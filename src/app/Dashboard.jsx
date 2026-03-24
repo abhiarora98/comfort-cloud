@@ -986,7 +986,7 @@ function parseCSV(csv){
     for(var i=0;i<line.length;i++){var c=line[i];if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cols.push(cur.trim());cur="";}else cur+=c;}
     cols.push(cur.trim());if(cols.length<10)return;
     var party=(cols[2]||"").replace(/^"|"$/g,"").trim();if(!party||party==="PARTY NAME")return;
-    try{orders.push({no:cols[0]||"",partyCode:cols[1]||"",party:party,salesPOC:cols[3]||"",piDate:cols[4]||"",qty:parseInt(cols[5])||0,category:cols[6]||"Other",model:cols[7]||"",backing:cols[8]||"",colour:cols[9]||"",width:cols[10]||"",length:cols[11]||"",actualRate:cols[12]||"",value:parseFloat((cols[13]||"0").replace(/[₹,]/g,""))||0});}catch(e){}
+    try{var rawCat=cols[6]||"Other";var CAT_FIX={"Rolls":"Loop Rolls","S-Mat":"TEFNO"};var fixedCat=CAT_FIX[rawCat]||rawCat;orders.push({no:cols[0]||"",partyCode:cols[1]||"",party:party,salesPOC:cols[3]||"",piDate:cols[4]||"",qty:parseInt(cols[5])||0,category:fixedCat,model:cols[7]||"",backing:cols[8]||"",colour:cols[9]||"",width:cols[10]||"",length:cols[11]||"",actualRate:cols[12]||"",value:parseFloat((cols[13]||"0").replace(/[₹,]/g,""))||0});}catch(e){}
   });
   return orders;
 }
