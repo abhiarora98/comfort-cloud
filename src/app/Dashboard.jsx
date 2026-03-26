@@ -1139,18 +1139,15 @@ export default function Dashboard(){
             {pg<pages&&<button onClick={()=>setPg(pg+1)} style={{padding:"8px 18px",borderRadius:8,...S.card,border:"none",fontFamily:MN,fontSize:12,cursor:"pointer"}}>Next →</button>}
           </div>}
         </div>:
-        <>
-        {readyToDispatch.length>0&&<div style={{marginBottom:16}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:11,fontWeight:700,color:"#059669",background:"#ecfdf5",padding:"4px 12px",borderRadius:20}}>🟢 Ready to Dispatch</span><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:11,color:"#94a3b8"}}>{readyToDispatch.length} order{readyToDispatch.length!==1?"s":""}</span></div>
-          <div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #059669"}}>
+        <div style={{...S.card,overflow:"hidden"}}>
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead><tr>
-              {[["Date",22],["Days",null],["Party",null],["Categories",null],["Lines",null],["Qty",null],["POC",null],["__PAY__",null]].map(([h])=>
-                h==="__PAY__"?<th key={h} style={{background:"#0f172a",padding:"10px 12px"}}><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:10,fontWeight:600,color:"#fff"}}>DISPATCH</span></th>:
-                <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:"var(--font-mono,monospace)",fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:h==="Qty"?"right":"left"}}>{h==="Date"?"Approval Date":h}</th>
+              {[["Date",null],["Days",null],["Party",null],["Categories",null],["Lines",null],["Qty",null],["POC",null],["DISPATCH",null]].map(([h])=>
+                <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:h==="Qty"?"right":"left"}}>{h}</th>
               )}
             </tr></thead>
             <tbody>
+              {readyToDispatch.length>0&&<tr><td colSpan={8} style={{padding:"8px 14px",background:"#ecfdf5",borderBottom:"2px solid #059669"}}><span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#059669"}}>🟢 Ready to Dispatch</span><span style={{fontFamily:MN,fontSize:11,color:"#94a3b8",marginLeft:8}}>{readyToDispatch.length} order{readyToDispatch.length!==1?"s":""}</span></td></tr>}
               {readyToDispatch.map(o=>{const ep=exp===o.id;const days=daysSince(o.approvalDate);const dc=days>7?"#dc2626":days>3?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
                 return[
                   <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#f0fdf4":"#fff",borderLeft:ep?"3px solid #059669":"3px solid transparent",transition:"background 0.15s"}}>
@@ -1164,7 +1161,7 @@ export default function Dashboard(){
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}>{ps?<span style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:20,background:ps.bg,color:ps.color}}>{ps.label}</span>:<span style={{fontFamily:MN,fontSize:10,color:"#cbd5e1"}}>—</span>}</td>
                   </tr>,
                   ep&&<tr key={o.id+"x"}><td colSpan={8} style={{padding:0,borderBottom:"2px solid #059669"}}>
-                    <div style={{background:"#f8fafc",padding:"8px 16px 4px 42px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center"}}>
+                    <div style={{background:"#f8fafc",padding:"8px 16px 4px 28px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center"}}>
                       <span style={{...S.section,fontSize:10}}>{o.lineCount} line items</span><span style={{fontFamily:MN,fontSize:11,color:"#64748b"}}>· {fmtVal(o.totalValue)}</span>
                     </div>
                     <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -1185,21 +1182,7 @@ export default function Dashboard(){
                   </td></tr>
                 ];
               })}
-            </tbody>
-          </table>
-          </div>
-        </div>}
-        {pendingApproval.length>0&&<div>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:11,fontWeight:700,color:"#ea580c",background:"#fff7ed",padding:"4px 12px",borderRadius:20}}>🟠 Pending Approval</span><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:11,color:"#94a3b8"}}>{pendingApproval.length} order{pendingApproval.length!==1?"s":""}</span></div>
-        <div style={{...S.card,overflow:"hidden"}}>
-          <table style={{width:"100%",borderCollapse:"collapse"}}>
-            <thead><tr>
-              {[["Date",22],["Days",null],["Party",null],["Categories",null],["Lines",null],["Qty",null],["POC",null],["__PAY__",null]].map(([h])=>
-                h==="__PAY__"?<th key={h} style={{background:"#0f172a",padding:"10px 12px",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>DISPATCH</th>:
-                <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:h==="Qty"?"right":"left"}}>{h==="Date"?"PI Date":h}</th>
-              )}
-            </tr></thead>
-            <tbody>
+              {pendingApproval.length>0&&<tr><td colSpan={8} style={{padding:"8px 14px",background:"#fff7ed",borderTop:"2px solid #ea580c",borderBottom:"2px solid #ea580c"}}><span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#ea580c"}}>🟠 Pending Approval</span><span style={{fontFamily:MN,fontSize:11,color:"#94a3b8",marginLeft:8}}>{pendingApproval.length} order{pendingApproval.length!==1?"s":""}</span></td></tr>}
               {pendingApproval.slice((pg-1)*PG,pg*PG).map(o=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
                 return[
                   <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#fffbeb":"#fff",borderLeft:ep?"3px solid #d97706":"3px solid transparent",transition:"background 0.15s"}}>
@@ -1213,7 +1196,7 @@ export default function Dashboard(){
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}>{ps?<span style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:20,background:ps.bg,color:ps.color}}>{ps.label}</span>:<span style={{fontFamily:MN,fontSize:10,color:"#cbd5e1"}}>—</span>}</td>
                   </tr>,
                   ep&&<tr key={o.id+"x"}><td colSpan={8} style={{padding:0,borderBottom:"2px solid #d97706"}}>
-                    <div style={{background:"#f8fafc",padding:"8px 16px 4px 42px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center"}}>
+                    <div style={{background:"#f8fafc",padding:"8px 16px 4px 28px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center"}}>
                       <span style={{...S.section,fontSize:10}}>{o.lineCount} line items</span><span style={{fontFamily:MN,fontSize:11,color:"#64748b"}}>· {fmtVal(o.totalValue)}</span>
                     </div>
                     <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -1234,7 +1217,7 @@ export default function Dashboard(){
                   </td></tr>
                 ];
               })}
-              {!pendingApproval.length&&<tr><td colSpan={8} style={{padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</td></tr>}
+              {!pendingApproval.length&&!readyToDispatch.length&&<tr><td colSpan={8} style={{padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</td></tr>}
             </tbody>
           </table>
           {pages>1&&<div style={{padding:"12px 16px",borderTop:"1px solid #e2e8f0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
@@ -1244,8 +1227,6 @@ export default function Dashboard(){
             )}</div>
           </div>}
         </div>
-        </div>}
-        </>
       }
     </div>}
 
