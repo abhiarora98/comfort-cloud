@@ -1210,7 +1210,7 @@ export default function Dashboard(){
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {pFilt.slice(0,50).map(p=>{const tv=p.pendingValue||0;
               return <div key={p.name} onClick={()=>{setSelP(p.name);setPcf("all");setShowHist(false);setMpv(true);}} style={{...S.card,padding:"14px 16px",cursor:"pointer"}}>
-                <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>{p.name}</div>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><input type="checkbox" checked={!!payments[p.name]} onChange={e=>{e.stopPropagation();setPay(p.name,payments[p.name]?0:1);}} onClick={e=>e.stopPropagation()} style={{accentColor:"#059669",width:16,height:16,cursor:"pointer"}}/><span style={{fontWeight:700,fontSize:14}}>{p.name}</span></div>
                 <div style={{display:"flex",gap:8,fontSize:10,fontFamily:MN,color:"#94a3b8",marginBottom:6}}><span>{p.poc}</span><span>·</span><span>{p.invoiceCount} inv</span></div>
                 <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:6}}>
                   <span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:"#059669"}}>{fmtVal(p.dispatchedTotal||0)}</span>
@@ -1230,7 +1230,7 @@ export default function Dashboard(){
             <div style={{overflowY:"auto",flex:1}}>
               {pFilt.map(p=>{const tv=p.pendingValue||0;const ps=payStatus(!!(payments[p.name]));
                 return <div key={p.name} onClick={()=>{setSelP(p.name);setPcf("all");setShowHist(false);}} style={{padding:"12px 16px",borderBottom:"1px solid #f1f5f9",cursor:"pointer",background:selP===p.name?"#fffbeb":"#fff",borderLeft:selP===p.name?"3px solid #d97706":"3px solid transparent",transition:"all 0.15s"}}>
-                  <div style={{fontSize:13,fontWeight:600,marginBottom:3}}>{p.name}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}><input type="checkbox" checked={!!payments[p.name]} onChange={e=>{e.stopPropagation();setPay(p.name,payments[p.name]?0:1);}} onClick={e=>e.stopPropagation()} style={{accentColor:"#059669",width:15,height:15,cursor:"pointer"}}/><span style={{fontSize:13,fontWeight:600}}>{p.name}</span></div>
                   <div style={{fontFamily:MN,fontSize:10,color:"#94a3b8",marginBottom:4}}>{p.poc} · {p.invoiceCount||0} inv</div>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
                     <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#059669"}}>{fmtVal(p.dispatchedTotal||0)}</span>
