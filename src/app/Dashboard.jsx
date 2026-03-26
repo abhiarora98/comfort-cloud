@@ -114,11 +114,9 @@ function fmtVal(v){
   if(v>=100000)   return "₹"+(v/100000).toFixed(1)+"L";
   return "₹"+Math.round(v).toLocaleString("en-IN");
 }
-function payStatus(paid,total){
-  if(!total) return null;
-  if(paid<=0) return {label:"Unpaid",color:"#ea580c",bg:"#fff7ed",border:"#fed7aa"};
-  if(paid>=total) return {label:"Paid",color:"#059669",bg:"#ecfdf5",border:"#86efac"};
-  return {label:"Partial",color:"#2563eb",bg:"#eff6ff",border:"#93c5fd"};
+function payStatus(approved){
+  if(approved) return {label:"Approved",color:"#059669",bg:"#ecfdf5",border:"#86efac"};
+  return {label:"Not Approved",color:"#ea580c",bg:"#fff7ed",border:"#fed7aa"};
 }
 function useW(){const[w,setW]=useState(typeof window!=='undefined'?window.innerWidth:1200);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);return w;}
 
@@ -268,7 +266,7 @@ function PartyDetail({party,pcf,setPcf,payments,setPayment,showHist,setShowHist,
   const shown=pcf==="all"?lines:lines.filter(l=>l.category===pcf);
   const byCat={};shown.forEach(l=>{if(!byCat[l.category])byCat[l.category]=[];byCat[l.category].push(l);});
   const tv=party.pendingValue||party.orders.reduce((s,o)=>s+o.totalValue,0);
-  const paid=payments[party.name]||0;const ps=payStatus(paid,tv);const bal=Math.max(0,tv-paid);
+  const approved=!!(payments[party.name]);const ps=payStatus(approved);
   const invs=INV_MAP[party.name]||[];const r=REORDER[party.name];const pdata=MONTHLY.data[party.name];
 
   return <div style={{display:"flex",flexDirection:"column",flex:1,overflow:"hidden"}}>
@@ -309,16 +307,14 @@ function PartyDetail({party,pcf,setPcf,payments,setPayment,showHist,setShowHist,
 
       {tv>0&&<div style={{background:"rgba(255,255,255,0.06)",borderRadius:10,padding:"12px 14px",marginBottom:12}}>
         <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:10}}>
-          {[["Pending",fmtVal(tv),"#fff"],["Dispatched",fmtVal(party.dispatchedTotal||0),"#4ade80"],["Received",fmtVal(paid),"#60a5fa"],["Balance",fmtVal(bal),bal>0?"#fbbf24":"#4ade80"]].map(([l,v,c])=><div key={l}>
+          {[["Pending",fmtVal(tv),"#fff"],["Dispatched",fmtVal(party.dispatchedTotal||0),"#4ade80"]].map(([l,v,c])=><div key={l}>
             <div style={{fontSize:9,opacity:0.4,textTransform:"uppercase"}}>{l}</div>
             <div style={{fontFamily:MN,fontSize:16,fontWeight:700,color:c}}>{v}</div>
           </div>)}
-          {ps&&<span style={{fontFamily:MN,fontSize:11,fontWeight:700,padding:"4px 14px",borderRadius:20,background:ps.bg,color:ps.color,alignSelf:"center"}}>{ps.label}</span>}
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <input type="number" value={paid||""} onChange={e=>setPayment(party.name,+e.target.value)} placeholder="Amount received ₹" style={{flex:1,maxWidth:200,padding:"6px 12px",borderRadius:6,border:"1px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.08)",color:"#fff",fontFamily:MN,fontSize:12,outline:"none"}}/>
-          {paid>0&&<button onClick={()=>setPayment(party.name,0)} style={{padding:"6px 12px",borderRadius:6,border:"1px solid rgba(255,255,255,0.15)",background:"transparent",color:"rgba(255,255,255,0.6)",fontSize:10,fontFamily:MN,cursor:"pointer"}}>Clear</button>}
-        </div>
+        <button onClick={()=>setPayment(party.name,approved?0:1)} style={{padding:"6px 16px",borderRadius:6,border:"1px solid rgba(255,255,255,0.2)",background:approved?"rgba(5,150,105,0.25)":"rgba(255,255,255,0.08)",color:approved?"#4ade80":"rgba(255,255,255,0.6)",fontSize:12,fontFamily:MN,cursor:"pointer",fontWeight:700}}>
+          {approved?"✓ Approved":"Mark as Approved"}
+        </button>
       </div>}
 
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -1037,7 +1033,7 @@ export default function Dashboard(){
     let r=ORDERS.filter(o=>{
       if(cat!=="all"&&!o.categories.includes(cat))return false;
       if(poc&&o.salesPOC!==poc)return false;
-      if(payF!=="all"){const p=payments[o.party]||0;const st=p>=o.totalValue?"paid":p>0?"part":"pending";if(st!==payF)return false;}
+      if(payF!=="all"){const appr=!!(payments[o.party]);if(payF==="approved"&&!appr)return false;if(payF==="not_approved"&&appr)return false;}
       if(srch){const q=srch.toLowerCase();if(![o.party,...o.lines.map(l=>l.model),...o.lines.map(l=>l.colour)].some(v=>v.toLowerCase().includes(q)))return false;}
       return true;
     });
@@ -1153,14 +1149,14 @@ export default function Dashboard(){
               {[["Date",22],["Days",null],["Party",null],["Categories",null],["Lines",null],["Qty",null],["POC",null],["__PAY__",null]].map(([h])=>
                 h==="__PAY__"?<th key={h} style={{background:"#0f172a",padding:"10px 12px"}}>
                   <select value={payF} onChange={e=>setPayF(e.target.value)} style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"4px 8px",borderRadius:6,border:"1px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.08)",color:"#fff",cursor:"pointer",outline:"none"}}>
-                    <option value="all">PAYMENT</option><option value="pending">UNPAID</option><option value="part">PARTIAL</option><option value="paid">PAID</option>
+                    <option value="all">PAYMENT</option><option value="approved">APPROVED</option><option value="not_approved">NOT APPROVED</option>
                   </select>
                 </th>:
                 <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:h==="Qty"?"right":"left"}}>{h==="Date"?"PI Date":h}</th>
               )}
             </tr></thead>
             <tbody>
-              {page.map(o=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(payments[o.party]||0,o.totalValue);
+              {page.map(o=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!(payments[o.party]));
                 return[
                   <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#fffbeb":"#fff",borderLeft:ep?"3px solid #d97706":"3px solid transparent",transition:"background 0.15s"}}>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
@@ -1232,7 +1228,7 @@ export default function Dashboard(){
               <input value={psrch} onChange={e=>setPsrch(e.target.value)} placeholder="Search..." style={{width:"100%",padding:"8px 12px",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:12,fontFamily:SN,outline:"none"}}/>
             </div>
             <div style={{overflowY:"auto",flex:1}}>
-              {pFilt.map(p=>{const tv=p.pendingValue||0;const ps=payStatus(payments[p.name]||0,tv);
+              {pFilt.map(p=>{const tv=p.pendingValue||0;const ps=payStatus(!!(payments[p.name]));
                 return <div key={p.name} onClick={()=>{setSelP(p.name);setPcf("all");setShowHist(false);}} style={{padding:"12px 16px",borderBottom:"1px solid #f1f5f9",cursor:"pointer",background:selP===p.name?"#fffbeb":"#fff",borderLeft:selP===p.name?"3px solid #d97706":"3px solid transparent",transition:"all 0.15s"}}>
                   <div style={{fontSize:13,fontWeight:600,marginBottom:3}}>{p.name}</div>
                   <div style={{fontFamily:MN,fontSize:10,color:"#94a3b8",marginBottom:4}}>{p.poc} · {p.invoiceCount||0} inv</div>
