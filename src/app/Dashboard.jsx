@@ -133,7 +133,7 @@ const S={
 function Badge({cat}){const x=CC[cat]||CC["Other"];return <span style={{...S.pill,background:x.b,color:x.c}}><span style={{width:5,height:5,borderRadius:"50%",background:x.c}}/>{x.l}</span>;}
 function Dot({c,s=6}){return <span style={{width:s,height:s,borderRadius:"50%",background:c,display:"inline-block",flexShrink:0}}/>;}
 
-function StatCard({icon,l,v,sub,accent,breakdown,unit}){
+function StatCard({icon,l,v,sub,sub2,accent,breakdown,unit}){
   const total=breakdown?breakdown.reduce((s,[,q])=>s+q,0):null;
   return(
     <div style={{...S.card,padding:"16px 18px",position:"relative",overflow:"hidden"}}>
@@ -141,6 +141,7 @@ function StatCard({icon,l,v,sub,accent,breakdown,unit}){
       <div style={{...S.section,marginBottom:8,fontSize:10}}>{l}</div>
       <div style={{fontFamily:MN,fontSize:26,fontWeight:700,color:"#0f172a",lineHeight:1}}>{v}</div>
       {sub&&<div style={{fontSize:12,color:"#64748b",fontWeight:500,marginTop:4}}>{sub}</div>}
+      {sub2&&<div style={{fontSize:11,color:"#94a3b8",fontWeight:500,marginTop:3}}>{sub2}</div>}
       {total!=null&&<div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:accent||AC2,marginTop:6}}>{total.toLocaleString()} {unit||"rolls"}</div>}
       {breakdown&&<div style={{marginTop:8,paddingTop:8,borderTop:"1px solid #f1f5f9",display:"flex",gap:12,flexWrap:"wrap"}}>
         {breakdown.map(([lbl,qty])=>qty>0&&<div key={lbl} style={{display:"flex",alignItems:"center",gap:4}}>
@@ -1083,7 +1084,7 @@ export default function Dashboard(){
       {/* ═══ PENDING ═══ */}
       {tab==="pending"&&<div>
         <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:24}}>
-          <StatCard l="Total Orders" v={filtered.length} sub={fmtVal(filtered.reduce((s,o)=>s+o.totalValue,0))} accent="#3b82f6"/>
+          <StatCard l="Total Orders" v={filtered.length} sub={fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))+" ready · "+fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))+" pending"} accent="#3b82f6"/>
           <StatCard l="Total Qty" v={pendQty.toLocaleString()} sub={cat==="all"?"all categories":(CC[cat]?.l||cat)} accent="#8b5cf6"/>
           {ALL_CATS.filter(c=>catCounts[c]>0).sort((a,b)=>{const av=allLines.filter(l=>l.category===a).reduce((s,l)=>s+(l.value||0),0);const bv=allLines.filter(l=>l.category===b).reduce((s,l)=>s+(l.value||0),0);return bv-av;}).map(c=>{
             const cl=allLines.filter(l=>l.category===c);const val=fmtVal(cl.reduce((s,l)=>s+(l.value||0),0));
