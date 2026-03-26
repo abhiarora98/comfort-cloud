@@ -1148,7 +1148,7 @@ export default function Dashboard(){
               <th style={{width:22}}/>
               {[["Date",22],["Days",null],["Party",null],["Categories",null],["Lines",null],["Qty",null],["POC",null],["__PAY__",null]].map(([h])=>
                 h==="__PAY__"?<th key={h} style={{background:"#0f172a",padding:"10px 12px"}}><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:10,fontWeight:600,color:"#fff"}}>PAYMENT</span></th>:
-                <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:"var(--font-mono,monospace)",fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:h==="Qty"?"right":"left"}}>{h==="Date"?"PI Date":h}</th>
+                <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:"var(--font-mono,monospace)",fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:h==="Qty"?"right":"left"}}>{h==="Date"?"Approval Date":h}</th>
               )}
             </tr></thead>
             <tbody>
@@ -1156,7 +1156,7 @@ export default function Dashboard(){
                 return[
                   <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#f0fdf4":"#fff",borderLeft:ep?"3px solid #059669":"3px solid transparent",transition:"background 0.15s"}}>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
-                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:11,whiteSpace:"nowrap"}}>{o.piDate}</td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:11,whiteSpace:"nowrap"}}>{o.approvalDate}</td>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}><span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:dc,background:dc+"12",padding:"2px 8px",borderRadius:12}}>{days}d</span></td>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontWeight:600,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.party}</td>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div></td>
