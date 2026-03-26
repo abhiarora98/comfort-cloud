@@ -1139,6 +1139,7 @@ export default function Dashboard(){
             {pg<pages&&<button onClick={()=>setPg(pg+1)} style={{padding:"8px 18px",borderRadius:8,...S.card,border:"none",fontFamily:MN,fontSize:12,cursor:"pointer"}}>Next →</button>}
           </div>}
         </div>:
+        <>
         {readyToDispatch.length>0&&<div style={{marginBottom:16}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:11,fontWeight:700,color:"#059669",background:"#ecfdf5",padding:"4px 12px",borderRadius:20}}>🟢 Ready to Dispatch</span><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:11,color:"#94a3b8"}}>{readyToDispatch.length} order{readyToDispatch.length!==1?"s":""}</span></div>
           <div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #059669"}}>
@@ -1250,9 +1251,11 @@ export default function Dashboard(){
               <button key={p} onClick={()=>setPg(p)} style={{padding:"5px 11px",border:"none",borderRadius:6,background:p===pg?"#0f172a":"#f1f5f9",color:p===pg?"#fff":"#64748b",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:600}}>{p}</button>
             )}</div>
           </div>}
+        </div>
         </div>}
-        </div>}
-      </div>}
+        </>
+      }
+    </div>}
 
       {/* ═══ PARTY ═══ */}
       {tab==="party"&&<div>
