@@ -1195,11 +1195,7 @@ export default function Dashboard(){
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead><tr>
               {[["Date",22],["Days",null],["Party",null],["Categories",null],["Lines",null],["Qty",null],["POC",null],["__PAY__",null]].map(([h])=>
-                h==="__PAY__"?<th key={h} style={{background:"#0f172a",padding:"10px 12px"}}>
-                  <select value={payF} onChange={e=>setPayF(e.target.value)} style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"4px 8px",borderRadius:6,border:"1px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.08)",color:"#fff",cursor:"pointer",outline:"none"}}>
-                    <option value="all">DISPATCH</option><option value="approved">APPROVED</option><option value="not_approved">NOT APPROVED</option>
-                  </select>
-                </th>:
+                h==="__PAY__"?<th key={h} style={{background:"#0f172a",padding:"10px 12px",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase"}}>DISPATCH</th>:
                 <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:h==="Qty"?"right":"left"}}>{h==="Date"?"PI Date":h}</th>
               )}
             </tr></thead>
