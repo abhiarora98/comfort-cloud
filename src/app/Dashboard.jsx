@@ -1093,6 +1093,7 @@ export default function Dashboard(){
             else if(c==="Car Set")bd=[["3pc",cl.filter(l=>l.width==="3pc").reduce((s,l)=>s+l.qty,0)],["5pc",cl.filter(l=>l.width==="5pc").reduce((s,l)=>s+l.qty,0)]];
             else if(c==="Foot Mat"){const bw={};cl.forEach(l=>{bw[l.width]=(bw[l.width]||0)+l.qty;});bd=Object.entries(bw).sort((a,b)=>b[1]-a[1]).slice(0,3);}
             else if(c==="Wire")bd=[["4ft",cl.filter(l=>l.width==="4ft").reduce((s,l)=>s+l.qty,0)],["other",cl.filter(l=>l.width!=="4ft").reduce((s,l)=>s+l.qty,0)]];
+            else if(c==="Grass"){const bm={};cl.forEach(l=>{const m=l.model||"Other";bm[m]=(bm[m]||0)+l.qty;});bd=Object.entries(bm).sort((a,b)=>b[1]-a[1]).slice(0,3);}
             return <StatCard key={c} l={c} v={catCounts[c]} sub={val} unit={CAT_UNIT[c]||"rolls"} breakdown={bd} accent={(CC[c]||CC.Other).c}/>;
           })}
         </div>
