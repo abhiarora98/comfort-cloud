@@ -1086,16 +1086,27 @@ export default function Dashboard(){
         <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:24}}>
           <StatCard l="Total Orders" v={filtered.length} sub={fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))+" ready · "+fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))+" pending"} accent="#3b82f6"/>
           <StatCard l="Total Qty" v={pendQty.toLocaleString()} sub={cat==="all"?"all categories":(CC[cat]?.l||cat)} accent="#8b5cf6"/>
-          {ALL_CATS.filter(c=>catCounts[c]>0).sort((a,b)=>{const av=allLines.filter(l=>l.category===a).reduce((s,l)=>s+(l.value||0),0);const bv=allLines.filter(l=>l.category===b).reduce((s,l)=>s+(l.value||0),0);return bv-av;}).map(c=>{
-            const cl=allLines.filter(l=>l.category===c);const val=fmtVal(cl.reduce((s,l)=>s+(l.value||0),0));
-            let bd=null;
-            if(["Loop Rolls","TEFNO","Turf"].includes(c))bd=[["2ft",cl.filter(l=>l.width==="2ft").reduce((s,l)=>s+l.qty,0)],["4ft",cl.filter(l=>l.width==="4ft").reduce((s,l)=>s+l.qty,0)]];
-            else if(c==="Car Set")bd=[["3pc",cl.filter(l=>l.width==="3pc").reduce((s,l)=>s+l.qty,0)],["5pc",cl.filter(l=>l.width==="5pc").reduce((s,l)=>s+l.qty,0)]];
-            else if(c==="Foot Mat"){const bw={};cl.forEach(l=>{bw[l.width]=(bw[l.width]||0)+l.qty;});bd=Object.entries(bw).sort((a,b)=>b[1]-a[1]).slice(0,3);}
-            else if(c==="Wire")bd=[["4ft",cl.filter(l=>l.width==="4ft").reduce((s,l)=>s+l.qty,0)],["other",cl.filter(l=>l.width!=="4ft").reduce((s,l)=>s+l.qty,0)]];
-            else if(c==="Grass"){const bm={};cl.forEach(l=>{const m=l.model||"Other";bm[m]=(bm[m]||0)+l.qty;});bd=Object.entries(bm).sort((a,b)=>b[1]-a[1]).slice(0,3);}
-            return <StatCard key={c} l={c} v={catCounts[c]} sub={val} unit={CAT_UNIT[c]||"rolls"} breakdown={bd} accent={(CC[c]||CC.Other).c}/>;
-          })}
+          {(()=>{
+            const ROLL_CATS=["Loop Rolls","TEFNO","Turf","Grass","Wire","Monograss"];
+            const rollLines=allLines.filter(l=>ROLL_CATS.includes(l.category));
+            const rollQty=rollLines.reduce((s,l)=>s+l.qty,0);
+            const rollVal=fmtVal(rollLines.reduce((s,l)=>s+(l.value||0),0));
+            const rollBd=ROLL_CATS.filter(c=>allLines.some(l=>l.category===c)).map(c=>[c,allLines.filter(l=>l.category===c).reduce((s,l)=>s+l.qty,0)]);
+            const carLines=allLines.filter(l=>l.category==="Car Set");
+            const carQty=carLines.reduce((s,l)=>s+l.qty,0);
+            const carVal=fmtVal(carLines.reduce((s,l)=>s+(l.value||0),0));
+            const carBd=[["3pc",carLines.filter(l=>l.width==="3pc").reduce((s,l)=>s+l.qty,0)],["5pc",carLines.filter(l=>l.width==="5pc").reduce((s,l)=>s+l.qty,0)]];
+            const fmLines=allLines.filter(l=>l.category==="Foot Mat");
+            const fmQty=fmLines.reduce((s,l)=>s+l.qty,0);
+            const fmVal=fmtVal(fmLines.reduce((s,l)=>s+(l.value||0),0));
+            const fmBw={};fmLines.forEach(l=>{fmBw[l.width]=(fmBw[l.width]||0)+l.qty;});
+            const fmBd=Object.entries(fmBw).sort((a,b)=>b[1]-a[1]).slice(0,3);
+            return(<>
+              {rollQty>0&&<StatCard l="All Rolls" v={rollQty} sub={rollVal} unit="rolls" breakdown={rollBd} accent="#d97706"/>}
+              {carQty>0&&<StatCard l="Car Set" v={carQty} sub={carVal} unit="sets" breakdown={carBd} accent={(CC["Car Set"]||CC.Other).c}/>}
+              {fmQty>0&&<StatCard l="Foot Mat" v={fmQty} sub={fmVal} unit="pcs" breakdown={fmBd} accent={(CC["Foot Mat"]||CC.Other).c}/>}
+            </>);
+          })()}
         </div>
 
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
