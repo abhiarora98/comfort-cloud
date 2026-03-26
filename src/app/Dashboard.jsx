@@ -980,7 +980,7 @@ function parseCSV(csv){
     for(var i=0;i<line.length;i++){var c=line[i];if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cols.push(cur.trim());cur="";}else cur+=c;}
     cols.push(cur.trim());if(cols.length<10)return;
     var party=(cols[2]||"").replace(/^"|"$/g,"").trim();if(!party||party==="PARTY NAME")return;
-    try{var rawCat=cols[6]||"Other";var CAT_FIX={"Rolls":"Loop Rolls","S-Mat":"TEFNO","WIRE":"Wire"};var fixedCat=CAT_FIX[rawCat]||rawCat;orders.push({no:cols[0]||"",partyCode:cols[1]||"",party:party,salesPOC:cols[3]||"",piDate:cols[4]||"",qty:parseInt(cols[5])||0,category:fixedCat,model:cols[7]||"",backing:cols[8]||"",colour:cols[9]||"",width:cols[10]||"",length:cols[11]||"",actualRate:cols[12]||"",value:parseFloat((cols[13]||"0").replace(/[₹,]/g,""))||0,approvalDate:(cols[14]||"").replace(/^"|"$/g,"").trim()});}catch(e){}
+    try{var rawCat=cols[6]||"Other";var CAT_FIX={"Rolls":"Loop Rolls","S-Mat":"TEFNO","WIRE":"Wire"};var fixedCat=CAT_FIX[rawCat]||rawCat;orders.push({no:cols[0]||"",partyCode:cols[1]||"",party:party,salesPOC:cols[3]||"",piDate:cols[4]||"",qty:parseInt(cols[5])||0,category:fixedCat,model:cols[7]||"",backing:cols[8]||"",colour:cols[9]||"",width:cols[10]||"",length:cols[11]||"",actualRate:cols[12]||"",value:parseFloat((cols[13]||"0").replace(/[₹,]/g,""))||0,approvalDate:(cols[14]||"").replace(/^"|"$/g,"").trim(),dispatchStatus:(cols[16]||"").replace(/^"|"$/g,"").trim().toLowerCase()});}catch(e){}
   });
   return orders;
 }
@@ -988,8 +988,8 @@ function groupOrders(rawOrders){
   var groups={};
   rawOrders.forEach(function(o){
     var key=o.party+"||"+o.piDate;
-    if(!groups[key])groups[key]={id:o.no,party:o.party,salesPOC:o.salesPOC,piDate:o.piDate,totalQty:0,totalValue:0,lineCount:0,categories:[],lines:[],approvalDate:""};
-    var g=groups[key];g.totalQty+=o.qty;g.totalValue+=o.value;g.lineCount++;if(o.approvalDate&&!g.approvalDate)g.approvalDate=o.approvalDate;
+    if(!groups[key])groups[key]={id:o.no,party:o.party,salesPOC:o.salesPOC,piDate:o.piDate,totalQty:0,totalValue:0,lineCount:0,categories:[],lines:[],approvalDate:"",dispatchedCount:0};
+    var g=groups[key];g.totalQty+=o.qty;g.totalValue+=o.value;g.lineCount++;if(o.approvalDate&&!g.approvalDate)g.approvalDate=o.approvalDate;if(o.dispatchStatus==="dispatched")g.dispatchedCount++;
     if(g.categories.indexOf(o.category)<0)g.categories.push(o.category);g.lines.push(o);
   });
   return Object.values(groups).sort(function(a,b){return pd(a.piDate)-pd(b.piDate);});
@@ -1041,7 +1041,7 @@ export default function Dashboard(){
     return r;
   },[cat,poc,srch,srt,payF,ORDERS]);
 
-  const page=filtered.slice((pg-1)*PG,pg*PG);const pages=Math.max(1,Math.ceil(filtered.length/PG));
+  const readyToDispatch=filtered.filter(o=>o.approvalDate&&o.dispatchedCount<o.lineCount);const pendingApproval=filtered.filter(o=>!o.approvalDate);const page=filtered.slice((pg-1)*PG,pg*PG);const pages=Math.max(1,Math.ceil(pendingApproval.length/PG));
   const catCounts=useMemo(()=>{const c={};ORDERS.filter(o=>!poc||o.salesPOC===poc).forEach(o=>o.categories.forEach(cc=>c[cc]=(c[cc]||0)+1));return c;},[poc,ORDERS]);
   const allLines=useMemo(()=>ORDERS.flatMap(o=>o.lines),[ORDERS]);
   const pendQty=useMemo(()=>ORDERS.reduce((s,o)=>{const ls=cat==="all"?o.lines:o.lines.filter(l=>l.category===cat);return s+ls.reduce((ss,l)=>ss+l.qty,0);},0),[cat,ORDERS]);
@@ -1096,7 +1096,7 @@ export default function Dashboard(){
         </div>
 
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
-          <div style={{...S.section}}>Pending Orders</div>
+          <div style={{...S.section}}>Orders</div>
           <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
             <input value={srch} onChange={e=>{setSrch(e.target.value);setPg(1);}} placeholder="Search party, model..." style={{...S.input,width:mob?150:260}}/>
             <select value={srt} onChange={e=>setSrt(e.target.value)} style={S.select}><option value="da">Oldest</option><option value="dd">Newest</option><option value="pa">A→Z</option><option value="qd">Qty ↓</option></select>
@@ -1139,6 +1139,59 @@ export default function Dashboard(){
             {pg<pages&&<button onClick={()=>setPg(pg+1)} style={{padding:"8px 18px",borderRadius:8,...S.card,border:"none",fontFamily:MN,fontSize:12,cursor:"pointer"}}>Next →</button>}
           </div>}
         </div>:
+        {readyToDispatch.length>0&&<div style={{marginBottom:16}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:11,fontWeight:700,color:"#059669",background:"#ecfdf5",padding:"4px 12px",borderRadius:20}}>🟢 Ready to Dispatch</span><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:11,color:"#94a3b8"}}>{readyToDispatch.length} order{readyToDispatch.length!==1?"s":""}</span></div>
+          <div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #059669"}}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead><tr>
+              <th style={{width:22}}/>
+              {[["Date",22],["Days",null],["Party",null],["Categories",null],["Lines",null],["Qty",null],["POC",null],["__PAY__",null]].map(([h])=>
+                h==="__PAY__"?<th key={h} style={{background:"#0f172a",padding:"10px 12px"}}><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:10,fontWeight:600,color:"#fff"}}>PAYMENT</span></th>:
+                <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:"var(--font-mono,monospace)",fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:h==="Qty"?"right":"left"}}>{h==="Date"?"PI Date":h}</th>
+              )}
+            </tr></thead>
+            <tbody>
+              {readyToDispatch.map(o=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
+                return[
+                  <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#f0fdf4":"#fff",borderLeft:ep?"3px solid #059669":"3px solid transparent",transition:"background 0.15s"}}>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:11,whiteSpace:"nowrap"}}>{o.piDate}</td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}><span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:dc,background:dc+"12",padding:"2px 8px",borderRadius:12}}>{days}d</span></td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontWeight:600,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.party}</td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div></td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{o.lineCount}</td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:13,fontWeight:700,textAlign:"right"}}>{cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0)}</td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:POC_COLORS[o.salesPOC]||"#64748b",background:(POC_COLORS[o.salesPOC]||"#64748b")+"15",padding:"2px 8px",borderRadius:12}}>{o.salesPOC}</span></td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}>{ps?<span style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:20,background:ps.bg,color:ps.color}}>{ps.label}</span>:<span style={{fontFamily:MN,fontSize:10,color:"#cbd5e1"}}>—</span>}</td>
+                  </tr>,
+                  ep&&<tr key={o.id+"x"}><td colSpan={9} style={{padding:0,borderBottom:"2px solid #059669"}}>
+                    <div style={{background:"#f8fafc",padding:"8px 16px 4px 42px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center"}}>
+                      <span style={{...S.section,fontSize:10}}>{o.lineCount} line items</span><span style={{fontFamily:MN,fontSize:11,color:"#64748b"}}>· {fmtVal(o.totalValue)}</span>
+                    </div>
+                    <table style={{width:"100%",borderCollapse:"collapse"}}>
+                      <thead><tr>{["#","Code","Model","Backing","Colour","Width","Length","Qty","Rate","Value"].map(h=><th key={h} style={{padding:"8px 14px",...S.section,fontSize:9,background:"#f1f5f9",borderBottom:"1px solid #e2e8f0",textAlign:["Qty","Rate","Value"].includes(h)?"right":"left"}}>{h}</th>)}</tr></thead>
+                      <tbody>{o.lines.map((l,i)=><tr key={l.no} style={{background:i%2?"#fafafa":"#fff"}}>
+                        <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,color:"#94a3b8"}}>{i+1}</td>
+                        <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,fontWeight:600,color:"#64748b"}}>{l.partyCode||"—"}</td>
+                        <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,fontWeight:600}}>{l.model}</td>
+                        <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,color:"#64748b"}}>{l.backing}</td>
+                        <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12}}>{l.colour}</td>
+                        <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN}}>{l.width}</td>
+                        <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN,color:"#94a3b8"}}>{l.length}</td>
+                        <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:14,fontFamily:MN,fontWeight:700,textAlign:"right"}}>{l.qty}</td>
+                        <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN,textAlign:"right",color:"#64748b"}}>{l.actualRate||"—"}</td>
+                        <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,fontFamily:MN,fontWeight:600,textAlign:"right"}}>{fmtVal(l.value||0)}</td>
+                      </tr>)}</tbody>
+                    </table>
+                  </td></tr>
+                ];
+              })}
+            </tbody>
+          </table>
+          </div>
+        </div>}
+        {pendingApproval.length>0&&<div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:11,fontWeight:700,color:"#ea580c",background:"#fff7ed",padding:"4px 12px",borderRadius:20}}>🟠 Pending Approval</span><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:11,color:"#94a3b8"}}>{pendingApproval.length} order{pendingApproval.length!==1?"s":""}</span></div>
         <div style={{...S.card,overflow:"hidden"}}>
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead><tr>
@@ -1153,7 +1206,7 @@ export default function Dashboard(){
               )}
             </tr></thead>
             <tbody>
-              {page.map(o=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
+              {pendingApproval.slice((pg-1)*PG,pg*PG).map(o=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
                 return[
                   <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#fffbeb":"#fff",borderLeft:ep?"3px solid #d97706":"3px solid transparent",transition:"background 0.15s"}}>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
@@ -1188,15 +1241,16 @@ export default function Dashboard(){
                   </td></tr>
                 ];
               })}
-              {!page.length&&<tr><td colSpan={9} style={{padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</td></tr>}
+              {!pendingApproval.length&&<tr><td colSpan={9} style={{padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</td></tr>}
             </tbody>
           </table>
           {pages>1&&<div style={{padding:"12px 16px",borderTop:"1px solid #e2e8f0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{(pg-1)*PG+1}–{Math.min(pg*PG,filtered.length)} of {filtered.length}</span>
+            <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{(pg-1)*PG+1}–{Math.min(pg*PG,pendingApproval.length)} of {pendingApproval.length}</span>
             <div style={{display:"flex",gap:4}}>{Array.from({length:pages},(_,i)=>i+1).filter(p=>pages<=7||p<=2||p>=pages-1||Math.abs(p-pg)<=1).map(p=>
               <button key={p} onClick={()=>setPg(p)} style={{padding:"5px 11px",border:"none",borderRadius:6,background:p===pg?"#0f172a":"#f1f5f9",color:p===pg?"#fff":"#64748b",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:600}}>{p}</button>
             )}</div>
           </div>}
+        </div>}
         </div>}
       </div>}
 
