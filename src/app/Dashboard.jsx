@@ -1152,7 +1152,7 @@ export default function Dashboard(){
               )}
             </tr></thead>
             <tbody>
-              {readyToDispatch.map(o=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
+              {readyToDispatch.map(o=>{const ep=exp===o.id;const days=daysSince(o.approvalDate);const dc=days>7?"#dc2626":days>3?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
                 return[
                   <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#f0fdf4":"#fff",borderLeft:ep?"3px solid #059669":"3px solid transparent",transition:"background 0.15s"}}>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
