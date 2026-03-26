@@ -1147,7 +1147,7 @@ export default function Dashboard(){
             <thead><tr>
               <th style={{width:22}}/>
               {[["Date",22],["Days",null],["Party",null],["Categories",null],["Lines",null],["Qty",null],["POC",null],["__PAY__",null]].map(([h])=>
-                h==="__PAY__"?<th key={h} style={{background:"#0f172a",padding:"10px 12px"}}><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:10,fontWeight:600,color:"#fff"}}>PAYMENT</span></th>:
+                h==="__PAY__"?<th key={h} style={{background:"#0f172a",padding:"10px 12px"}}><span style={{fontFamily:"var(--font-mono,monospace)",fontSize:10,fontWeight:600,color:"#fff"}}>DISPATCH</span></th>:
                 <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:"var(--font-mono,monospace)",fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:h==="Qty"?"right":"left"}}>{h==="Date"?"Approval Date":h}</th>
               )}
             </tr></thead>
@@ -1196,11 +1196,10 @@ export default function Dashboard(){
         <div style={{...S.card,overflow:"hidden"}}>
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead><tr>
-              <th style={{width:22}}/>
               {[["Date",22],["Days",null],["Party",null],["Categories",null],["Lines",null],["Qty",null],["POC",null],["__PAY__",null]].map(([h])=>
                 h==="__PAY__"?<th key={h} style={{background:"#0f172a",padding:"10px 12px"}}>
                   <select value={payF} onChange={e=>setPayF(e.target.value)} style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"4px 8px",borderRadius:6,border:"1px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.08)",color:"#fff",cursor:"pointer",outline:"none"}}>
-                    <option value="all">PAYMENT</option><option value="approved">APPROVED</option><option value="not_approved">NOT APPROVED</option>
+                    <option value="all">DISPATCH</option><option value="approved">APPROVED</option><option value="not_approved">NOT APPROVED</option>
                   </select>
                 </th>:
                 <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:h==="Qty"?"right":"left"}}>{h==="Date"?"PI Date":h}</th>
@@ -1210,7 +1209,6 @@ export default function Dashboard(){
               {pendingApproval.slice((pg-1)*PG,pg*PG).map(o=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
                 return[
                   <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#fffbeb":"#fff",borderLeft:ep?"3px solid #d97706":"3px solid transparent",transition:"background 0.15s"}}>
-                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:11,whiteSpace:"nowrap"}}>{o.piDate}</td>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}><span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:dc,background:dc+"12",padding:"2px 8px",borderRadius:12}}>{days}d</span></td>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontWeight:600,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.party}</td>
@@ -1220,7 +1218,7 @@ export default function Dashboard(){
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:POC_COLORS[o.salesPOC]||"#64748b",background:(POC_COLORS[o.salesPOC]||"#64748b")+"15",padding:"2px 8px",borderRadius:12}}>{o.salesPOC}</span></td>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}>{ps?<span style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:20,background:ps.bg,color:ps.color}}>{ps.label}</span>:<span style={{fontFamily:MN,fontSize:10,color:"#cbd5e1"}}>—</span>}</td>
                   </tr>,
-                  ep&&<tr key={o.id+"x"}><td colSpan={9} style={{padding:0,borderBottom:"2px solid #d97706"}}>
+                  ep&&<tr key={o.id+"x"}><td colSpan={8} style={{padding:0,borderBottom:"2px solid #d97706"}}>
                     <div style={{background:"#f8fafc",padding:"8px 16px 4px 42px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center"}}>
                       <span style={{...S.section,fontSize:10}}>{o.lineCount} line items</span><span style={{fontFamily:MN,fontSize:11,color:"#64748b"}}>· {fmtVal(o.totalValue)}</span>
                     </div>
@@ -1242,7 +1240,7 @@ export default function Dashboard(){
                   </td></tr>
                 ];
               })}
-              {!pendingApproval.length&&<tr><td colSpan={9} style={{padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</td></tr>}
+              {!pendingApproval.length&&<tr><td colSpan={8} style={{padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</td></tr>}
             </tbody>
           </table>
           {pages>1&&<div style={{padding:"12px 16px",borderTop:"1px solid #e2e8f0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
