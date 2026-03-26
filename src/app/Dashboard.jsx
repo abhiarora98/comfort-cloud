@@ -1043,7 +1043,7 @@ export default function Dashboard(){
   },[cat,poc,srch,srt,payF,ORDERS]);
 
   const readyToDispatch=filtered.filter(o=>o.approvalDate&&o.dispatchedCount<o.lineCount);const pendingApproval=filtered.filter(o=>!o.approvalDate);const page=filtered.slice((pg-1)*PG,pg*PG);const pages=Math.max(1,Math.ceil(pendingApproval.length/PG));
-  const catCounts=useMemo(()=>{const c={};ORDERS.filter(o=>!poc||o.salesPOC===poc).forEach(o=>o.categories.forEach(cc=>c[cc]=(c[cc]||0)+1));return c;},[poc,ORDERS]);
+  const catCounts=useMemo(()=>{const c={};ORDERS.filter(o=>(!poc||o.salesPOC===poc)&&!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)).forEach(o=>o.categories.forEach(cc=>c[cc]=(c[cc]||0)+1));return c;},[poc,ORDERS]);
   const allLines=useMemo(()=>ORDERS.flatMap(o=>o.lines),[ORDERS]);
   const pendQty=useMemo(()=>ORDERS.reduce((s,o)=>{const ls=cat==="all"?o.lines:o.lines.filter(l=>l.category===cat);return s+ls.reduce((ss,l)=>ss+l.qty,0);},0),[cat,ORDERS]);
   const pFilt=PARTIES.filter(p=>!psrch||p.name.toLowerCase().includes(psrch.toLowerCase()));
@@ -1106,7 +1106,7 @@ export default function Dashboard(){
         </div>
 
         <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
-          {[["all","All",RAW.filter(o=>!poc||o.salesPOC===poc).length],...Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>[c,(CC[c]||CC.Other).l,n])].map(([val,lbl,n])=>
+          {[["all","All",filtered.length],...Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>[c,(CC[c]||CC.Other).l,n])].map(([val,lbl,n])=>
             <div key={val} onClick={()=>{setCat(val);setPg(1);}} style={{padding:"6px 14px",borderRadius:20,border:"none",background:cat===val?"#0f172a":"#fff",color:cat===val?"#fff":"#475569",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:600,boxShadow:cat===val?"none":"0 1px 2px rgba(0,0,0,0.05)",display:"flex",alignItems:"center",gap:6}}>
               {val!=="all"&&<Dot c={cat===val?"#fff":(CC[val]||CC.Other).c}/>}{lbl}<span style={{opacity:0.5,marginLeft:2}}>{n}</span>
             </div>
