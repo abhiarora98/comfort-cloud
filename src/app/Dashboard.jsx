@@ -1083,7 +1083,7 @@ export default function Dashboard(){
       {/* ═══ PENDING ═══ */}
       {tab==="pending"&&<div>
         <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:24}}>
-          <StatCard l="Total Orders" v={RAW.length} sub={fmtVal(ORDERS.reduce((s,o)=>s+o.totalValue,0))} accent="#3b82f6"/>
+          <StatCard l="Total Orders" v={filtered.length} sub={fmtVal(filtered.reduce((s,o)=>s+o.totalValue,0))} accent="#3b82f6"/>
           <StatCard l="Total Qty" v={pendQty.toLocaleString()} sub={cat==="all"?"all categories":(CC[cat]?.l||cat)} accent="#8b5cf6"/>
           {ALL_CATS.filter(c=>catCounts[c]>0).sort((a,b)=>{const av=allLines.filter(l=>l.category===a).reduce((s,l)=>s+(l.value||0),0);const bv=allLines.filter(l=>l.category===b).reduce((s,l)=>s+(l.value||0),0);return bv-av;}).map(c=>{
             const cl=allLines.filter(l=>l.category===c);const val=fmtVal(cl.reduce((s,l)=>s+(l.value||0),0));
