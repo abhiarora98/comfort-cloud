@@ -1028,6 +1028,7 @@ export default function Dashboard(){
 
   const filtered=useMemo(()=>{
     let r=ORDERS.filter(o=>{
+      if(o.lineCount>0&&o.dispatchedCount>=o.lineCount)return false;
       if(cat!=="all"&&!o.categories.includes(cat))return false;
       if(poc&&o.salesPOC!==poc)return false;
       if(payF!=="all"){const appr=!!o.approvalDate;if(payF==="approved"&&!appr)return false;if(payF==="not_approved"&&appr)return false;}
