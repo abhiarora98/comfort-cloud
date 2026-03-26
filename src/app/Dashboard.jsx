@@ -258,7 +258,7 @@ function CallSchedule({mob}){
 }
 
 /* ═══════════════ PARTY DETAIL ═══════════════ */
-function PartyDetail({party,pcf,setPcf,payments,setPayment,showHist,setShowHist,mob,onBack}){
+function PartyDetail({party,pcf,setPcf,showHist,setShowHist,mob,onBack}){
   if(!party)return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",color:"#94a3b8",gap:12,padding:60,textAlign:"center",flex:1}}>
     <div style={{fontSize:40,opacity:0.3}}>👈</div><div style={{fontFamily:MN,fontSize:13}}>Select a party</div>
   </div>;
@@ -266,7 +266,7 @@ function PartyDetail({party,pcf,setPcf,payments,setPayment,showHist,setShowHist,
   const shown=pcf==="all"?lines:lines.filter(l=>l.category===pcf);
   const byCat={};shown.forEach(l=>{if(!byCat[l.category])byCat[l.category]=[];byCat[l.category].push(l);});
   const tv=party.pendingValue||party.orders.reduce((s,o)=>s+o.totalValue,0);
-  const approved=!!(payments[party.name]);const ps=payStatus(approved);
+  const approved=party.orders.some(o=>!!o.approvalDate);const ps=payStatus(approved);
   const invs=INV_MAP[party.name]||[];const r=REORDER[party.name];const pdata=MONTHLY.data[party.name];
 
   return <div style={{display:"flex",flexDirection:"column",flex:1,overflow:"hidden"}}>
@@ -312,9 +312,7 @@ function PartyDetail({party,pcf,setPcf,payments,setPayment,showHist,setShowHist,
             <div style={{fontFamily:MN,fontSize:16,fontWeight:700,color:c}}>{v}</div>
           </div>)}
         </div>
-        <button onClick={()=>setPayment(party.name,approved?0:1)} style={{padding:"6px 16px",borderRadius:6,border:"1px solid rgba(255,255,255,0.2)",background:approved?"rgba(5,150,105,0.25)":"rgba(255,255,255,0.08)",color:approved?"#4ade80":"rgba(255,255,255,0.6)",fontSize:12,fontFamily:MN,cursor:"pointer",fontWeight:700}}>
-          {approved?"✓ Approved":"Mark as Approved"}
-        </button>
+        {ps&&<span style={{fontFamily:MN,fontSize:12,fontWeight:700,padding:"6px 16px",borderRadius:6,background:approved?"rgba(5,150,105,0.25)":"rgba(234,88,12,0.25)",color:approved?"#4ade80":"#fb923c"}}>{ps.label}</span>}
       </div>}
 
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -982,7 +980,7 @@ function parseCSV(csv){
     for(var i=0;i<line.length;i++){var c=line[i];if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cols.push(cur.trim());cur="";}else cur+=c;}
     cols.push(cur.trim());if(cols.length<10)return;
     var party=(cols[2]||"").replace(/^"|"$/g,"").trim();if(!party||party==="PARTY NAME")return;
-    try{var rawCat=cols[6]||"Other";var CAT_FIX={"Rolls":"Loop Rolls","S-Mat":"TEFNO"};var fixedCat=CAT_FIX[rawCat]||rawCat;orders.push({no:cols[0]||"",partyCode:cols[1]||"",party:party,salesPOC:cols[3]||"",piDate:cols[4]||"",qty:parseInt(cols[5])||0,category:fixedCat,model:cols[7]||"",backing:cols[8]||"",colour:cols[9]||"",width:cols[10]||"",length:cols[11]||"",actualRate:cols[12]||"",value:parseFloat((cols[13]||"0").replace(/[₹,]/g,""))||0});}catch(e){}
+    try{var rawCat=cols[6]||"Other";var CAT_FIX={"Rolls":"Loop Rolls","S-Mat":"TEFNO"};var fixedCat=CAT_FIX[rawCat]||rawCat;orders.push({no:cols[0]||"",partyCode:cols[1]||"",party:party,salesPOC:cols[3]||"",piDate:cols[4]||"",qty:parseInt(cols[5])||0,category:fixedCat,model:cols[7]||"",backing:cols[8]||"",colour:cols[9]||"",width:cols[10]||"",length:cols[11]||"",actualRate:cols[12]||"",value:parseFloat((cols[13]||"0").replace(/[₹,]/g,""))||0,approvalDate:(cols[14]||"").replace(/^"|"$/g,"").trim()});}catch(e){}
   });
   return orders;
 }
@@ -990,8 +988,8 @@ function groupOrders(rawOrders){
   var groups={};
   rawOrders.forEach(function(o){
     var key=o.party+"||"+o.piDate;
-    if(!groups[key])groups[key]={id:o.no,party:o.party,salesPOC:o.salesPOC,piDate:o.piDate,totalQty:0,totalValue:0,lineCount:0,categories:[],lines:[]};
-    var g=groups[key];g.totalQty+=o.qty;g.totalValue+=o.value;g.lineCount++;
+    if(!groups[key])groups[key]={id:o.no,party:o.party,salesPOC:o.salesPOC,piDate:o.piDate,totalQty:0,totalValue:0,lineCount:0,categories:[],lines:[],approvalDate:""};
+    var g=groups[key];g.totalQty+=o.qty;g.totalValue+=o.value;g.lineCount++;if(o.approvalDate&&!g.approvalDate)g.approvalDate=o.approvalDate;
     if(g.categories.indexOf(o.category)<0)g.categories.push(o.category);g.lines.push(o);
   });
   return Object.values(groups).sort(function(a,b){return pd(a.piDate)-pd(b.piDate);});
@@ -999,7 +997,7 @@ function groupOrders(rawOrders){
 
 export default function Dashboard(){
   const w=useW();const mob=w<768;
-  const[tab,setTab]=useState("pending");const[payments,setPayments]=useState({});
+  const[tab,setTab]=useState("pending");
   const[cat,setCat]=useState("all");const[srch,setSrch]=useState("");const[srt,setSrt]=useState("da");const[poc,setPoc]=useState("");
   const[pg,setPg]=useState(1);const[exp,setExp]=useState(null);
   const[selP,setSelP]=useState(null);const[pcf,setPcf]=useState("all");const[psrch,setPsrch]=useState("");
@@ -1007,7 +1005,6 @@ export default function Dashboard(){
   const[liveOrders,setLiveOrders]=useState(null);
   const[lastUpdated,setLastUpdated]=useState(null);
   const[fetchStatus,setFetchStatus]=useState("idle");
-  const setPay=(n,v)=>setPayments(p=>({...p,[n]:v}));
 
   useEffect(()=>{
     var doFetch=function(){
@@ -1033,7 +1030,7 @@ export default function Dashboard(){
     let r=ORDERS.filter(o=>{
       if(cat!=="all"&&!o.categories.includes(cat))return false;
       if(poc&&o.salesPOC!==poc)return false;
-      if(payF!=="all"){const appr=!!(payments[o.party]);if(payF==="approved"&&!appr)return false;if(payF==="not_approved"&&appr)return false;}
+      if(payF!=="all"){const appr=!!o.approvalDate;if(payF==="approved"&&!appr)return false;if(payF==="not_approved"&&appr)return false;}
       if(srch){const q=srch.toLowerCase();if(![o.party,...o.lines.map(l=>l.model),...o.lines.map(l=>l.colour)].some(v=>v.toLowerCase().includes(q)))return false;}
       return true;
     });
@@ -1042,7 +1039,7 @@ export default function Dashboard(){
     else if(srt==="pa")r.sort((a,b)=>a.party.localeCompare(b.party));
     else if(srt==="qd"){const cq=o=>cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0);r.sort((a,b)=>cq(b)-cq(a));}
     return r;
-  },[cat,poc,srch,srt,payF,payments,ORDERS]);
+  },[cat,poc,srch,srt,payF,ORDERS]);
 
   const page=filtered.slice((pg-1)*PG,pg*PG);const pages=Math.max(1,Math.ceil(filtered.length/PG));
   const catCounts=useMemo(()=>{const c={};ORDERS.filter(o=>!poc||o.salesPOC===poc).forEach(o=>o.categories.forEach(cc=>c[cc]=(c[cc]||0)+1));return c;},[poc,ORDERS]);
@@ -1156,7 +1153,7 @@ export default function Dashboard(){
               )}
             </tr></thead>
             <tbody>
-              {page.map(o=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!(payments[o.party]));
+              {page.map(o=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
                 return[
                   <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#fffbeb":"#fff",borderLeft:ep?"3px solid #d97706":"3px solid transparent",transition:"background 0.15s"}}>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
@@ -1210,7 +1207,7 @@ export default function Dashboard(){
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {pFilt.slice(0,50).map(p=>{const tv=p.pendingValue||0;
               return <div key={p.name} onClick={()=>{setSelP(p.name);setPcf("all");setShowHist(false);setMpv(true);}} style={{...S.card,padding:"14px 16px",cursor:"pointer"}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><input type="checkbox" checked={!!payments[p.name]} onChange={e=>{e.stopPropagation();setPay(p.name,payments[p.name]?0:1);}} onClick={e=>e.stopPropagation()} style={{accentColor:"#059669",width:16,height:16,cursor:"pointer"}}/><span style={{fontWeight:700,fontSize:14}}>{p.name}</span></div>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>{p.name}</div>
                 <div style={{display:"flex",gap:8,fontSize:10,fontFamily:MN,color:"#94a3b8",marginBottom:6}}><span>{p.poc}</span><span>·</span><span>{p.invoiceCount} inv</span></div>
                 <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:6}}>
                   <span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:"#059669"}}>{fmtVal(p.dispatchedTotal||0)}</span>
@@ -1220,7 +1217,7 @@ export default function Dashboard(){
               </div>;})}
           </div>
         </div>:mob&&mpv?
-          <PartyDetail party={sPObj} pcf={pcf} setPcf={setPcf} payments={payments} setPayment={setPay} showHist={showHist} setShowHist={setShowHist} mob onBack={()=>setMpv(false)}/>
+          <PartyDetail party={sPObj} pcf={pcf} setPcf={setPcf} showHist={showHist} setShowHist={setShowHist} mob onBack={()=>setMpv(false)}/>
         :<div style={{display:"grid",gridTemplateColumns:"300px 1fr",...S.card,overflow:"hidden",minHeight:650}}>
           <div style={{borderRight:"1px solid #e2e8f0",display:"flex",flexDirection:"column"}}>
             <div style={{background:"#0f172a",color:"#fff",padding:"14px 16px",flexShrink:0}}>
@@ -1228,9 +1225,9 @@ export default function Dashboard(){
               <input value={psrch} onChange={e=>setPsrch(e.target.value)} placeholder="Search..." style={{width:"100%",padding:"8px 12px",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:12,fontFamily:SN,outline:"none"}}/>
             </div>
             <div style={{overflowY:"auto",flex:1}}>
-              {pFilt.map(p=>{const tv=p.pendingValue||0;const ps=payStatus(!!(payments[p.name]));
+              {pFilt.map(p=>{const tv=p.pendingValue||0;const hasApproval=p.orders.some(o=>!!o.approvalDate);const ps=payStatus(hasApproval);
                 return <div key={p.name} onClick={()=>{setSelP(p.name);setPcf("all");setShowHist(false);}} style={{padding:"12px 16px",borderBottom:"1px solid #f1f5f9",cursor:"pointer",background:selP===p.name?"#fffbeb":"#fff",borderLeft:selP===p.name?"3px solid #d97706":"3px solid transparent",transition:"all 0.15s"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}><input type="checkbox" checked={!!payments[p.name]} onChange={e=>{e.stopPropagation();setPay(p.name,payments[p.name]?0:1);}} onClick={e=>e.stopPropagation()} style={{accentColor:"#059669",width:15,height:15,cursor:"pointer"}}/><span style={{fontSize:13,fontWeight:600}}>{p.name}</span></div>
+                  <div style={{fontSize:13,fontWeight:600,marginBottom:3}}>{p.name}</div>
                   <div style={{fontFamily:MN,fontSize:10,color:"#94a3b8",marginBottom:4}}>{p.poc} · {p.invoiceCount||0} inv</div>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
                     <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#059669"}}>{fmtVal(p.dispatchedTotal||0)}</span>
@@ -1243,7 +1240,7 @@ export default function Dashboard(){
                 </div>;})}
             </div>
           </div>
-          <PartyDetail party={sPObj} pcf={pcf} setPcf={setPcf} payments={payments} setPayment={setPay} showHist={showHist} setShowHist={setShowHist} mob={false}/>
+          <PartyDetail party={sPObj} pcf={pcf} setPcf={setPcf} showHist={showHist} setShowHist={setShowHist} mob={false}/>
         </div>}
       </div>}
 
