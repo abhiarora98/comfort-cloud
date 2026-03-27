@@ -1183,8 +1183,10 @@ export default function Dashboard(){
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}>{ps?<span style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:20,background:ps.bg,color:ps.color}}>{ps.label}</span>:<span style={{fontFamily:MN,fontSize:10,color:"#cbd5e1"}}>—</span>}</td>
                   </tr>,
                   ep&&<tr key={o.id+"x"}><td colSpan={9} style={{padding:0,borderBottom:"2px solid #059669"}}>
-                    <div style={{background:"#f8fafc",padding:"8px 16px 4px 28px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center"}}>
+                    <div style={{background:"#f8fafc",padding:"8px 16px 4px 28px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
                       <span style={{...S.section,fontSize:10}}>{o.lineCount} line items</span><span style={{fontFamily:MN,fontSize:11,color:"#64748b"}}>· {fmtVal(o.totalValue)}</span>
+                      <span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>PI</span><span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#475569"}}>{o.id}</span>
+                      <span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>PI Date</span><span style={{fontFamily:MN,fontSize:11,color:"#475569"}}>{o.piDate}</span>
                     </div>
                     <table style={{width:"100%",borderCollapse:"collapse"}}>
                       <thead><tr>{["#","Code","Model","Backing","Colour","Width","Length","Qty","Rate","Value"].map(h=><th key={h} style={{padding:"8px 14px",...S.section,fontSize:9,background:"#f1f5f9",borderBottom:"1px solid #e2e8f0",textAlign:["Qty","Rate","Value"].includes(h)?"right":"left"}}>{h}</th>)}</tr></thead>
