@@ -1164,13 +1164,13 @@ export default function Dashboard(){
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead><tr>
               <th style={{width:22,background:"#0f172a"}}/>
-              {[["Date",null],["Days",null],["Party",null],["Categories",null],["Lines",null],["Qty",null],["POC",null],["DISPATCH",null]].map(([h])=>
+              {[["Date ↕",null],["Days",null],["Party",null],["Categories",null],["Lines",null],["Qty",null],["POC",null],["DISPATCH",null]].map(([h])=>
                 <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:h==="Qty"?"right":"left"}}>{h}</th>
               )}
             </tr></thead>
             <tbody>
-              {readyToDispatch.length>0&&<tr><td colSpan={8} style={{padding:"8px 14px",background:"#ecfdf5",borderBottom:"2px solid #059669"}} colSpan={9}><span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#059669"}}>🟢 Ready to Dispatch</span><span style={{fontFamily:MN,fontSize:11,color:"#94a3b8",marginLeft:8}}>{readyToDispatch.length} order{readyToDispatch.length!==1?"s":""}</span></td></tr>}
-              {readyToDispatch.map(o=>{const ep=exp===o.id;const days=daysSince(o.approvalDate);const dc=days>7?"#dc2626":days>3?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
+              {readyToDispatch.length>0&&<tr><td colSpan={9} style={{padding:"8px 14px",background:"#ecfdf5",borderBottom:"2px solid #059669"}}><span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#059669"}}>🟢 Ready to Dispatch</span><span style={{fontFamily:MN,fontSize:11,color:"#94a3b8",marginLeft:8}}>{readyToDispatch.length} order{readyToDispatch.length!==1?"s":""}</span><span style={{fontFamily:MN,fontSize:10,color:"#059669",marginLeft:12,opacity:0.7}}>date = approval date</span></td></tr>}
+              {[...readyToDispatch].sort((a,b)=>pd(a.approvalDate)-pd(b.approvalDate)).map(o=>{const ep=exp===o.id;const days=daysSince(o.approvalDate);const dc=days>7?"#dc2626":days>3?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
                 return[
                   <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#f0fdf4":"#fff",borderLeft:ep?"3px solid #059669":"3px solid transparent",transition:"background 0.15s"}}>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
@@ -1205,7 +1205,7 @@ export default function Dashboard(){
                   </td></tr>
                 ];
               })}
-              {pendingApproval.length>0&&<tr><td colSpan={8} style={{padding:"8px 14px",background:"#fff7ed",borderTop:"2px solid #ea580c",borderBottom:"2px solid #ea580c"}} colSpan={9}><span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#ea580c"}}>🟠 Pending Approval</span><span style={{fontFamily:MN,fontSize:11,color:"#94a3b8",marginLeft:8}}>{pendingApproval.length} order{pendingApproval.length!==1?"s":""}</span></td></tr>}
+              {pendingApproval.length>0&&<tr><td colSpan={9} style={{padding:"8px 14px",background:"#fff7ed",borderTop:"2px solid #ea580c",borderBottom:"2px solid #ea580c"}}><span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#ea580c"}}>🟠 Pending Approval</span><span style={{fontFamily:MN,fontSize:11,color:"#94a3b8",marginLeft:8}}>{pendingApproval.length} order{pendingApproval.length!==1?"s":""}</span><span style={{fontFamily:MN,fontSize:10,color:"#ea580c",marginLeft:12,opacity:0.7}}>date = PI date</span></td></tr>}
               {pendingApproval.slice((pg-1)*PG,pg*PG).map(o=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
                 return[
                   <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#fffbeb":"#fff",borderLeft:ep?"3px solid #d97706":"3px solid transparent",transition:"background 0.15s"}}>
