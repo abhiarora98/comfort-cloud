@@ -1098,7 +1098,7 @@ export default function Dashboard(){
             const fmQty=fmLines.reduce((s,l)=>s+l.qty,0);
             const fmVal=fmtVal(fmLines.reduce((s,l)=>s+(l.value||0),0));
             const fmBw={};fmLines.forEach(l=>{const k=(l.width&&l.length)?l.width+" x "+l.length:l.width||l.length||"?";fmBw[k]=(fmBw[k]||0)+l.qty;});
-            const fmBd=Object.entries(fmBw).sort((a,b)=>b[1]-a[1]).slice(0,3);
+            const fmBdAll=Object.entries(fmBw).sort((a,b)=>b[1]-a[1]);const fmShown=fmBdAll.slice(0,4);const fmRest=fmBdAll.slice(4).reduce((s,[,q])=>s+q,0);const fmBd=fmRest>0?[...fmShown,["other",fmRest]]:fmShown;
             return(<>
               {rollQty>0&&<StatCard l="All Rolls" v={rollQty} sub={rollVal} unit="rolls" breakdown={rollBd} accent="#d97706"/>}
               {ROLL_CATS.filter(c=>allLines.some(l=>l.category===c)).map(c=>{
