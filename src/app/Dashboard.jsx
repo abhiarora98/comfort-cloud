@@ -1085,7 +1085,6 @@ export default function Dashboard(){
       {tab==="pending"&&<div>
         <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:24}}>
           <StatCard l="Total Orders" v={filtered.length} sub={fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))+" ready · "+fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))+" pending"} accent="#3b82f6"/>
-          <StatCard l="Total Qty" v={pendQty.toLocaleString()} sub={cat==="all"?"all categories":(CC[cat]?.l||cat)} accent="#8b5cf6"/>
           {(()=>{
             const ROLL_CATS=["Loop Rolls","TEFNO","Turf","Grass","Wire","Monograss"];
             const rollLines=allLines.filter(l=>ROLL_CATS.includes(l.category));
