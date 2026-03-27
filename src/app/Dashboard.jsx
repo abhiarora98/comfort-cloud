@@ -1045,8 +1045,8 @@ export default function Dashboard(){
 
   const readyToDispatch=filtered.filter(o=>o.approvalDate&&o.dispatchedCount<o.lineCount);const pendingApproval=filtered.filter(o=>!o.approvalDate);const page=filtered.slice((pg-1)*PG,pg*PG);const pages=Math.max(1,Math.ceil(pendingApproval.length/PG));
   const catCounts=useMemo(()=>{const c={};ORDERS.filter(o=>(!poc||o.salesPOC===poc)&&!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)).forEach(o=>o.categories.forEach(cc=>c[cc]=(c[cc]||0)+1));return c;},[poc,ORDERS]);
-  const allLines=useMemo(()=>ORDERS.flatMap(o=>o.lines),[ORDERS]);
-  const pendQty=useMemo(()=>ORDERS.reduce((s,o)=>{const ls=cat==="all"?o.lines:o.lines.filter(l=>l.category===cat);return s+ls.reduce((ss,l)=>ss+l.qty,0);},0),[cat,ORDERS]);
+  const allLines=useMemo(()=>ORDERS.filter(o=>!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)).flatMap(o=>o.lines),[ORDERS]);
+  const pendQty=useMemo(()=>ORDERS.filter(o=>!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)).reduce((s,o)=>{const ls=cat==="all"?o.lines:o.lines.filter(l=>l.category===cat);return s+ls.reduce((ss,l)=>ss+l.qty,0);},0),[cat,ORDERS]);
   const pFilt=PARTIES.filter(p=>!psrch||p.name.toLowerCase().includes(psrch.toLowerCase()));
   const sPObj=selP?PARTIES.find(p=>p.name===selP):null;
 
@@ -1107,7 +1107,7 @@ export default function Dashboard(){
                 const cl=allLines.filter(l=>l.category===c);const val=fmtVal(cl.reduce((s,l)=>s+(l.value||0),0));const qty=cl.reduce((s,l)=>s+l.qty,0);
                 let bd=null;
                 if(["Loop Rolls","TEFNO","Turf"].includes(c))bd=[["2ft",cl.filter(l=>l.width==="2ft").reduce((s,l)=>s+l.qty,0)],["4ft",cl.filter(l=>l.width==="4ft").reduce((s,l)=>s+l.qty,0)]];
-                else if(c==="Wire")bd=[["4ft",cl.filter(l=>l.width==="4ft").reduce((s,l)=>s+l.qty,0)],["other",cl.filter(l=>l.width!=="4ft").reduce((s,l)=>s+l.qty,0)]];
+                else if(c==="Wire")bd=[["2ft",cl.filter(l=>l.width==="2ft").reduce((s,l)=>s+l.qty,0)],["4ft",cl.filter(l=>l.width==="4ft").reduce((s,l)=>s+l.qty,0)]];
                 else if(c==="Grass"){const bm={};cl.forEach(l=>{const m=l.model||"Other";bm[m]=(bm[m]||0)+l.qty;});bd=Object.entries(bm).sort((a,b)=>b[1]-a[1]).slice(0,3);}
                 return <StatCard key={c} l={c} v={qty} sub={val} unit="rolls" breakdown={bd} accent={(CC[c]||CC.Other).c}/>;
               })}
