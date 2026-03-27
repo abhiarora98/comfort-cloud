@@ -1013,6 +1013,7 @@ export default function Dashboard(){
       fetch(SHEET_URL).then(function(r){if(!r.ok)throw new Error();return r.text();})
       .then(function(csv){
         var raw=parseCSV(csv);if(raw.length===0)throw new Error("Empty");
+        var catSet={};raw.forEach(function(r){catSet[r.category]=(catSet[r.category]||0)+1;});console.log("[PARSE] rows="+raw.length+" cats="+JSON.stringify(catSet));
         var grouped=groupOrders(raw);
         setLiveOrders(grouped);setLastUpdated(new Date());setFetchStatus("ok");
       }).catch(function(){setFetchStatus(liveOrders?"error_cached":"error");});
