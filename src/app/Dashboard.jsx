@@ -1103,6 +1103,14 @@ export default function Dashboard(){
             const fmBd=Object.entries(fmBw).sort((a,b)=>b[1]-a[1]).slice(0,3);
             return(<>
               {rollQty>0&&<StatCard l="All Rolls" v={rollQty} sub={rollVal} unit="rolls" breakdown={rollBd} accent="#d97706"/>}
+              {ROLL_CATS.filter(c=>allLines.some(l=>l.category===c)).map(c=>{
+                const cl=allLines.filter(l=>l.category===c);const val=fmtVal(cl.reduce((s,l)=>s+(l.value||0),0));const qty=cl.reduce((s,l)=>s+l.qty,0);
+                let bd=null;
+                if(["Loop Rolls","TEFNO","Turf"].includes(c))bd=[["2ft",cl.filter(l=>l.width==="2ft").reduce((s,l)=>s+l.qty,0)],["4ft",cl.filter(l=>l.width==="4ft").reduce((s,l)=>s+l.qty,0)]];
+                else if(c==="Wire")bd=[["4ft",cl.filter(l=>l.width==="4ft").reduce((s,l)=>s+l.qty,0)],["other",cl.filter(l=>l.width!=="4ft").reduce((s,l)=>s+l.qty,0)]];
+                else if(c==="Grass"){const bm={};cl.forEach(l=>{const m=l.model||"Other";bm[m]=(bm[m]||0)+l.qty;});bd=Object.entries(bm).sort((a,b)=>b[1]-a[1]).slice(0,3);}
+                return <StatCard key={c} l={c} v={qty} sub={val} unit="rolls" breakdown={bd} accent={(CC[c]||CC.Other).c}/>;
+              })}
               {carQty>0&&<StatCard l="Car Set" v={carQty} sub={carVal} unit="sets" breakdown={carBd} accent={(CC["Car Set"]||CC.Other).c}/>}
               {fmQty>0&&<StatCard l="Foot Mat" v={fmQty} sub={fmVal} unit="pcs" breakdown={fmBd} accent={(CC["Foot Mat"]||CC.Other).c}/>}
             </>);
