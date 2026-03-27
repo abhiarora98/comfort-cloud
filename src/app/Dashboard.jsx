@@ -999,7 +999,7 @@ export default function Dashboard(){
   const w=useW();const mob=w<768;
   const[tab,setTab]=useState("pending");
   const[cat,setCat]=useState("all");const[srch,setSrch]=useState("");const[srt,setSrt]=useState("da");const[poc,setPoc]=useState("");
-  const[pg,setPg]=useState(1);const[exp,setExp]=useState(null);const[expParties,setExpParties]=useState({});const[expRTD,setExpRTD]=useState(null);
+  const[pg,setPg]=useState(1);const[exp,setExp]=useState(null);const[expParties,setExpParties]=useState({});
   const[selP,setSelP]=useState(null);const[pcf,setPcf]=useState("all");const[psrch,setPsrch]=useState("");
   const[showHist,setShowHist]=useState(false);const[payF,setPayF]=useState("all");const[mpv,setMpv]=useState(false);
   const[liveOrders,setLiveOrders]=useState(null);
@@ -1186,9 +1186,9 @@ export default function Dashboard(){
                       <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontFamily:MN,fontSize:12,fontWeight:700,textAlign:"right",color:"#059669"}}>{fmtVal(totalVal)}</td>
                       <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5"}}/>
                     </tr>
-                    {pExp&&orders.map(o=>{const ep=expRTD===o.id;const days=daysSince(o.approvalDate);const dc2=days>7?"#dc2626":days>3?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
+                    {pExp&&orders.map(o=>{const ep=!!expParties["_pi_"+o.id];const days=daysSince(o.approvalDate);const dc2=days>7?"#dc2626":days>3?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
                       return [
-                        <tr key={o.id} onClick={e=>{e.stopPropagation();setExpRTD(ep?null:o.id)}} style={{cursor:"pointer",background:ep?"#ecfdf5":"#f0fdf4",borderLeft:"3px solid #86efac",transition:"background 0.15s"}}>
+                        <tr key={o.id} onClick={e=>{e.stopPropagation();setExpParties(prev=>({...prev,["_pi_"+o.id]:!prev["_pi_"+o.id]}))}} style={{cursor:"pointer",background:ep?"#ecfdf5":"#f0fdf4",borderLeft:"3px solid #86efac",transition:"background 0.15s"}}>
                           <td style={{padding:"8px 14px 8px 28px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
                           <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:11,whiteSpace:"nowrap"}}>{o.approvalDate}</td>
                           <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9"}}><span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:dc2,background:dc2+"12",padding:"2px 6px",borderRadius:10}}>{days}d</span></td>
@@ -1241,9 +1241,9 @@ export default function Dashboard(){
                       <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontFamily:MN,fontSize:12,fontWeight:700,textAlign:"right",color:"#059669"}}>{fmtVal(totalVal)}</td>
                       <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5"}}/>
                     </tr>
-                    {pExp&&orders.map(o=>{const ep=expRTD===o.id;const days=daysSince(o.approvalDate);const dc2=days>7?"#dc2626":days>3?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
+                    {pExp&&orders.map(o=>{const ep=!!expParties["_pi_"+o.id];const days=daysSince(o.approvalDate);const dc2=days>7?"#dc2626":days>3?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
                       return [
-                        <tr key={o.id} onClick={e=>{e.stopPropagation();setExpRTD(ep?null:o.id)}} style={{cursor:"pointer",background:ep?"#ecfdf5":"#f0fdf4",borderLeft:"3px solid #86efac",transition:"background 0.15s"}}>
+                        <tr key={o.id} onClick={e=>{e.stopPropagation();setExpParties(prev=>({...prev,["_pi_"+o.id]:!prev["_pi_"+o.id]}))}} style={{cursor:"pointer",background:ep?"#ecfdf5":"#f0fdf4",borderLeft:"3px solid #86efac",transition:"background 0.15s"}}>
                           <td style={{padding:"8px 14px 8px 28px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
                           <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:11,whiteSpace:"nowrap"}}>{o.approvalDate}</td>
                           <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9"}}><span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:dc2,background:dc2+"12",padding:"2px 6px",borderRadius:10}}>{days}d</span></td>
