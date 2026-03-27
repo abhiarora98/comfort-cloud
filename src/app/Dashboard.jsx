@@ -142,7 +142,6 @@ function StatCard({icon,l,v,sub,sub2,accent,breakdown,unit}){
       <div style={{fontFamily:MN,fontSize:26,fontWeight:700,color:"#0f172a",lineHeight:1}}>{v}</div>
       {sub&&<div style={{fontSize:12,color:"#64748b",fontWeight:500,marginTop:4}}>{sub}</div>}
       {sub2&&<div style={{fontSize:11,color:"#94a3b8",fontWeight:500,marginTop:3}}>{sub2}</div>}
-      {total!=null&&<div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:accent||AC2,marginTop:6}}>{total.toLocaleString()} {unit||"rolls"}</div>}
       {breakdown&&<div style={{marginTop:8,paddingTop:8,borderTop:"1px solid #f1f5f9",display:"flex",gap:12,flexWrap:"wrap"}}>
         {breakdown.map(([lbl,qty])=>qty>0&&<div key={lbl} style={{display:"flex",alignItems:"center",gap:4}}>
           <span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{lbl}</span>
