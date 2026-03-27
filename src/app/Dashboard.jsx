@@ -1197,7 +1197,7 @@ export default function Dashboard(){
                     </tr>
                     {pExp&&orders.map(o=>{const ep=expRTD===o.id;const days=daysSince(o.approvalDate);const dc2=days>7?"#dc2626":days>3?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
                       return <Fragment key={o.id}>
-                        <tr onClick={()=>setExpRTD(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#ecfdf5":"#f0fdf4",borderLeft:"3px solid #86efac",transition:"background 0.15s"}}>
+                        <tr onClick={e=>{e.stopPropagation();setExpRTD(ep?null:o.id)}} style={{cursor:"pointer",background:ep?"#ecfdf5":"#f0fdf4",borderLeft:"3px solid #86efac",transition:"background 0.15s"}}>
                           <td style={{padding:"8px 14px 8px 28px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
                           <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:11,whiteSpace:"nowrap"}}>{o.approvalDate}</td>
                           <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9"}}><span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:dc2,background:dc2+"12",padding:"2px 6px",borderRadius:10}}>{days}d</span></td>
