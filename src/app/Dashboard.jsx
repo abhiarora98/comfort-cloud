@@ -1043,6 +1043,7 @@ export default function Dashboard(){
   },[cat,poc,srch,srt,payF,ORDERS]);
 
   const readyToDispatch=filtered.filter(o=>o.approvalDate&&o.dispatchedCount<o.lineCount);const pendingApproval=filtered.filter(o=>!o.approvalDate);const page=filtered.slice((pg-1)*PG,pg*PG);const pages=Math.max(1,Math.ceil(pendingApproval.length/PG));
+  const rtdSorted=[...readyToDispatch].sort((a,b)=>pd(a.approvalDate)-pd(b.approvalDate));const rtdOverdue=rtdSorted.filter(o=>daysSince(o.approvalDate)>7);const rtdOnTime=rtdSorted.filter(o=>daysSince(o.approvalDate)<=7);const rtdGrpBy=(ords)=>{const g={};ords.forEach(o=>{if(!g[o.party])g[o.party]=[];g[o.party].push(o);});return Object.entries(g).sort((a,b)=>pd(a[1][0].approvalDate)-pd(b[1][0].approvalDate));};const rtdOverdueGroups=rtdGrpBy(rtdOverdue);const rtdOnTimeGroups=rtdGrpBy(rtdOnTime);
   const catCounts=useMemo(()=>{const c={};ORDERS.filter(o=>(!poc||o.salesPOC===poc)&&!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)).forEach(o=>o.categories.forEach(cc=>c[cc]=(c[cc]||0)+1));return c;},[poc,ORDERS]);
   const allLines=useMemo(()=>ORDERS.flatMap(o=>o.lines),[ORDERS]);
   const pendQty=useMemo(()=>ORDERS.filter(o=>!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)).reduce((s,o)=>{const ls=cat==="all"?o.lines:o.lines.filter(l=>l.category===cat);return s+ls.reduce((ss,l)=>ss+l.qty,0);},0),[cat,ORDERS]);
@@ -1168,20 +1169,10 @@ export default function Dashboard(){
               )}
             </tr></thead>
             <tbody>
-              {readyToDispatch.length>0&&(()=>{
-                const rtdSorted=[...readyToDispatch].sort((a,b)=>pd(a.approvalDate)-pd(b.approvalDate));
-                const rtdOverdue=rtdSorted.filter(o=>daysSince(o.approvalDate)>7);
-                const rtdOnTime=rtdSorted.filter(o=>daysSince(o.approvalDate)<=7);
-                function groupByParty(orders){const g={};orders.forEach(o=>{if(!g[o.party])g[o.party]=[];g[o.party].push(o);});return Object.entries(g).sort((a,b)=>pd(a[1][0].approvalDate)-pd(b[1][0].approvalDate));}
-                function renderPartyGroup(partyName,orders){
-                  const pExp=expParties[partyName];
-                  const allCats=[...new Set(orders.flatMap(o=>o.categories))];
-                  const totalVal=orders.reduce((s,o)=>s+o.totalValue,0);
-                  const totalQty=orders.reduce((s,o)=>s+(cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((ss,l)=>ss+l.qty,0)),0);
-                  const totalLines=orders.reduce((s,o)=>s+o.lineCount,0);
-                  const oldestDays=daysSince(orders[0].approvalDate);
-                  const dc=oldestDays>7?"#dc2626":oldestDays>3?"#ea580c":"#059669";
-                  const poc1=orders[0].salesPOC;
+              {readyToDispatch.length>0&&<>
+                <tr><td colSpan={10} style={{padding:"8px 14px",background:"#ecfdf5",borderBottom:"2px solid #059669"}}><span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#059669"}}>🟢 Ready to Dispatch</span><span style={{fontFamily:MN,fontSize:11,color:"#94a3b8",marginLeft:8}}>{readyToDispatch.length} order{readyToDispatch.length!==1?"s":""}</span><span style={{fontFamily:MN,fontSize:10,color:"#059669",marginLeft:12,opacity:0.7}}>date = approval date</span></td></tr>
+                {rtdOverdue.length>0&&<tr><td colSpan={10} style={{padding:"6px 14px 6px 20px",background:"#fef2f2",borderBottom:"1px solid #fca5a5"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:700,color:"#dc2626"}}>⚠ Overdue · {rtdOverdue.length} order{rtdOverdue.length!==1?"s":""} · {fmtVal(rtdOverdue.reduce((s,o)=>s+o.totalValue,0))}</span></td></tr>}
+                {rtdOverdueGroups.map(([partyName,orders])=>{const pExp=expParties[partyName];const allCats=[...new Set(orders.flatMap(o=>o.categories))];const totalVal=orders.reduce((s,o)=>s+o.totalValue,0);const totalQty=orders.reduce((s,o)=>s+(cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((ss,l)=>ss+l.qty,0)),0);const totalLines=orders.reduce((s,o)=>s+o.lineCount,0);const oldestDays=daysSince(orders[0].approvalDate);const dc=oldestDays>7?"#dc2626":oldestDays>3?"#ea580c":"#059669";const poc1=orders[0].salesPOC;
                   return <Fragment key={"pg_"+partyName}>
                     <tr onClick={()=>setExpParties(prev=>({...prev,[partyName]:!prev[partyName]}))} style={{cursor:"pointer",background:pExp?"#f0fdf4":"#f8fffe",borderLeft:"3px solid #059669"}}>
                       <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontFamily:MN,fontSize:10,color:"#059669"}}>{pExp?"▾":"▸"}</td>
@@ -1209,7 +1200,7 @@ export default function Dashboard(){
                           <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:12,fontWeight:600,textAlign:"right"}}>{fmtVal(o.totalValue)}</td>
                           <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9"}}>{ps?<span style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:20,background:ps.bg,color:ps.color}}>{ps.label}</span>:<span style={{fontFamily:MN,fontSize:10,color:"#cbd5e1"}}>—</span>}</td>
                         </tr>
-                        {ep&&<tr><td colSpan={10} style={{padding:0,borderBottom:"1px solid #86efac"}}>
+                        {ep&&<tr key={o.id+"d"}><td colSpan={10} style={{padding:0,borderBottom:"1px solid #86efac"}}>
                           <div style={{background:"#f8fafc",padding:"8px 16px 4px 36px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
                             <span style={{...S.section,fontSize:10}}>{o.lineCount} line items</span><span style={{fontFamily:MN,fontSize:11,color:"#64748b"}}>· {fmtVal(o.totalValue)}</span>
                             <span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>PI</span><span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#475569"}}>{o.id}</span>
@@ -1217,7 +1208,7 @@ export default function Dashboard(){
                           </div>
                           <table style={{width:"100%",borderCollapse:"collapse"}}>
                             <thead><tr>{["#","Code","Model","Backing","Colour","Width","Length","Qty","Rate","Value"].map(h=><th key={h} style={{padding:"8px 14px",...S.section,fontSize:9,background:"#f1f5f9",borderBottom:"1px solid #e2e8f0",textAlign:["Qty","Rate","Value"].includes(h)?"right":"left"}}>{h}</th>)}</tr></thead>
-                            <tbody>{o.lines.map((l,i)=><tr key={l.no} style={{background:i%2?"#fafafa":"#fff"}}>
+                            <tbody>{o.lines.map((l,i)=><tr key={l.no||i} style={{background:i%2?"#fafafa":"#fff"}}>
                               <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,color:"#94a3b8"}}>{i+1}</td>
                               <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,fontWeight:600,color:"#64748b"}}>{l.partyCode||"—"}</td>
                               <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,fontWeight:600}}>{l.model}</td>
@@ -1234,15 +1225,63 @@ export default function Dashboard(){
                       </Fragment>;
                     })}
                   </Fragment>;
-                }
-                return(<>
-                  <tr><td colSpan={10} style={{padding:"8px 14px",background:"#ecfdf5",borderBottom:"2px solid #059669"}}><span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#059669"}}>🟢 Ready to Dispatch</span><span style={{fontFamily:MN,fontSize:11,color:"#94a3b8",marginLeft:8}}>{readyToDispatch.length} order{readyToDispatch.length!==1?"s":""}</span><span style={{fontFamily:MN,fontSize:10,color:"#059669",marginLeft:12,opacity:0.7}}>date = approval date</span></td></tr>
-                  {rtdOverdue.length>0&&<tr><td colSpan={10} style={{padding:"6px 14px 6px 20px",background:"#fef2f2",borderBottom:"1px solid #fca5a5"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:700,color:"#dc2626"}}>⚠ Overdue · {rtdOverdue.length} order{rtdOverdue.length!==1?"s":""} · {fmtVal(rtdOverdue.reduce((s,o)=>s+o.totalValue,0))}</span></td></tr>}
-                  {groupByParty(rtdOverdue).map(([p,os])=>renderPartyGroup(p,os))}
-                  {rtdOnTime.length>0&&rtdOverdue.length>0&&<tr><td colSpan={10} style={{padding:"6px 14px 6px 20px",background:"#f0fdf4",borderBottom:"1px solid #86efac"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:700,color:"#059669"}}>✓ On Time · {rtdOnTime.length} order{rtdOnTime.length!==1?"s":""}</span></td></tr>}
-                  {groupByParty(rtdOnTime).map(([p,os])=>renderPartyGroup(p,os))}
-                </>);
-              })()}
+                })}
+                {rtdOnTime.length>0&&rtdOverdue.length>0&&<tr><td colSpan={10} style={{padding:"6px 14px 6px 20px",background:"#f0fdf4",borderBottom:"1px solid #86efac"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:700,color:"#059669"}}>✓ On Time · {rtdOnTime.length} order{rtdOnTime.length!==1?"s":""}</span></td></tr>}
+                {rtdOnTimeGroups.map(([partyName,orders])=>{const pExp=expParties[partyName];const allCats=[...new Set(orders.flatMap(o=>o.categories))];const totalVal=orders.reduce((s,o)=>s+o.totalValue,0);const totalQty=orders.reduce((s,o)=>s+(cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((ss,l)=>ss+l.qty,0)),0);const totalLines=orders.reduce((s,o)=>s+o.lineCount,0);const oldestDays=daysSince(orders[0].approvalDate);const dc=oldestDays>7?"#dc2626":oldestDays>3?"#ea580c":"#059669";const poc1=orders[0].salesPOC;
+                  return <Fragment key={"pg_"+partyName}>
+                    <tr onClick={()=>setExpParties(prev=>({...prev,[partyName]:!prev[partyName]}))} style={{cursor:"pointer",background:pExp?"#f0fdf4":"#f8fffe",borderLeft:"3px solid #059669"}}>
+                      <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontFamily:MN,fontSize:10,color:"#059669"}}>{pExp?"▾":"▸"}</td>
+                      <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontFamily:MN,fontSize:11,whiteSpace:"nowrap",color:"#64748b"}}>{orders[0].approvalDate}</td>
+                      <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5"}}><span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:dc,background:dc+"12",padding:"2px 8px",borderRadius:12}}>{oldestDays}d</span></td>
+                      <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontWeight:700,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{partyName}{orders.length>1&&<span style={{fontFamily:MN,fontSize:10,color:"#059669",marginLeft:8,fontWeight:600}}>{orders.length} PIs</span>}</td>
+                      <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5"}}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{allCats.map(c=><Badge key={c} cat={c}/>)}</div></td>
+                      <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{totalLines}</td>
+                      <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontFamily:MN,fontSize:13,fontWeight:700,textAlign:"right"}}>{totalQty}</td>
+                      <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:POC_COLORS[poc1]||"#64748b",background:(POC_COLORS[poc1]||"#64748b")+"15",padding:"2px 8px",borderRadius:12}}>{poc1}</span></td>
+                      <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontFamily:MN,fontSize:12,fontWeight:700,textAlign:"right",color:"#059669"}}>{fmtVal(totalVal)}</td>
+                      <td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5"}}/>
+                    </tr>
+                    {pExp&&orders.map(o=>{const ep=expRTD===o.id;const days=daysSince(o.approvalDate);const dc2=days>7?"#dc2626":days>3?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
+                      return <Fragment key={o.id}>
+                        <tr onClick={e=>{e.stopPropagation();setExpRTD(ep?null:o.id)}} style={{cursor:"pointer",background:ep?"#ecfdf5":"#f0fdf4",borderLeft:"3px solid #86efac",transition:"background 0.15s"}}>
+                          <td style={{padding:"8px 14px 8px 28px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
+                          <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:11,whiteSpace:"nowrap"}}>{o.approvalDate}</td>
+                          <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9"}}><span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:dc2,background:dc2+"12",padding:"2px 6px",borderRadius:10}}>{days}d</span></td>
+                          <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#64748b"}}>PI {o.id}</td>
+                          <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9"}}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div></td>
+                          <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{o.lineCount}</td>
+                          <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:12,fontWeight:700,textAlign:"right"}}>{cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0)}</td>
+                          <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:POC_COLORS[o.salesPOC]||"#64748b",background:(POC_COLORS[o.salesPOC]||"#64748b")+"15",padding:"2px 8px",borderRadius:12}}>{o.salesPOC}</span></td>
+                          <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:12,fontWeight:600,textAlign:"right"}}>{fmtVal(o.totalValue)}</td>
+                          <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9"}}>{ps?<span style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:20,background:ps.bg,color:ps.color}}>{ps.label}</span>:<span style={{fontFamily:MN,fontSize:10,color:"#cbd5e1"}}>—</span>}</td>
+                        </tr>
+                        {ep&&<tr key={o.id+"d"}><td colSpan={10} style={{padding:0,borderBottom:"1px solid #86efac"}}>
+                          <div style={{background:"#f8fafc",padding:"8px 16px 4px 36px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+                            <span style={{...S.section,fontSize:10}}>{o.lineCount} line items</span><span style={{fontFamily:MN,fontSize:11,color:"#64748b"}}>· {fmtVal(o.totalValue)}</span>
+                            <span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>PI</span><span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#475569"}}>{o.id}</span>
+                            <span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>PI Date</span><span style={{fontFamily:MN,fontSize:11,color:"#475569"}}>{o.piDate}</span>
+                          </div>
+                          <table style={{width:"100%",borderCollapse:"collapse"}}>
+                            <thead><tr>{["#","Code","Model","Backing","Colour","Width","Length","Qty","Rate","Value"].map(h=><th key={h} style={{padding:"8px 14px",...S.section,fontSize:9,background:"#f1f5f9",borderBottom:"1px solid #e2e8f0",textAlign:["Qty","Rate","Value"].includes(h)?"right":"left"}}>{h}</th>)}</tr></thead>
+                            <tbody>{o.lines.map((l,i)=><tr key={l.no||i} style={{background:i%2?"#fafafa":"#fff"}}>
+                              <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,color:"#94a3b8"}}>{i+1}</td>
+                              <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,fontWeight:600,color:"#64748b"}}>{l.partyCode||"—"}</td>
+                              <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,fontWeight:600}}>{l.model}</td>
+                              <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,color:"#64748b"}}>{l.backing}</td>
+                              <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12}}>{l.colour}</td>
+                              <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN}}>{l.width}</td>
+                              <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN,color:"#94a3b8"}}>{l.length}</td>
+                              <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:14,fontFamily:MN,fontWeight:700,textAlign:"right"}}>{l.qty}</td>
+                              <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN,textAlign:"right",color:"#64748b"}}>{l.actualRate||"—"}</td>
+                              <td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,fontFamily:MN,fontWeight:600,textAlign:"right"}}>{fmtVal(l.value||0)}</td>
+                            </tr>)}</tbody>
+                          </table>
+                        </td></tr>}
+                      </Fragment>;
+                    })}
+                  </Fragment>;
+                })}
+              </>}
               {pendingApproval.length>0&&<tr><td colSpan={10} style={{padding:"8px 14px",background:"#fff7ed",borderTop:"2px solid #ea580c",borderBottom:"2px solid #ea580c"}}><span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#ea580c"}}>🟠 Pending Approval</span><span style={{fontFamily:MN,fontSize:11,color:"#94a3b8",marginLeft:8}}>{pendingApproval.length} order{pendingApproval.length!==1?"s":""}</span><span style={{fontFamily:MN,fontSize:10,color:"#ea580c",marginLeft:12,opacity:0.7}}>date = PI date</span></td></tr>}
               {pendingApproval.slice((pg-1)*PG,pg*PG).map(o=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
                 return[
