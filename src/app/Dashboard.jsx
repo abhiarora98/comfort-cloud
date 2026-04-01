@@ -1180,7 +1180,17 @@ export default function Dashboard(){
         <div style={{display:"flex",flexDirection:"column",gap:16}}>
           {!pendingApproval.length&&!readyToDispatch.length&&<div style={{...S.card,padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</div>}
           {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden"}}>
-            <div style={{padding:"12px 18px",borderBottom:"2px solid #059669",display:"flex",alignItems:"center",gap:10}}><span style={{width:8,height:8,borderRadius:"50%",background:"#059669",display:"inline-block"}}/><span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:"#059669"}}>Ready to Dispatch</span><span style={{fontFamily:MN,fontSize:11,color:"#94a3b8",marginLeft:2}}>{readyToDispatch.length} order{readyToDispatch.length!==1?"s":""}</span><span style={{fontFamily:MN,fontSize:10,color:"#94a3b8",marginLeft:"auto",opacity:0.6}}>date = approval date</span></div>
+            <div style={{padding:"16px 20px",background:"linear-gradient(90deg,#ecfdf5,#f8fafc)",borderBottom:"1px solid #d1fae5",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:10,height:10,borderRadius:"50%",background:"#059669",boxShadow:"0 0 0 3px #86efac55"}}/>
+              <div>
+                <div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#065f46",letterSpacing:"-0.01em"}}>Ready to Dispatch</div>
+                <div style={{fontFamily:MN,fontSize:10,color:"#6b7280",marginTop:1}}>Approval date · oldest first</div>
+              </div>
+              <div style={{marginLeft:"auto",display:"flex",gap:16,alignItems:"center"}}>
+                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#059669"}}>{readyToDispatch.length}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
+                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#065f46"}}>{fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>total value</div></div>
+              </div>
+            </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
                 <th style={{width:22,background:"#0f172a"}}/>
@@ -1192,7 +1202,17 @@ export default function Dashboard(){
             </table>
           </div>}
           {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden"}}>
-            <div style={{padding:"12px 18px",borderBottom:"2px solid #ea580c",display:"flex",alignItems:"center",gap:10}}><span style={{width:8,height:8,borderRadius:"50%",background:"#ea580c",display:"inline-block"}}/><span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:"#ea580c"}}>Pending Approval</span><span style={{fontFamily:MN,fontSize:11,color:"#94a3b8",marginLeft:2}}>{pendingApproval.length} order{pendingApproval.length!==1?"s":""}</span><span style={{fontFamily:MN,fontSize:10,color:"#94a3b8",marginLeft:"auto",opacity:0.6}}>date = PI date</span></div>
+            <div style={{padding:"16px 20px",background:"linear-gradient(90deg,#fff7ed,#f8fafc)",borderBottom:"1px solid #fed7aa",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:10,height:10,borderRadius:"50%",background:"#ea580c",boxShadow:"0 0 0 3px #fdba7455"}}/>
+              <div>
+                <div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#9a3412",letterSpacing:"-0.01em"}}>Pending Approval</div>
+                <div style={{fontFamily:MN,fontSize:10,color:"#6b7280",marginTop:1}}>PI date · awaiting sign-off</div>
+              </div>
+              <div style={{marginLeft:"auto",display:"flex",gap:16,alignItems:"center"}}>
+                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#ea580c"}}>{pendingApproval.length}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
+                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#9a3412"}}>{fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>total value</div></div>
+              </div>
+            </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
                 <th style={{width:22,background:"#0f172a"}}/>
