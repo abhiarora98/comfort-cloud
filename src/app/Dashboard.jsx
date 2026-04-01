@@ -134,19 +134,31 @@ function Badge({cat}){const x=CC[cat]||CC["Other"];return <span style={{...S.pil
 function Dot({c,s=6}){return <span style={{width:s,height:s,borderRadius:"50%",background:c,display:"inline-block",flexShrink:0}}/>;}
 
 function StatCard({icon,l,v,sub,sub2,accent,breakdown,unit}){
+  const ac=accent||AC2;
   const total=breakdown?breakdown.reduce((s,[,q])=>s+q,0):null;
   return(
-    <div style={{...S.card,padding:"16px 18px",position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:-20,right:-20,width:80,height:80,borderRadius:"50%",background:accent||AC2,opacity:0.04}}/>
-      <div style={{...S.section,marginBottom:8,fontSize:10}}>{l}</div>
-      <div style={{fontFamily:MN,fontSize:26,fontWeight:700,color:"#0f172a",lineHeight:1}}>{v}</div>
-      {sub&&<div style={{fontSize:12,color:"#64748b",fontWeight:500,marginTop:4}}>{sub}</div>}
-      {sub2&&<div style={{fontSize:11,color:"#94a3b8",fontWeight:500,marginTop:3}}>{sub2}</div>}
-      {breakdown&&<div style={{marginTop:8,paddingTop:8,borderTop:"1px solid #f1f5f9",display:"flex",gap:12,flexWrap:"wrap"}}>
-        {breakdown.map(([lbl,qty])=>qty>0&&<div key={lbl} style={{display:"flex",alignItems:"center",gap:4}}>
-          <span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{lbl}</span>
-          <span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:"#475569"}}>{qty}</span>
-        </div>)}
+    <div style={{...S.card,padding:"16px 18px",position:"relative",overflow:"hidden",borderLeft:`3px solid ${ac}`}}>
+      <div style={{position:"absolute",top:0,right:0,width:60,height:60,borderRadius:"50%",background:ac,opacity:0.06,transform:"translate(20px,-20px)"}}/>
+      <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8",marginBottom:8}}>{l}</div>
+      <div style={{display:"flex",alignItems:"baseline",gap:5,marginBottom:2}}>
+        <div style={{fontFamily:MN,fontSize:28,fontWeight:700,color:"#0f172a",lineHeight:1}}>{v}</div>
+        {unit&&<div style={{fontFamily:MN,fontSize:11,color:ac,fontWeight:600}}>{unit}</div>}
+      </div>
+      {sub&&<div style={{fontSize:11,color:"#64748b",fontWeight:500,marginTop:3,fontFamily:MN}}>{sub}</div>}
+      {sub2&&<div style={{fontSize:10,color:"#94a3b8",fontWeight:500,marginTop:2,fontFamily:MN}}>{sub2}</div>}
+      {breakdown&&<div style={{marginTop:10,paddingTop:8,borderTop:`1px solid ${ac}22`}}>
+        {breakdown.filter(([,q])=>q>0).map(([lbl,qty])=>{
+          const pct=total>0?Math.round(100*qty/total):0;
+          return <div key={lbl} style={{marginBottom:6}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+              <span style={{fontFamily:MN,fontSize:10,color:"#64748b"}}>{lbl}</span>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#475569"}}>{qty}</span>
+            </div>
+            <div style={{height:3,background:"#f1f5f9",borderRadius:2}}>
+              <div style={{height:3,width:`${pct}%`,background:ac,borderRadius:2}}/>
+            </div>
+          </div>;
+        })}
       </div>}
     </div>
   );
