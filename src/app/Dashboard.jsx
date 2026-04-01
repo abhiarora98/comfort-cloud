@@ -135,30 +135,23 @@ function Dot({c,s=6}){return <span style={{width:s,height:s,borderRadius:"50%",b
 
 function StatCard({icon,l,v,sub,sub2,accent,breakdown,unit}){
   const ac=accent||AC2;
-  const total=breakdown?breakdown.reduce((s,[,q])=>s+q,0):null;
   return(
-    <div style={{...S.card,padding:"16px 18px",position:"relative",overflow:"hidden",borderLeft:`3px solid ${ac}`}}>
-      <div style={{position:"absolute",top:0,right:0,width:60,height:60,borderRadius:"50%",background:ac,opacity:0.06,transform:"translate(20px,-20px)"}}/>
-      <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8",marginBottom:8}}>{l}</div>
-      <div style={{display:"flex",alignItems:"baseline",gap:5,marginBottom:2}}>
-        <div style={{fontFamily:MN,fontSize:28,fontWeight:700,color:"#0f172a",lineHeight:1}}>{v}</div>
-        {unit&&<div style={{fontFamily:MN,fontSize:11,color:ac,fontWeight:600}}>{unit}</div>}
+    <div style={{padding:"14px 16px",borderRadius:16,background:"rgba(255,255,255,0.6)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.85)",boxShadow:"0 2px 12px rgba(0,0,0,0.06),inset 0 1px 0 rgba(255,255,255,0.95)",position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",top:-18,right:-18,width:64,height:64,borderRadius:"50%",background:ac,opacity:0.15,filter:"blur(16px)",pointerEvents:"none"}}/>
+      <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94a3b8",marginBottom:6}}>{l}</div>
+      <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+        <div style={{fontFamily:MN,fontSize:26,fontWeight:700,color:"#0f172a",lineHeight:1}}>{v}</div>
+        {unit&&<div style={{fontFamily:MN,fontSize:10,color:ac,fontWeight:700}}>{unit}</div>}
       </div>
       {sub&&<div style={{fontSize:11,color:"#64748b",fontWeight:500,marginTop:3,fontFamily:MN}}>{sub}</div>}
-      {sub2&&<div style={{fontSize:10,color:"#94a3b8",fontWeight:500,marginTop:2,fontFamily:MN}}>{sub2}</div>}
-      {breakdown&&<div style={{marginTop:10,paddingTop:8,borderTop:`1px solid ${ac}22`}}>
-        {breakdown.filter(([,q])=>q>0).map(([lbl,qty])=>{
-          const pct=total>0?Math.round(100*qty/total):0;
-          return <div key={lbl} style={{marginBottom:6}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-              <span style={{fontFamily:MN,fontSize:10,color:"#64748b"}}>{lbl}</span>
-              <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#475569"}}>{qty}</span>
-            </div>
-            <div style={{height:3,background:"#f1f5f9",borderRadius:2}}>
-              <div style={{height:3,width:`${pct}%`,background:ac,borderRadius:2}}/>
-            </div>
-          </div>;
-        })}
+      {sub2&&<div style={{fontSize:10,color:"#94a3b8",marginTop:2,fontFamily:MN}}>{sub2}</div>}
+      {breakdown&&<div style={{marginTop:8,paddingTop:6,borderTop:"1px solid rgba(0,0,0,0.05)",display:"flex",gap:4,flexWrap:"wrap"}}>
+        {breakdown.filter(([,q])=>q>0).map(([lbl,qty])=>(
+          <div key={lbl} style={{display:"flex",alignItems:"center",gap:3,background:`${ac}14`,border:`1px solid ${ac}30`,padding:"2px 7px",borderRadius:8}}>
+            <span style={{fontFamily:MN,fontSize:9,color:"#94a3b8"}}>{lbl}</span>
+            <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#475569"}}>{qty}</span>
+          </div>
+        ))}
       </div>}
     </div>
   );
@@ -1107,7 +1100,7 @@ export default function Dashboard(){
 
       {/* ═══ PENDING ═══ */}
       {tab==="pending"&&<div>
-        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:24}}>
+        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:24,padding:"16px",borderRadius:20,background:"linear-gradient(135deg,#e8eef7 0%,#eef2f8 50%,#e8f0ea 100%)"}}>
           <StatCard l="Total Orders" v={filtered.length} sub={fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))+" ready · "+fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))+" pending"} accent="#3b82f6"/>
           {(()=>{
             const ROLL_CATS=["Loop Rolls","TEFNO","Turf","Grass","Wire","Monograss"];
