@@ -135,7 +135,7 @@ function Dot({c,s=6}){return <span style={{width:s,height:s,borderRadius:"50%",b
 
 function StatCard({icon,l,v,sub,sub2,accent,breakdown,unit,span2}){
   const ac=accent||AC2;
-  const glassCard={padding:"14px 16px",borderRadius:16,background:"rgba(255,255,255,0.12)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"0 2px 16px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.3)",position:"relative",overflow:"hidden"};
+  const glassCard={padding:"14px 16px",borderRadius:16,background:"rgba(255,255,255,0.08)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:"1px solid rgba(255,255,255,0.15)",boxShadow:"0 1px 8px rgba(0,0,0,0.15)",position:"relative",overflow:"hidden"};
   return(
     <div style={{...glassCard,...(span2?{gridColumn:"span 2"}:{})}}>
       <div style={{position:"absolute",top:-18,right:-18,width:64,height:64,borderRadius:"50%",background:ac,opacity:0.2,filter:"blur(16px)",pointerEvents:"none"}}/>
