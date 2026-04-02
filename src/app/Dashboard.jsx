@@ -1083,7 +1083,7 @@ export default function Dashboard(){
     {/* Header */}
     <div style={{background:"linear-gradient(135deg,#0c1222 0%,#1a2744 60%,#2a1f0e 100%)",color:"#fff",padding:mob?"0 16px":"0 28px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:200,borderBottom:"2px solid #d97706"}}>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
-        <div style={{width:34,height:34,borderRadius:6,background:"linear-gradient(135deg,#d97706,#f59e0b)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:MN,fontSize:11,fontWeight:700,color:"#0c1222",letterSpacing:"-0.03em"}}>CC</div>
+        <div style={{background:"#fff",borderRadius:6,padding:"3px 8px",display:"flex",alignItems:"center",justifyContent:"center"}}><img src="/logo.png" alt="Comfort Mats" style={{height:28,width:"auto"}}/></div>
         <div><div style={{fontFamily:MN,fontSize:16,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase"}}>Comfort Cloud</div>{!mob&&<div style={{fontSize:10,opacity:0.4,fontFamily:MN,marginTop:-1,letterSpacing:"0.06em"}}>Dashboard</div>}</div>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
