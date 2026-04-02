@@ -1100,7 +1100,7 @@ export default function Dashboard(){
 
       {/* ═══ PENDING ═══ */}
       {tab==="pending"&&<div>
-        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:24,padding:"16px",borderRadius:20,background:"linear-gradient(135deg,#1F305F 0%,#2d3f7a 100%)"}}>
+        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:24,padding:"16px",borderRadius:20,background:"linear-gradient(135deg,#16254a 0%,#243268 100%)"}}>
           <StatCard l="Total Orders" v={filtered.length} sub={fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))+" ready · "+fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))+" pending"} accent="#3b82f6"/>
           {(()=>{
             const ROLL_CATS=["Loop Rolls","TEFNO","Turf","Grass","Wire","Monograss"];
