@@ -130,7 +130,7 @@ const S={
   section:{fontFamily:MN,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8"},
 };
 
-function Badge({cat}){const x=CC[cat]||CC["Other"];return <span style={{...S.pill,background:x.b,color:x.c}}><span style={{width:5,height:5,borderRadius:"50%",background:x.c}}/>{x.l}</span>;}
+function Badge({cat}){const x=CC[cat]||CC["Other"];return <span style={{...S.pill,background:x.b,color:x.c,border:"1px solid "+x.c+"40",boxShadow:"0 1px 3px "+x.c+"22"}}><span style={{width:6,height:6,borderRadius:"50%",background:x.c,flexShrink:0}}/>{x.l}</span>;}
 function Dot({c,s=6}){return <span style={{width:s,height:s,borderRadius:"50%",background:c,display:"inline-block",flexShrink:0}}/>;}
 
 function StatCard({icon,l,v,sub,sub2,accent,breakdown,unit,span2}){
