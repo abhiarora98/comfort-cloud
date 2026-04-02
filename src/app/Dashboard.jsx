@@ -1090,7 +1090,7 @@ export default function Dashboard(){
         <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(217,119,6,0.12)",border:"1px solid rgba(217,119,6,0.25)",padding:"6px 14px",borderRadius:20,fontSize:11,fontFamily:MN}}>
           <span style={{width:7,height:7,borderRadius:"50%",background:fetchStatus==="ok"?"#4ade80":fetchStatus==="loading"?"#fbbf24":"#d97706",boxShadow:fetchStatus==="ok"?"0 0 8px #4ade80":"0 0 8px #d97706"}}/>
           {!mob&&<>{filtered.length} orders · {fmtVal(filtered.reduce((s,o)=>s+o.totalValue,0))}</>}
-          {fetchStatus==="ok"&&lastUpdated&&<span style={{opacity:0.6,marginLeft:4}}>{mob?"Live":` · Live ${lastUpdated.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}`}</span>}
+          {fetchStatus==="ok"&&lastUpdated&&<span style={{opacity:0.6,marginLeft:4}}>{mob?`Live ${lastUpdated.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}`:` · Live ${lastUpdated.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}`}</span>}
           {fetchStatus==="loading"&&<span style={{opacity:0.6,marginLeft:4}}>Fetching…</span>}
           {fetchStatus==="error"&&<span style={{opacity:0.6,marginLeft:4}}>Offline</span>}
         </div>
