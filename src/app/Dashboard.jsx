@@ -1063,7 +1063,7 @@ export default function Dashboard(){
     pushOrders(rtdOnTime,rtdOverdue.length);
   }
   const catCounts=useMemo(()=>{const c={};ORDERS.filter(o=>(!poc||o.salesPOC===poc)&&!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)).forEach(o=>o.categories.forEach(cc=>c[cc]=(c[cc]||0)+1));return c;},[poc,ORDERS]);
-  const allLines=useMemo(()=>ORDERS.flatMap(o=>o.lines),[ORDERS]);
+  const allLines=useMemo(()=>filtered.flatMap(o=>o.lines),[filtered]);
   const pendQty=useMemo(()=>ORDERS.filter(o=>!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)).reduce((s,o)=>{const ls=cat==="all"?o.lines:o.lines.filter(l=>l.category===cat);return s+ls.reduce((ss,l)=>ss+l.qty,0);},0),[cat,ORDERS]);
   const pFilt=PARTIES.filter(p=>!psrch||p.name.toLowerCase().includes(psrch.toLowerCase()));
   const sPObj=selP?PARTIES.find(p=>p.name===selP):null;
