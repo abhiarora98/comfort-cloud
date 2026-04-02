@@ -1046,6 +1046,7 @@ export default function Dashboard(){
     else if(srt==="dd")r.sort((a,b)=>pd(b.piDate)-pd(a.piDate));
     else if(srt==="pa")r.sort((a,b)=>a.party.localeCompare(b.party));
     else if(srt==="qd"){const cq=o=>cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0);r.sort((a,b)=>cq(b)-cq(a));}
+    else if(srt==="vd")r.sort((a,b)=>b.totalValue-a.totalValue);
     return r;
   },[cat,poc,srch,srt,payF,ORDERS]);
 
@@ -1159,7 +1160,7 @@ export default function Dashboard(){
           <div style={{...S.section}}>Orders</div>
           <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
             <input value={srch} onChange={e=>{setSrch(e.target.value);setPg(1);}} placeholder="Search party, model..." style={{...S.input,width:mob?150:260}}/>
-            <select value={srt} onChange={e=>setSrt(e.target.value)} style={S.select}><option value="da">Oldest</option><option value="dd">Newest</option><option value="pa">A→Z</option><option value="qd">Qty ↓</option></select>
+            <select value={srt} onChange={e=>setSrt(e.target.value)} style={S.select}><option value="da">Oldest</option><option value="dd">Newest</option><option value="pa">A→Z</option><option value="qd">Qty ↓</option><option value="vd">Value ↓</option></select>
             <select value={poc} onChange={e=>{setPoc(e.target.value);setPg(1);}} style={S.select}><option value="">All POC</option>{pocs.map(p=><option key={p}>{p}</option>)}</select>
           </div>
         </div>
