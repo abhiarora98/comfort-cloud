@@ -1004,7 +1004,7 @@ function groupOrders(rawOrders){
 
 export default function Dashboard(){
   const w=useW();const mob=w<768;
-  const[tab,setTab]=useState("pending");
+  const[tab,setTab]=useState("pending");const[menuOpen,setMenuOpen]=useState(false);
   const[cat,setCat]=useState("all");const[srch,setSrch]=useState("");const[srt,setSrt]=useState("da");const[poc,setPoc]=useState("");
   const[pg,setPg]=useState(1);const[exp,setExp]=useState(null);const[expParties,setExpParties]=useState({});
   const[selP,setSelP]=useState(null);const[pcf,setPcf]=useState("all");const[psrch,setPsrch]=useState("");
@@ -1094,9 +1094,19 @@ export default function Dashboard(){
           {fetchStatus==="loading"&&<span style={{opacity:0.6,marginLeft:4}}>Fetching…</span>}
           {fetchStatus==="error"&&<span style={{opacity:0.6,marginLeft:4}}>Offline</span>}
         </div>
-        {user&&<div style={{display:"flex",alignItems:"center",gap:8}}>
-          {!mob&&<span style={{fontFamily:MN,fontSize:11,color:"rgba(255,255,255,0.6)"}}>{user.firstName||user.emailAddresses?.[0]?.emailAddress}</span>}
-          <button onClick={()=>signOut()} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.7)",padding:"5px 12px",borderRadius:8,fontSize:11,fontFamily:MN,cursor:"pointer"}}>Sign out</button>
+        {user&&<div style={{position:"relative"}}>
+          <button onClick={()=>setMenuOpen(o=>!o)} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.7)",width:34,height:34,borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,padding:0}}>
+            <span style={{width:14,height:1.5,background:"currentColor",borderRadius:2}}/>
+            <span style={{width:14,height:1.5,background:"currentColor",borderRadius:2}}/>
+            <span style={{width:14,height:1.5,background:"currentColor",borderRadius:2}}/>
+          </button>
+          {menuOpen&&<div style={{position:"absolute",top:42,right:0,background:"#1e293b",border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,minWidth:160,boxShadow:"0 8px 24px rgba(0,0,0,0.4)",zIndex:999,overflow:"hidden"}}>
+            <div style={{padding:"10px 14px",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+              <div style={{fontFamily:MN,fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:2}}>Signed in as</div>
+              <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.firstName||user.emailAddresses?.[0]?.emailAddress}</div>
+            </div>
+            <button onClick={()=>{setMenuOpen(false);signOut();}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",color:"#f87171",fontFamily:MN,fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left"}}>Sign out</button>
+          </div>}
         </div>}
       </div>
     </div>
