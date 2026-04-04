@@ -1028,7 +1028,7 @@ export default function Dashboard(){
     return function(){clearInterval(iv);};
   },[]);
 
-  const ORDERS=liveOrders||RAW;
+  const ORDERS=(liveOrders||RAW).filter(o=>o.party&&o.party.trim()&&o.party.toLowerCase()!=="test");
   const PARTIES=useMemo(()=>{const ob={};ORDERS.forEach(o=>{if(!ob[o.party])ob[o.party]=[];ob[o.party].push(o);});
     return ALL_PARTIES.map(p=>({...p,earliest:pd(p.firstDate||"01/01/2025"),orders:ob[p.name]||[],pendingValue:p.pendingValue||(ob[p.name]||[]).reduce((s,o)=>s+o.totalValue,0),cats:Object.fromEntries((p.cats||[]).map(c=>[c,1]))}));},[ORDERS]);
   const pocs=useMemo(()=>[...new Set(ORDERS.map(o=>o.salesPOC))].sort(),[ORDERS]);
