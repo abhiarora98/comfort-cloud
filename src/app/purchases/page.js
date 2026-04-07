@@ -56,7 +56,7 @@ export default function PurchasesPage() {
           <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.15)' }} />
           <div style={{ fontFamily: MN, fontSize: 14, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Purchases</div>
         </div>
-        <div style={{ fontFamily: MN, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{fullName}</div>
+        <div style={{ fontFamily: MN, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{user?.firstName} {user?.lastName}</div>
       </div>
 
       <div style={{ padding: '24px 28px', maxWidth: 900, margin: '0 auto' }}>
