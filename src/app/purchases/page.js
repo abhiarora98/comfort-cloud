@@ -18,8 +18,8 @@ export default function PurchasesPage() {
     </div>
   );
 
-  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
-  if (fullName !== 'Abhi Arora') return (
+  const role = user?.publicMetadata?.role;
+  if (role !== 'admin') return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, fontFamily: MN }}>
       <div style={{ fontSize: 32 }}>🔒</div>
       <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>Access Restricted</div>

@@ -1118,7 +1118,7 @@ export default function Dashboard(){
       {tabs.map(t=><div key={t.id} onClick={()=>{setTab(t.id);if(t.id==="party")setMpv(false);}} style={{padding:mob?"12px 14px":"14px 22px",fontSize:13,fontWeight:tab===t.id?700:500,color:tab===t.id?"#0f172a":"#94a3b8",cursor:"pointer",borderBottom:tab===t.id?"3px solid #d97706":"3px solid transparent",whiteSpace:"nowrap",transition:"all 0.2s"}}>
         {t.l}{t.n!==""&&<span style={{display:"inline-block",background:tab===t.id?"#fef3c7":"#f1f5f9",borderRadius:20,padding:"1px 8px",fontFamily:MN,fontSize:10,marginLeft:6,color:tab===t.id?"#d97706":"#94a3b8",fontWeight:600}}>{t.n}</span>}
       </div>)}
-      {user?.firstName==="Abhi"&&user?.lastName==="Arora"&&<a href="/purchases" style={{padding:mob?"12px 14px":"14px 22px",fontSize:13,fontWeight:500,color:"#94a3b8",cursor:"pointer",borderBottom:"3px solid transparent",whiteSpace:"nowrap",transition:"all 0.2s",textDecoration:"none",display:"flex",alignItems:"center",gap:6}}>Purchases</a>}
+      {role==="admin"&&<a href="/purchases" style={{padding:mob?"12px 14px":"14px 22px",fontSize:13,fontWeight:500,color:"#94a3b8",cursor:"pointer",borderBottom:"3px solid transparent",whiteSpace:"nowrap",transition:"all 0.2s",textDecoration:"none",display:"flex",alignItems:"center",gap:6}}>Purchases</a>}
     </div>
 
     <div style={{padding:mob?"16px":"24px 28px",maxWidth:1500,margin:"0 auto"}}>
