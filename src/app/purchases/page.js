@@ -1,27 +1,53 @@
 'use client';
 import { useUser } from '@clerk/nextjs';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const MN = "'DM Mono', monospace";
 const SN = "'Instrument Sans', sans-serif";
+const SHEET_ID = '1CQS5w9VLTjHcZ9Gzw3P6wGgZ0K6YDKuL1Ux42LQeRSQ';
+const PURCHASES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=PURCHASES`;
 
 function useW(){const[w,setW]=useState(typeof window!=='undefined'?window.innerWidth:1200);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);return w;}
+
+function parsePurchasesCSV(csv) {
+  const lines = csv.trim().split('\n');
+  if (lines.length < 2) return [];
+  return lines.slice(1).map(line => {
+    const cols = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) || [];
+    const clean = c => (c || '').replace(/^"|"$/g, '').trim();
+    return { date: clean(cols[0]), supplier: clean(cols[1]), billNo: clean(cols[2]), amount: clean(cols[3]), notes: clean(cols[4]), savedBy: clean(cols[5]), savedAt: clean(cols[6]) };
+  }).filter(r => r.supplier || r.billNo);
+}
 
 export default function PurchasesPage() {
   const { user, isLoaded } = useUser();
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
-  const [form, setForm] = useState({ supplier: '', billNo: '', date: '', notes: '' });
-  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState({ supplier: '', billNo: '', date: '', amount: '', notes: '' });
+  const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const [bills, setBills] = useState([]);
+  const [loadingBills, setLoadingBills] = useState(true);
+  const [view, setView] = useState('form'); // 'form' | 'history'
   const w = useW();
   const mob = w < 768;
 
+  const fetchBills = useCallback(async () => {
+    setLoadingBills(true);
+    try {
+      const r = await fetch(PURCHASES_URL);
+      const text = await r.text();
+      setBills(parsePurchasesCSV(text).reverse()); // newest first
+    } catch { setBills([]); }
+    finally { setLoadingBills(false); }
+  }, []);
+
+  useEffect(() => { fetchBills(); }, [fetchBills]);
+
   if (!isLoaded) return (
-    <div style={{ minHeight: '100vh', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: MN, color: '#94a3b8' }}>
-      Loading...
-    </div>
+    <div style={{ minHeight: '100vh', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: MN, color: '#94a3b8' }}>Loading...</div>
   );
 
   const role = user?.publicMetadata?.role;
@@ -29,8 +55,7 @@ export default function PurchasesPage() {
     <div style={{ minHeight: '100vh', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, fontFamily: MN }}>
       <div style={{ fontSize: 32 }}>🔒</div>
       <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>Access Restricted</div>
-      <div style={{ fontSize: 12, color: '#94a3b8' }}>You don't have permission to view this page.</div>
-      <a href="/" style={{ marginTop: 8, fontSize: 12, color: '#d97706', fontWeight: 600 }}>← Back to Dashboard</a>
+      <a href="/" style={{ marginTop: 8, fontSize: 12, color: '#d97706', fontWeight: 600 }}>← Back</a>
     </div>
   );
 
@@ -42,7 +67,6 @@ export default function PurchasesPage() {
     setScanError('');
     setScanning(true);
     try {
-      // Resize image to max 1024px before sending (phone photos are 3-5MB)
       const base64 = await new Promise((res, rej) => {
         const img = new Image();
         const url = URL.createObjectURL(file);
@@ -66,26 +90,29 @@ export default function PurchasesPage() {
       });
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
-      setForm(f => ({
-        supplier: data.supplier || f.supplier,
-        billNo: data.billNo || f.billNo,
-        date: data.date || f.date,
-        notes: data.notes || f.notes,
-        amount: data.amount || f.amount,
-      }));
-    } catch (err) {
-      setScanError('Could not read bill. Please fill in manually.');
-    } finally {
-      setScanning(false);
-    }
+      setForm(f => ({ supplier: data.supplier || f.supplier, billNo: data.billNo || f.billNo, date: data.date || f.date, notes: data.notes || f.notes, amount: data.amount || f.amount }));
+    } catch { setScanError('Could not read bill. Please fill in manually.'); }
+    finally { setScanning(false); }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setSaving(true);
+    setSaveError('');
+    try {
+      const payload = { ...form, savedBy: `${user.firstName} ${user.lastName}`.trim(), savedAt: new Date().toISOString() };
+      const resp = await fetch('/api/save-purchase', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+      await fetchBills();
+      setView('history');
+      setPhoto(null); setPhotoPreview(null);
+      setForm({ supplier: '', billNo: '', date: '', amount: '', notes: '' });
+      setScanError('');
+    } catch (err) {
+      setSaveError(err.message || 'Failed to save. Try again.');
+    } finally { setSaving(false); }
   };
-
-  const reset = () => { setPhoto(null); setPhotoPreview(null); setForm({ supplier: '', billNo: '', date: '', notes: '', amount: '' }); setSubmitted(false); setScanError(''); };
 
   const card = { background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
   const input = { width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 13, fontFamily: SN, outline: 'none', color: '#1e293b', boxSizing: 'border-box' };
@@ -100,20 +127,52 @@ export default function PurchasesPage() {
           <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.15)' }} />
           <div style={{ fontFamily: MN, fontSize: 14, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Purchases</div>
         </div>
-        {!mob && <div style={{ fontFamily: MN, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{user?.firstName} {user?.lastName}</div>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {!mob && <div style={{ fontFamily: MN, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{user?.firstName} {user?.lastName}</div>}
+          <button onClick={() => setView(view === 'form' ? 'history' : 'form')} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '5px 12px', borderRadius: 8, fontSize: 11, fontFamily: MN, cursor: 'pointer' }}>
+            {view === 'form' ? `History (${bills.length})` : '+ Add Bill'}
+          </button>
+        </div>
       </div>
 
       <div style={{ padding: mob ? '16px' : '24px 28px', maxWidth: 900, margin: '0 auto' }}>
-        {submitted ? (
-          <div style={{ ...card, padding: mob ? 32 : 48, textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>✅</div>
-            <div style={{ fontFamily: MN, fontSize: 16, fontWeight: 700, color: '#059669', marginBottom: 8 }}>Bill Saved</div>
-            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 24 }}>
-              <strong>{form.supplier}</strong> · {form.billNo} · {form.date}
+
+        {/* History view */}
+        {view === 'history' && (
+          <div style={card}>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8' }}>Bill History</div>
+              <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{bills.length} bills</div>
             </div>
-            <button onClick={reset} style={{ background: '#0f172a', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontFamily: MN, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Add Another Bill</button>
+            {loadingBills ? (
+              <div style={{ padding: 32, textAlign: 'center', fontFamily: MN, fontSize: 12, color: '#94a3b8' }}>Loading...</div>
+            ) : bills.length === 0 ? (
+              <div style={{ padding: 48, textAlign: 'center' }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+                <div style={{ fontFamily: MN, fontSize: 12, color: '#94a3b8' }}>No bills saved yet</div>
+              </div>
+            ) : (
+              <div>
+                {bills.map((b, i) => (
+                  <div key={i} style={{ padding: '12px 16px', borderBottom: i < bills.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.supplier || '—'}</div>
+                      <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{b.billNo} · {b.date}</div>
+                      {b.notes && <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.notes}</div>}
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      {b.amount && <div style={{ fontFamily: MN, fontSize: 13, fontWeight: 700, color: '#0f172a' }}>₹{Number(b.amount).toLocaleString('en-IN')}</div>}
+                      <div style={{ fontFamily: MN, fontSize: 9, color: '#cbd5e1', marginTop: 2 }}>{b.savedBy}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
+        )}
+
+        {/* Form view */}
+        {view === 'form' && (
           <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap: 16 }}>
 
             {/* Photo upload */}
@@ -144,7 +203,6 @@ export default function PurchasesPage() {
                 <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
               </div>
 
-              {/* Buying pattern — hide on mobile to reduce scroll */}
               {!mob && <div style={{ ...card, padding: 16 }}>
                 <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 14 }}>Buying Pattern</div>
                 <div style={{ background: '#f8fafc', borderRadius: 8, padding: '24px 16px', textAlign: 'center', border: '1px dashed #e2e8f0' }}>
@@ -173,18 +231,15 @@ export default function PurchasesPage() {
                 </div>
                 <div>
                   <label style={labelStyle}>Total Amount (₹)</label>
-                  <input style={input} placeholder="e.g. 15000" value={form.amount||''} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+                  <input style={input} placeholder="e.g. 15000" value={form.amount || ''} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>Notes</label>
                   <textarea style={{ ...input, minHeight: 80, resize: 'vertical' }} placeholder="Any additional notes..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
                 </div>
-                <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8', marginBottom: 2 }}>Saving to</div>
-                  <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 600, color: '#475569' }}>Google Sheet · PURCHASES tab <span style={{ color: '#94a3b8', fontWeight: 400 }}>(coming soon)</span></div>
-                </div>
-                <button type="submit" style={{ background: 'linear-gradient(135deg,#0c1222,#1a2744)', color: '#fff', border: 'none', padding: '13px', borderRadius: 8, fontFamily: MN, fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em' }}>
-                  Save Bill
+                {saveError && <div style={{ fontFamily: MN, fontSize: 11, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 8 }}>{saveError}</div>}
+                <button type="submit" disabled={saving} style={{ background: saving ? '#94a3b8' : 'linear-gradient(135deg,#0c1222,#1a2744)', color: '#fff', border: 'none', padding: '13px', borderRadius: 8, fontFamily: MN, fontSize: 12, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  {saving ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />Saving...</> : 'Save Bill'}
                 </button>
               </form>
             </div>
