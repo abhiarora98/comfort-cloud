@@ -13,6 +13,8 @@ export default function PurchasesPage() {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [form, setForm] = useState({ supplier: '', billNo: '', date: '', notes: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState('');
   const w = useW();
   const mob = w < 768;
 
@@ -32,11 +34,39 @@ export default function PurchasesPage() {
     </div>
   );
 
-  const handlePhoto = (e) => {
+  const handlePhoto = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setPhoto(file);
     setPhotoPreview(URL.createObjectURL(file));
+    setScanError('');
+    setScanning(true);
+    try {
+      const base64 = await new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result.split(',')[1]);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const resp = await fetch('/api/read-bill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mediaType: file.type }),
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+      setForm(f => ({
+        supplier: data.supplier || f.supplier,
+        billNo: data.billNo || f.billNo,
+        date: data.date || f.date,
+        notes: data.notes || f.notes,
+        amount: data.amount || f.amount,
+      }));
+    } catch (err) {
+      setScanError('Could not read bill. Please fill in manually.');
+    } finally {
+      setScanning(false);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -44,7 +74,7 @@ export default function PurchasesPage() {
     setSubmitted(true);
   };
 
-  const reset = () => { setPhoto(null); setPhotoPreview(null); setForm({ supplier: '', billNo: '', date: '', notes: '' }); setSubmitted(false); };
+  const reset = () => { setPhoto(null); setPhotoPreview(null); setForm({ supplier: '', billNo: '', date: '', notes: '', amount: '' }); setSubmitted(false); setScanError(''); };
 
   const card = { background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
   const input = { width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 13, fontFamily: SN, outline: 'none', color: '#1e293b', boxSizing: 'border-box' };
@@ -92,7 +122,15 @@ export default function PurchasesPage() {
                     <div style={{ fontSize: 11, color: '#94a3b8' }}>Tap to use camera or choose file</div>
                   </label>
                 )}
-                {photo && <div style={{ marginTop: 10, fontFamily: MN, fontSize: 10, color: '#94a3b8', textAlign: 'center' }}>AI bill reading — coming soon</div>}
+                {scanning && (
+                  <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: MN, fontSize: 11, color: '#d97706' }}>
+                    <span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #d97706', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    Reading bill...
+                  </div>
+                )}
+                {!scanning && scanError && <div style={{ marginTop: 10, fontFamily: MN, fontSize: 10, color: '#dc2626', textAlign: 'center' }}>{scanError}</div>}
+                {!scanning && !scanError && photo && <div style={{ marginTop: 10, fontFamily: MN, fontSize: 10, color: '#059669', textAlign: 'center' }}>✓ Bill scanned — check details below</div>}
+                <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
               </div>
 
               {/* Buying pattern — hide on mobile to reduce scroll */}
@@ -121,6 +159,10 @@ export default function PurchasesPage() {
                 <div>
                   <label style={labelStyle}>Bill Date</label>
                   <input type="date" style={input} value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required />
+                </div>
+                <div>
+                  <label style={labelStyle}>Total Amount (₹)</label>
+                  <input style={input} placeholder="e.g. 15000" value={form.amount||''} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>Notes</label>
