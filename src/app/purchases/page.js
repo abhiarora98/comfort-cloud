@@ -42,16 +42,27 @@ export default function PurchasesPage() {
     setScanError('');
     setScanning(true);
     try {
+      // Resize image to max 1024px before sending (phone photos are 3-5MB)
       const base64 = await new Promise((res, rej) => {
-        const reader = new FileReader();
-        reader.onload = () => res(reader.result.split(',')[1]);
-        reader.onerror = rej;
-        reader.readAsDataURL(file);
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const MAX = 1024;
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+          res(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+        };
+        img.onerror = rej;
+        img.src = url;
       });
       const resp = await fetch('/api/read-bill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, mediaType: file.type }),
+        body: JSON.stringify({ imageBase64: base64, mediaType: 'image/jpeg' }),
       });
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
