@@ -1,9 +1,13 @@
 import { request as httpsRequest } from 'https';
 import { request as httpRequest } from 'http';
+import { Agent } from 'https';
 
 export const maxDuration = 30;
 
 const TALLY_URL = process.env.TALLY_URL || 'https://specialist-numbers-univ-annotated.trycloudflare.com';
+
+// Force HTTP/1.1 — Cloudflare drops the body when HTTP/2 is negotiated
+const http11Agent = new Agent({ ALPNProtocols: ['http/1.1'] });
 
 function getPurchaseXML(fromDate, toDate) {
   return `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>Day Book</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fromDate}</SVFROMDATE><SVTODATE>${toDate}</SVTODATE></STATICVARIABLES></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
@@ -23,17 +27,19 @@ function doRequest(url, body) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
     const buf = Buffer.from(body, 'utf8');
+    const isHttps = u.protocol === 'https:';
     const opts = {
       hostname: u.hostname,
-      port: u.port || (u.protocol === 'https:' ? 443 : 80),
+      port: u.port || (isHttps ? 443 : 80),
       path: u.pathname || '/',
       method: 'POST',
       headers: {
         'Content-Type': 'text/xml',
         'Content-Length': buf.length,
       },
+      agent: isHttps ? http11Agent : undefined,
     };
-    const req = (u.protocol === 'https:' ? httpsRequest : httpRequest)(opts, (res) => {
+    const req = (isHttps ? httpsRequest : httpRequest)(opts, (res) => {
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => resolve({ status: res.statusCode, text: Buffer.concat(chunks).toString('utf8') }));
