@@ -65,7 +65,9 @@ export async function GET() {
     }
 
     const vouchers = parseVouchers(xml);
-    return Response.json({ ok: true, vouchers, count: vouchers.length });
+    // Return first 500 chars of raw XML for debugging if no vouchers found
+    const debug = vouchers.length === 0 ? xml.slice(0, 500) : null;
+    return Response.json({ ok: true, vouchers, count: vouchers.length, debug });
   } catch (e) {
     console.error('tally-purchases error:', e);
     return Response.json({ ok: false, error: e.message, vouchers: [] }, { status: 500 });

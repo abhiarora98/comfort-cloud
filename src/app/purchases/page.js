@@ -68,6 +68,10 @@ export default function PurchasesPage() {
       const r = await fetch('/api/tally-purchases');
       const data = await r.json();
       if (!data.ok) throw new Error(data.error);
+      if (data.count === 0) {
+        setSyncMsg(`⚠ Tally returned 0 vouchers${data.debug ? ': ' + data.debug.slice(0, 80) : ''}`);
+        setSyncing(false); return;
+      }
       const existingBillNos = new Set(bills.map(b => b.billNo));
       const newOnes = data.vouchers.filter(v => !existingBillNos.has(v.billNo));
       for (const v of newOnes) {
