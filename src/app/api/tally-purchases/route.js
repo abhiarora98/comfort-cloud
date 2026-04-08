@@ -12,7 +12,7 @@ function getPurchaseXML(fromDate, toDate) {
   <BODY>
     <EXPORTDATA>
       <REQUESTDESC>
-        <REPORTNAME>Day Book</REPORTNAME>
+        <REPORTNAME>DAYBOOK</REPORTNAME>
         <STATICVARIABLES>
           <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
           <SVCURRENTCOMPANY>${COMPANY}</SVCURRENTCOMPANY>
@@ -83,8 +83,7 @@ export async function GET() {
     }
 
     const vouchers = parseVouchers(xml);
-    // Return first 500 chars of raw XML for debugging if no vouchers found
-    const debug = vouchers.length === 0 ? xml.slice(0, 500) : null;
+    const debug = vouchers.length === 0 ? xml.slice(0, 1000) : null;
     return Response.json({ ok: true, vouchers, count: vouchers.length, debug });
   } catch (e) {
     console.error('tally-purchases error:', e);
