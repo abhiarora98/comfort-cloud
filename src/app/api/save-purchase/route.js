@@ -22,9 +22,14 @@ async function getSheets() {
   return google.sheets({ version: 'v4', auth });
 }
 
-async function ensureHeader(sheets) {
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: `${SHEET_NAME}!A1:G1` });
-  if (!res.data.values || res.data.values.length === 0) {
+async function ensureSheet(sheets) {
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+  const exists = meta.data.sheets.some(s => s.properties.title === SHEET_NAME);
+  if (!exists) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SHEET_ID,
+      requestBody: { requests: [{ addSheet: { properties: { title: SHEET_NAME } } }] },
+    });
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A1`,
@@ -38,7 +43,7 @@ export async function POST(req) {
   try {
     const d = await req.json();
     const sheets = await getSheets();
-    await ensureHeader(sheets);
+    await ensureSheet(sheets);
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A1`,
