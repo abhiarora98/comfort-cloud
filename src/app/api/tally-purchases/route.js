@@ -2,6 +2,8 @@ export const maxDuration = 30;
 
 const TALLY_URL = process.env.TALLY_URL || 'https://oxide-tomato-fiscal-ends.trycloudflare.com';
 
+const COMPANY = process.env.TALLY_COMPANY || 'Comfort Industries';
+
 const PURCHASE_XML = `<ENVELOPE>
   <HEADER>
     <TALLYREQUEST>Export Data</TALLYREQUEST>
@@ -12,6 +14,7 @@ const PURCHASE_XML = `<ENVELOPE>
         <REPORTNAME>Purchase Register</REPORTNAME>
         <STATICVARIABLES>
           <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
+          <SVCURRENTCOMPANY>${COMPANY}</SVCURRENTCOMPANY>
           <SVFROMDATE>$$MonthStart:$$MachineDate</SVFROMDATE>
           <SVTODATE>$$MachineDate</SVTODATE>
         </STATICVARIABLES>
