@@ -4,7 +4,17 @@ const SHEET_ID = '1CQS5w9VLTjHcZ9Gzw3P6wGgZ0K6YDKuL1Ux42LQeRSQ';
 const SHEET_NAME = 'PURCHASES';
 
 async function getSheets() {
-  const key = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  if (!raw) throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY not set');
+  // Handle base64-encoded or raw JSON
+  let key;
+  try {
+    key = JSON.parse(raw);
+  } catch {
+    key = JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
+  }
+  // Fix escaped newlines in private key
+  if (key.private_key) key.private_key = key.private_key.replace(/\\n/g, '\n');
   const auth = new google.auth.GoogleAuth({
     credentials: key,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
