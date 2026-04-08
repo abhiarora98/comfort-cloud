@@ -15,7 +15,6 @@ function getPurchaseXML(fromDate, toDate) {
         <REPORTNAME>Day Book</REPORTNAME>
         <STATICVARIABLES>
           <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
-          <SVCURRENTCOMPANY>${COMPANY}</SVCURRENTCOMPANY>
           <SVFROMDATE>${fromDate}</SVFROMDATE>
           <SVTODATE>${toDate}</SVTODATE>
         </STATICVARIABLES>
