@@ -1,8 +1,9 @@
+import { request as httpsRequest } from 'https';
+import { request as httpRequest } from 'http';
+
 export const maxDuration = 30;
 
-const TALLY_URL = process.env.TALLY_URL || 'https://oxide-tomato-fiscal-ends.trycloudflare.com';
-
-const COMPANY = process.env.TALLY_COMPANY || 'Comfort Industries';
+const TALLY_URL = process.env.TALLY_URL || 'https://specialist-numbers-univ-annotated.trycloudflare.com';
 
 function getPurchaseXML(fromDate, toDate) {
   return `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>Day Book</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVFROMDATE>${fromDate}</SVFROMDATE><SVTODATE>${toDate}</SVTODATE></STATICVARIABLES></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
@@ -18,6 +19,32 @@ function getTallyDates() {
   return { from, to };
 }
 
+function doRequest(url, body) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const buf = Buffer.from(body, 'utf8');
+    const opts = {
+      hostname: u.hostname,
+      port: u.port || (u.protocol === 'https:' ? 443 : 80),
+      path: u.pathname || '/',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/xml',
+        'Content-Length': buf.length,
+      },
+    };
+    const req = (u.protocol === 'https:' ? httpsRequest : httpRequest)(opts, (res) => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => resolve({ status: res.statusCode, text: Buffer.concat(chunks).toString('utf8') }));
+    });
+    req.on('error', reject);
+    req.setTimeout(20000, () => { req.destroy(); reject(new Error('Tally request timed out')); });
+    req.write(buf);
+    req.end();
+  });
+}
+
 function parseVouchers(xml) {
   const vouchers = [];
   const voucherRegex = /<VOUCHER\b[^>]*>([\s\S]*?)<\/VOUCHER>/g;
@@ -29,7 +56,6 @@ function parseVouchers(xml) {
       return m ? m[1].trim() : '';
     };
     const vtype = get('VOUCHERTYPENAME');
-    // Only include purchase vouchers
     if (!vtype.toLowerCase().includes('purchase')) continue;
     const date = get('DATE');
     const voucherNo = get('VOUCHERNUMBER') || get('BILLNO');
@@ -52,15 +78,9 @@ export async function GET() {
   try {
     const { from, to } = getTallyDates();
     const body = getPurchaseXML(from, to);
-    const resp = await fetch(TALLY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/xml;charset=utf-8', 'Content-Length': Buffer.byteLength(body).toString() },
-      body,
-      signal: AbortSignal.timeout(20000),
-    });
+    const { status, text: xml } = await doRequest(TALLY_URL, body);
 
-    if (!resp.ok) throw new Error(`Tally returned ${resp.status}`);
-    const xml = await resp.text();
+    if (status !== 200) throw new Error(`Tally returned ${status}`);
 
     if (xml.includes('LINEERROR') || xml.includes('ERRORS')) {
       const errMatch = xml.match(/<LINEERROR>([\s\S]*?)<\/LINEERROR>/);
