@@ -44,6 +44,8 @@ export default function PurchasesPage() {
   const [saveError, setSaveError] = useState('');
   const [bills, setBills] = useState([]);
   const [loadingBills, setLoadingBills] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
   const [view, setView] = useState('history'); // 'history' | 'form' | 'insights'
   const w = useW();
   const mob = w < 768;
@@ -59,6 +61,28 @@ export default function PurchasesPage() {
   }, []);
 
   useEffect(() => { fetchBills(); }, [fetchBills]);
+
+  const syncTally = async () => {
+    setSyncing(true); setSyncMsg('');
+    try {
+      const r = await fetch('/api/tally-purchases');
+      const data = await r.json();
+      if (!data.ok) throw new Error(data.error);
+      const existingBillNos = new Set(bills.map(b => b.billNo));
+      const newOnes = data.vouchers.filter(v => !existingBillNos.has(v.billNo));
+      for (const v of newOnes) {
+        await fetch('/api/save-purchase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...v, savedBy: 'Tally Sync', savedAt: new Date().toISOString(), verified: 'tally', mismatches: '', photoUrl: '', notes: '', category: '' }),
+        });
+      }
+      if (newOnes.length > 0) await fetchBills();
+      setSyncMsg(`✓ ${newOnes.length} new bills synced from Tally`);
+    } catch (e) {
+      setSyncMsg('⚠ ' + (e.message || 'Could not connect to Tally'));
+    } finally { setSyncing(false); }
+  };
 
   if (!isLoaded) return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: MN, color: '#94a3b8' }}>Loading...</div>
@@ -197,7 +221,13 @@ export default function PurchasesPage() {
           <div style={card}>
             <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8' }}>Bill History</div>
-              <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{bills.length} bills</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {syncMsg && <div style={{ fontFamily: MN, fontSize: 10, color: syncMsg.startsWith('✓') ? '#059669' : '#dc2626' }}>{syncMsg}</div>}
+                <button onClick={syncTally} disabled={syncing} style={{ background: syncing ? '#94a3b8' : '#0f172a', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: 6, fontFamily: MN, fontSize: 10, fontWeight: 700, cursor: syncing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {syncing ? <><span style={{ display: 'inline-block', width: 8, height: 8, border: '1.5px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />Syncing</> : '⟳ Tally'}
+                </button>
+                <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{bills.length} bills</div>
+              </div>
             </div>
             {loadingBills ? (
               <div style={{ padding: 32, textAlign: 'center', fontFamily: MN, fontSize: 12, color: '#94a3b8' }}>Loading...</div>
