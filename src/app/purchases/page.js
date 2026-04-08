@@ -15,7 +15,7 @@ function parsePurchasesCSV(csv) {
   return lines.slice(1).map(line => {
     const cols = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) || [];
     const clean = c => (c || '').replace(/^"|"$/g, '').trim();
-    return { date: clean(cols[0]), supplier: clean(cols[1]), billNo: clean(cols[2]), amount: clean(cols[3]), notes: clean(cols[4]), savedBy: clean(cols[5]), savedAt: clean(cols[6]) };
+    return { date: clean(cols[0]), supplier: clean(cols[1]), billNo: clean(cols[2]), amount: clean(cols[3]), notes: clean(cols[4]), savedBy: clean(cols[5]), savedAt: clean(cols[6]), photoUrl: clean(cols[7]) };
   }).filter(r => r.supplier || r.billNo);
 }
 
@@ -24,7 +24,9 @@ export default function PurchasesPage() {
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [form, setForm] = useState({ supplier: '', billNo: '', date: '', amount: '', notes: '' });
+  const [photoUrl, setPhotoUrl] = useState('');
   const [saving, setSaving] = useState(false);
+  const [selectedBill, setSelectedBill] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState('');
   const [saveError, setSaveError] = useState('');
@@ -93,6 +95,14 @@ export default function PurchasesPage() {
       setForm(f => ({ supplier: data.supplier || f.supplier, billNo: data.billNo || f.billNo, date: data.date || f.date, notes: data.notes || f.notes, amount: data.amount || f.amount }));
     } catch { setScanError('Could not read bill. Please fill in manually.'); }
     finally { setScanning(false); }
+    // Upload photo to Vercel Blob
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const up = await fetch('/api/upload-bill-photo', { method: 'POST', body: fd });
+      const upData = await up.json();
+      if (upData.url) setPhotoUrl(upData.url);
+    } catch { /* photo upload failed silently */ }
   };
 
   const handleSubmit = async (e) => {
@@ -100,13 +110,13 @@ export default function PurchasesPage() {
     setSaving(true);
     setSaveError('');
     try {
-      const payload = { ...form, savedBy: `${user.firstName} ${user.lastName}`.trim(), savedAt: new Date().toISOString() };
+      const payload = { ...form, photoUrl, savedBy: `${user.firstName} ${user.lastName}`.trim(), savedAt: new Date().toISOString() };
       const resp = await fetch('/api/save-purchase', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
       await fetchBills();
       setView('history');
-      setPhoto(null); setPhotoPreview(null);
+      setPhoto(null); setPhotoPreview(null); setPhotoUrl('');
       setForm({ supplier: '', billNo: '', date: '', amount: '', notes: '' });
       setScanError('');
     } catch (err) {
@@ -154,7 +164,11 @@ export default function PurchasesPage() {
             ) : (
               <div>
                 {bills.map((b, i) => (
-                  <div key={i} style={{ padding: '12px 16px', borderBottom: i < bills.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div key={i} onClick={() => b.photoUrl && setSelectedBill(b)} style={{ padding: '12px 16px', borderBottom: i < bills.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', alignItems: 'center', gap: 12, cursor: b.photoUrl ? 'pointer' : 'default' }}>
+                    {b.photoUrl
+                      ? <img src={b.photoUrl} alt="Bill" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }} />
+                      : <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', border: '1px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
+                    }
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.supplier || '—'}</div>
                       <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{b.billNo} · {b.date}</div>
@@ -246,6 +260,22 @@ export default function PurchasesPage() {
           </div>
         )}
       </div>
+
+      {/* Photo modal */}
+      {selectedBill && (
+        <div onClick={() => setSelectedBill(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', maxWidth: 500, width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{selectedBill.supplier}</div>
+                <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{selectedBill.billNo} · {selectedBill.date}</div>
+              </div>
+              <button onClick={() => setSelectedBill(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#94a3b8', padding: 4 }}>×</button>
+            </div>
+            <img src={selectedBill.photoUrl} alt="Bill" style={{ width: '100%', objectFit: 'contain', maxHeight: 'calc(90vh - 60px)' }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -48,7 +48,7 @@ export async function POST(req) {
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A1`,
       valueInputOption: 'RAW',
-      requestBody: { values: [[d.date, d.supplier, d.billNo, d.amount, d.notes, d.savedBy, d.savedAt]] },
+      requestBody: { values: [[d.date, d.supplier, d.billNo, d.amount, d.notes, d.savedBy, d.savedAt, d.photoUrl || '']] },
     });
     return Response.json({ ok: true });
   } catch (e) {
