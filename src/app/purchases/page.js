@@ -13,7 +13,16 @@ function parsePurchasesCSV(csv) {
   const lines = csv.trim().split('\n');
   if (lines.length < 2) return [];
   return lines.slice(1).map(line => {
-    const cols = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) || [];
+    // Robust CSV split: handle quoted fields
+    const cols = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { cols.push(cur); cur = ''; }
+      else { cur += c; }
+    }
+    cols.push(cur);
     const clean = c => (c || '').replace(/^"|"$/g, '').trim();
     return { date: clean(cols[0]), supplier: clean(cols[1]), billNo: clean(cols[2]), amount: clean(cols[3]), notes: clean(cols[4]), savedBy: clean(cols[5]), savedAt: clean(cols[6]), photoUrl: clean(cols[7]), category: clean(cols[8]), verified: clean(cols[9]), mismatches: clean(cols[10]) };
   }).filter(r => r.supplier || r.billNo);
@@ -200,7 +209,7 @@ export default function PurchasesPage() {
             ) : (
               <div>
                 {bills.map((b, i) => (
-                  <div key={i} onClick={() => b.photoUrl && setSelectedBill(b)} style={{ padding: '12px 16px', borderBottom: i < bills.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', alignItems: 'center', gap: 12, cursor: b.photoUrl ? 'pointer' : 'default' }}>
+                  <div key={i} onClick={() => setSelectedBill(b)} style={{ padding: '12px 16px', borderBottom: i < bills.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
                     {b.photoUrl
                       ? <img src={b.photoUrl} alt="Bill" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }} />
                       : <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', border: '1px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
@@ -416,7 +425,10 @@ export default function PurchasesPage() {
               </div>
               <button onClick={() => setSelectedBill(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#94a3b8', padding: 4 }}>×</button>
             </div>
-            <img src={selectedBill.photoUrl} alt="Bill" style={{ width: '100%', objectFit: 'contain', maxHeight: 'calc(90vh - 60px)' }} />
+            {selectedBill.photoUrl
+              ? <img src={selectedBill.photoUrl} alt="Bill" style={{ width: '100%', objectFit: 'contain', maxHeight: 'calc(90vh - 60px)' }} />
+              : <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8', fontFamily: MN, fontSize: 12 }}>No photo attached to this bill</div>
+            }
           </div>
         </div>
       )}
