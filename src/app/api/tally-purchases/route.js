@@ -5,23 +5,7 @@ const TALLY_URL = process.env.TALLY_URL || 'https://oxide-tomato-fiscal-ends.try
 const COMPANY = process.env.TALLY_COMPANY || 'Comfort Industries';
 
 function getPurchaseXML(fromDate, toDate) {
-  return `<ENVELOPE>
-  <HEADER>
-    <TALLYREQUEST>Export Data</TALLYREQUEST>
-  </HEADER>
-  <BODY>
-    <EXPORTDATA>
-      <REQUESTDESC>
-        <REPORTNAME>Day Book</REPORTNAME>
-        <STATICVARIABLES>
-          <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
-          <SVFROMDATE>${fromDate}</SVFROMDATE>
-          <SVTODATE>${toDate}</SVTODATE>
-        </STATICVARIABLES>
-      </REQUESTDESC>
-    </EXPORTDATA>
-  </BODY>
-</ENVELOPE>`;
+  return `<ENVELOPE><HEADER><TALLYREQUEST>Export Data</TALLYREQUEST></HEADER><BODY><EXPORTDATA><REQUESTDESC><REPORTNAME>List of Companies</REPORTNAME><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES></REQUESTDESC></EXPORTDATA></BODY></ENVELOPE>`;
 }
 
 function getTallyDates() {
@@ -67,10 +51,11 @@ function parseVouchers(xml) {
 export async function GET() {
   try {
     const { from, to } = getTallyDates();
+    const body = getPurchaseXML(from, to);
     const resp = await fetch(TALLY_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/xml' },
-      body: getPurchaseXML(from, to),
+      headers: { 'Content-Type': 'text/xml;charset=utf-8', 'Content-Length': Buffer.byteLength(body).toString() },
+      body,
       signal: AbortSignal.timeout(20000),
     });
 
