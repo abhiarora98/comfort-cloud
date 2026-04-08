@@ -34,7 +34,7 @@ async function ensureSheet(sheets) {
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A1`,
       valueInputOption: 'RAW',
-      requestBody: { values: [['Date', 'Supplier', 'Bill No', 'Amount', 'Notes', 'Saved By', 'Saved At']] },
+      requestBody: { values: [['Date', 'Supplier', 'Bill No', 'Amount', 'Notes', 'Saved By', 'Saved At', 'Photo URL', 'Category']] },
     });
   }
 }
@@ -48,7 +48,7 @@ export async function POST(req) {
       spreadsheetId: SHEET_ID,
       range: `${SHEET_NAME}!A1`,
       valueInputOption: 'RAW',
-      requestBody: { values: [[d.date, d.supplier, d.billNo, d.amount, d.notes, d.savedBy, d.savedAt, d.photoUrl || '']] },
+      requestBody: { values: [[d.date, d.supplier, d.billNo, d.amount, d.notes, d.savedBy, d.savedAt, d.photoUrl || '', d.category || '']] },
     });
     return Response.json({ ok: true });
   } catch (e) {

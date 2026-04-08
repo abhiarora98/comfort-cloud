@@ -15,7 +15,7 @@ function parsePurchasesCSV(csv) {
   return lines.slice(1).map(line => {
     const cols = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) || [];
     const clean = c => (c || '').replace(/^"|"$/g, '').trim();
-    return { date: clean(cols[0]), supplier: clean(cols[1]), billNo: clean(cols[2]), amount: clean(cols[3]), notes: clean(cols[4]), savedBy: clean(cols[5]), savedAt: clean(cols[6]), photoUrl: clean(cols[7]) };
+    return { date: clean(cols[0]), supplier: clean(cols[1]), billNo: clean(cols[2]), amount: clean(cols[3]), notes: clean(cols[4]), savedBy: clean(cols[5]), savedAt: clean(cols[6]), photoUrl: clean(cols[7]), category: clean(cols[8]) };
   }).filter(r => r.supplier || r.billNo);
 }
 
@@ -23,7 +23,7 @@ export default function PurchasesPage() {
   const { user, isLoaded } = useUser();
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
-  const [form, setForm] = useState({ supplier: '', billNo: '', date: '', amount: '', notes: '' });
+  const [form, setForm] = useState({ supplier: '', billNo: '', date: '', amount: '', notes: '', category: '' });
   const [photoUrl, setPhotoUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [selectedBill, setSelectedBill] = useState(null);
@@ -32,7 +32,7 @@ export default function PurchasesPage() {
   const [saveError, setSaveError] = useState('');
   const [bills, setBills] = useState([]);
   const [loadingBills, setLoadingBills] = useState(true);
-  const [view, setView] = useState('form'); // 'form' | 'history'
+  const [view, setView] = useState('history'); // 'history' | 'form' | 'insights'
   const w = useW();
   const mob = w < 768;
 
@@ -117,7 +117,7 @@ export default function PurchasesPage() {
       await fetchBills();
       setView('history');
       setPhoto(null); setPhotoPreview(null); setPhotoUrl('');
-      setForm({ supplier: '', billNo: '', date: '', amount: '', notes: '' });
+      setForm({ supplier: '', billNo: '', date: '', amount: '', notes: '', category: '' });
       setScanError('');
     } catch (err) {
       setSaveError(err.message || 'Failed to save. Try again.');
@@ -139,8 +139,13 @@ export default function PurchasesPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {!mob && <div style={{ fontFamily: MN, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{user?.firstName} {user?.lastName}</div>}
-          <button onClick={() => setView(view === 'form' ? 'history' : 'form')} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '5px 12px', borderRadius: 8, fontSize: 11, fontFamily: MN, cursor: 'pointer' }}>
-            {view === 'form' ? `History (${bills.length})` : '+ Add Bill'}
+          {['history','insights'].map(v => (
+            <button key={v} onClick={() => setView(v)} style={{ background: view===v ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '5px 12px', borderRadius: 8, fontSize: 11, fontFamily: MN, cursor: 'pointer' }}>
+              {v==='history' ? `History (${bills.length})` : 'Insights'}
+            </button>
+          ))}
+          <button onClick={() => setView('form')} style={{ background: '#d97706', border: 'none', color: '#fff', padding: '5px 12px', borderRadius: 8, fontSize: 11, fontFamily: MN, cursor: 'pointer', fontWeight: 700 }}>
+            + Add Bill
           </button>
         </div>
       </div>
@@ -248,6 +253,16 @@ export default function PurchasesPage() {
                   <input style={input} placeholder="e.g. 15000" value={form.amount || ''} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
                 </div>
                 <div>
+                  <label style={labelStyle}>Category</label>
+                  <select style={input} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} required>
+                    <option value="">Select category...</option>
+                    <option value="Raw Material">Raw Material</option>
+                    <option value="Consumables">Consumables</option>
+                    <option value="Hardware">Hardware</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
                   <label style={labelStyle}>Notes</label>
                   <textarea style={{ ...input, minHeight: 80, resize: 'vertical' }} placeholder="Any additional notes..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
                 </div>
@@ -259,6 +274,66 @@ export default function PurchasesPage() {
             </div>
           </div>
         )}
+
+        {/* Insights view */}
+        {view === 'insights' && (() => {
+          const CATS = ['Raw Material', 'Consumables', 'Hardware', 'Other'];
+          const CAT_COLORS = { 'Raw Material': '#3b82f6', 'Consumables': '#10b981', 'Hardware': '#f59e0b', 'Other': '#8b5cf6' };
+          const catTotals = CATS.map(cat => {
+            const catBills = bills.filter(b => b.category === cat);
+            const total = catBills.reduce((s, b) => s + (parseFloat(b.amount) || 0), 0);
+            const vendors = [...new Set(catBills.map(b => b.supplier).filter(Boolean))];
+            return { cat, total, vendors, count: catBills.length };
+          });
+          const grandTotal = catTotals.reduce((s, c) => s + c.total, 0);
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Summary bar */}
+              <div style={{ ...card, padding: 16 }}>
+                <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 14 }}>Spend by Category</div>
+                <div style={{ display: 'flex', height: 12, borderRadius: 8, overflow: 'hidden', marginBottom: 16, gap: 2 }}>
+                  {catTotals.filter(c => c.total > 0).map(c => (
+                    <div key={c.cat} style={{ flex: c.total / grandTotal, background: CAT_COLORS[c.cat], borderRadius: 4 }} />
+                  ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr 1fr' : 'repeat(4,1fr)', gap: 12 }}>
+                  {catTotals.map(c => (
+                    <div key={c.cat} style={{ padding: '10px 12px', borderRadius: 10, background: CAT_COLORS[c.cat] + '12', border: '1px solid ' + CAT_COLORS[c.cat] + '30' }}>
+                      <div style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, color: CAT_COLORS[c.cat], textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{c.cat}</div>
+                      <div style={{ fontFamily: MN, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>₹{c.total.toLocaleString('en-IN')}</div>
+                      <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{c.count} bills · {c.vendors.length} vendors</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Vendor breakdown per category */}
+              {catTotals.filter(c => c.vendors.length > 0).map(c => (
+                <div key={c.cat} style={{ ...card, padding: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: CAT_COLORS[c.cat] }} />
+                    <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#475569' }}>{c.cat}</div>
+                  </div>
+                  {c.vendors.map(v => {
+                    const vBills = bills.filter(b => b.supplier === v && b.category === c.cat);
+                    const vTotal = vBills.reduce((s, b) => s + (parseFloat(b.amount) || 0), 0);
+                    const pct = c.total > 0 ? Math.round(vTotal / c.total * 100) : 0;
+                    return (
+                      <div key={v} style={{ marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600 }}>{v}</div>
+                          <div style={{ fontFamily: MN, fontSize: 11, color: '#475569' }}>₹{vTotal.toLocaleString('en-IN')} <span style={{ color: '#94a3b8' }}>({pct}%)</span></div>
+                        </div>
+                        <div style={{ height: 4, background: '#f1f5f9', borderRadius: 4 }}>
+                          <div style={{ height: '100%', width: pct + '%', background: CAT_COLORS[c.cat], borderRadius: 4 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Photo modal */}
