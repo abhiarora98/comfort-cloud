@@ -271,9 +271,20 @@ export default function PurchasesPage() {
             <div style={{ ...card, padding: 16 }}>
               <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 20 }}>Bill Details</div>
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div>
+                <div style={{ position: 'relative' }}>
                   <label style={labelStyle}>Supplier Name</label>
-                  <input style={input} placeholder="e.g. Ravi Textiles" value={form.supplier} onChange={e => setForm(f => ({ ...f, supplier: e.target.value }))} required />
+                  <input style={input} placeholder="e.g. Ravi Textiles" value={form.supplier} onChange={e => {
+                    const val = e.target.value;
+                    setForm(f => {
+                      const match = bills.find(b => b.supplier.toLowerCase() === val.toLowerCase());
+                      return { ...f, supplier: val, category: match ? match.category : f.category };
+                    });
+                  }} required list="supplier-list" />
+                  <datalist id="supplier-list">
+                    {[...new Set(bills.map(b => b.supplier).filter(Boolean))].map(s => <option key={s} value={s} />)}
+                  </datalist>
+                  {form.supplier && bills.find(b => b.supplier.toLowerCase() === form.supplier.toLowerCase()) &&
+                    <div style={{ fontFamily: MN, fontSize: 10, color: '#059669', marginTop: 4 }}>✓ Known supplier — category pre-filled</div>}
                 </div>
                 <div>
                   <label style={labelStyle}>Bill Number</label>
