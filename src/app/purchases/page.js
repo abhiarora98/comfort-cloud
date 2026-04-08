@@ -69,8 +69,7 @@ export default function PurchasesPage() {
     if (!file) return;
     setPhoto(file);
     setPhotoPreview(URL.createObjectURL(file));
-    setScanError('');
-    setScanning(true);
+    // Resize and store base64 for AI verification on save
     try {
       const base64 = await new Promise((res, rej) => {
         const img = new Image();
@@ -89,19 +88,9 @@ export default function PurchasesPage() {
         img.src = url;
       });
       setPhotoBase64(base64);
-      const resp = await fetch('/api/read-bill', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, mediaType: 'image/jpeg' }),
-      });
-      const data = await resp.json();
-      if (data.error) throw new Error(data.error);
-      setForm(f => ({ supplier: data.supplier || f.supplier, billNo: data.billNo || f.billNo, date: data.date || f.date, notes: data.notes || f.notes, amount: data.amount || f.amount }));
-    } catch { setScanError('Could not read bill. Please fill in manually.'); }
-    finally { setScanning(false); }
+    } catch { /* ignore */ }
     // Upload photo to Vercel Blob
     try {
-
       const fd = new FormData();
       fd.append('file', file);
       const up = await fetch('/api/upload-bill-photo', { method: 'POST', body: fd });
@@ -246,14 +235,7 @@ export default function PurchasesPage() {
                     <div style={{ fontSize: 11, color: '#94a3b8' }}>Tap to use camera or choose file</div>
                   </label>
                 )}
-                {scanning && (
-                  <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: MN, fontSize: 11, color: '#d97706' }}>
-                    <span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #d97706', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    Reading bill...
-                  </div>
-                )}
-                {!scanning && scanError && <div style={{ marginTop: 10, fontFamily: MN, fontSize: 10, color: '#dc2626', textAlign: 'center' }}>{scanError}</div>}
-                {!scanning && !scanError && photo && <div style={{ marginTop: 10, fontFamily: MN, fontSize: 10, color: '#059669', textAlign: 'center' }}>✓ Bill scanned — check details below</div>}
+                {photo && <div style={{ marginTop: 10, fontFamily: MN, fontSize: 10, color: '#059669', textAlign: 'center' }}>✓ Photo attached — fill details below</div>}
                 <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
               </div>
 
