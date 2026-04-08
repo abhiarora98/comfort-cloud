@@ -15,7 +15,7 @@ function parsePurchasesCSV(csv) {
   return lines.slice(1).map(line => {
     const cols = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) || [];
     const clean = c => (c || '').replace(/^"|"$/g, '').trim();
-    return { date: clean(cols[0]), supplier: clean(cols[1]), billNo: clean(cols[2]), amount: clean(cols[3]), notes: clean(cols[4]), savedBy: clean(cols[5]), savedAt: clean(cols[6]), photoUrl: clean(cols[7]), category: clean(cols[8]) };
+    return { date: clean(cols[0]), supplier: clean(cols[1]), billNo: clean(cols[2]), amount: clean(cols[3]), notes: clean(cols[4]), savedBy: clean(cols[5]), savedAt: clean(cols[6]), photoUrl: clean(cols[7]), category: clean(cols[8]), verified: clean(cols[9]), mismatches: clean(cols[10]) };
   }).filter(r => r.supplier || r.billNo);
 }
 
@@ -25,7 +25,10 @@ export default function PurchasesPage() {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [form, setForm] = useState({ supplier: '', billNo: '', date: '', amount: '', notes: '', category: '' });
   const [photoUrl, setPhotoUrl] = useState('');
+  const [photoBase64, setPhotoBase64] = useState('');
   const [saving, setSaving] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [mismatchWarning, setMismatchWarning] = useState(null); // null | { mismatches: [] }
   const [selectedBill, setSelectedBill] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState('');
@@ -85,6 +88,7 @@ export default function PurchasesPage() {
         img.onerror = rej;
         img.src = url;
       });
+      setPhotoBase64(base64);
       const resp = await fetch('/api/read-bill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -97,6 +101,7 @@ export default function PurchasesPage() {
     finally { setScanning(false); }
     // Upload photo to Vercel Blob
     try {
+
       const fd = new FormData();
       fd.append('file', file);
       const up = await fetch('/api/upload-bill-photo', { method: 'POST', body: fd });
@@ -105,24 +110,50 @@ export default function PurchasesPage() {
     } catch { /* photo upload failed silently */ }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const doSave = async (mismatches) => {
     setSaving(true);
     setSaveError('');
+    setMismatchWarning(null);
     try {
-      const payload = { ...form, photoUrl, savedBy: `${user.firstName} ${user.lastName}`.trim(), savedAt: new Date().toISOString() };
+      const verified = !photoBase64 ? 'no-photo' : mismatches && mismatches.length > 0 ? 'mismatch' : 'ok';
+      const mismatchText = mismatches && mismatches.length > 0 ? mismatches.map(m => `${m.field}: entered "${m.entered}" but bill shows "${m.onBill}"`).join('; ') : '';
+      const payload = { ...form, photoUrl, savedBy: `${user.firstName} ${user.lastName}`.trim(), savedAt: new Date().toISOString(), verified, mismatches: mismatchText };
       const resp = await fetch('/api/save-purchase', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await resp.json();
       if (data.error) throw new Error(data.error);
       await fetchBills();
       setView('history');
-      setPhoto(null); setPhotoPreview(null); setPhotoUrl('');
+      setPhoto(null); setPhotoPreview(null); setPhotoUrl(''); setPhotoBase64('');
       setForm({ supplier: '', billNo: '', date: '', amount: '', notes: '', category: '' });
       setScanError('');
     } catch (err) {
       setSaveError(err.message || 'Failed to save. Try again.');
     } finally { setSaving(false); }
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    // If photo exists, verify before saving
+    if (photoBase64) {
+      setVerifying(true);
+      try {
+        const resp = await fetch('/api/verify-bill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: photoBase64, mediaType: 'image/jpeg', form }),
+        });
+        const result = await resp.json();
+        if (!result.match && result.mismatches && result.mismatches.length > 0) {
+          setMismatchWarning(result.mismatches);
+          setVerifying(false);
+          return;
+        }
+      } catch { /* verify failed, proceed with save */ }
+      setVerifying(false);
+    }
+    await doSave([]);
+  };
+
 
   const card = { background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' };
   const input = { width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 13, fontFamily: SN, outline: 'none', color: '#1e293b', boxSizing: 'border-box' };
@@ -175,9 +206,13 @@ export default function PurchasesPage() {
                       : <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', border: '1px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
                     }
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.supplier || '—'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.supplier || '—'}</div>
+                        {b.verified === 'mismatch' && <span title={b.mismatches} style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>}
+                      </div>
                       <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{b.billNo} · {b.date}</div>
-                      {b.notes && <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.notes}</div>}
+                      {b.verified === 'mismatch' && b.mismatches && <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.mismatches}</div>}
+                      {b.verified !== 'mismatch' && b.notes && <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.notes}</div>}
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       {b.amount && <div style={{ fontFamily: MN, fontSize: 13, fontWeight: 700, color: '#0f172a' }}>₹{Number(b.amount).toLocaleString('en-IN')}</div>}
@@ -267,8 +302,10 @@ export default function PurchasesPage() {
                   <textarea style={{ ...input, minHeight: 80, resize: 'vertical' }} placeholder="Any additional notes..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
                 </div>
                 {saveError && <div style={{ fontFamily: MN, fontSize: 11, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 8 }}>{saveError}</div>}
-                <button type="submit" disabled={saving} style={{ background: saving ? '#94a3b8' : 'linear-gradient(135deg,#0c1222,#1a2744)', color: '#fff', border: 'none', padding: '13px', borderRadius: 8, fontFamily: MN, fontSize: 12, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  {saving ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />Saving...</> : 'Save Bill'}
+                <button type="submit" disabled={saving || verifying} style={{ background: (saving || verifying) ? '#94a3b8' : 'linear-gradient(135deg,#0c1222,#1a2744)', color: '#fff', border: 'none', padding: '13px', borderRadius: 8, fontFamily: MN, fontSize: 12, fontWeight: 700, cursor: (saving || verifying) ? 'not-allowed' : 'pointer', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  {verifying ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />Verifying...</>
+                  : saving ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />Saving...</>
+                  : 'Save Bill'}
                 </button>
               </form>
             </div>
@@ -335,6 +372,34 @@ export default function PurchasesPage() {
           );
         })()}
       </div>
+
+      {/* Mismatch warning modal */}
+      {mismatchWarning && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 12, maxWidth: 420, width: '100%', overflow: 'hidden' }}>
+            <div style={{ background: '#fef3c7', padding: '14px 16px', borderBottom: '1px solid #fde68a', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <div style={{ fontSize: 20 }}>⚠️</div>
+              <div>
+                <div style={{ fontFamily: MN, fontSize: 12, fontWeight: 700, color: '#92400e' }}>Data Mismatch Detected</div>
+                <div style={{ fontSize: 12, color: '#78350f', marginTop: 2 }}>The entered details don't match the bill photo.</div>
+              </div>
+            </div>
+            <div style={{ padding: 16 }}>
+              {mismatchWarning.map((m, i) => (
+                <div key={i} style={{ marginBottom: 10, padding: '10px 12px', background: '#fef2f2', borderRadius: 8, border: '1px solid #fecaca' }}>
+                  <div style={{ fontFamily: MN, fontSize: 10, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', marginBottom: 4 }}>{m.field}</div>
+                  <div style={{ fontSize: 12 }}>Entered: <strong>{m.entered}</strong></div>
+                  <div style={{ fontSize: 12 }}>On bill: <strong>{m.onBill}</strong></div>
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                <button onClick={() => setMismatchWarning(null)} style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', fontFamily: MN, fontSize: 11, fontWeight: 700, cursor: 'pointer', color: '#0f172a' }}>Fix Details</button>
+                <button onClick={() => doSave(mismatchWarning)} style={{ flex: 1, padding: '10px', borderRadius: 8, border: 'none', background: '#dc2626', color: '#fff', fontFamily: MN, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Save Anyway</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Photo modal */}
       {selectedBill && (
