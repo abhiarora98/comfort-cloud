@@ -5,32 +5,22 @@ const TALLY_URL = process.env.TALLY_URL || 'https://oxide-tomato-fiscal-ends.try
 const COMPANY = process.env.TALLY_COMPANY || 'Comfort Industries';
 
 function getPurchaseXML(fromDate, toDate) {
-  // Tally Prime format (VERSION 1)
   return `<ENVELOPE>
   <HEADER>
-    <VERSION>1</VERSION>
-    <TALLYREQUEST>Export</TALLYREQUEST>
-    <TYPE>Data</TYPE>
-    <ID>Vouchers</ID>
+    <TALLYREQUEST>Export Data</TALLYREQUEST>
   </HEADER>
   <BODY>
-    <DESC>
-      <STATICVARIABLES>
-        <SVCURRENTCOMPANY>${COMPANY}</SVCURRENTCOMPANY>
-        <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
-        <SVFROMDATE>${fromDate}</SVFROMDATE>
-        <SVTODATE>${toDate}</SVTODATE>
-      </STATICVARIABLES>
-      <TDL>
-        <TDLMESSAGE>
-          <COLLECTION NAME="PurchaseVouchers" ISMODIFY="No">
-            <TYPE>Voucher</TYPE>
-            <FILTERS>FilterPurchase</FILTERS>
-          </COLLECTION>
-          <SYSTEM TYPE="Formulae" NAME="FilterPurchase">@@VoucherTypeName Contains "Purchase"</SYSTEM>
-        </TDLMESSAGE>
-      </TDL>
-    </DESC>
+    <EXPORTDATA>
+      <REQUESTDESC>
+        <REPORTNAME>Day Book</REPORTNAME>
+        <STATICVARIABLES>
+          <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
+          <SVCURRENTCOMPANY>${COMPANY}</SVCURRENTCOMPANY>
+          <SVFROMDATE>${fromDate}</SVFROMDATE>
+          <SVTODATE>${toDate}</SVTODATE>
+        </STATICVARIABLES>
+      </REQUESTDESC>
+    </EXPORTDATA>
   </BODY>
 </ENVELOPE>`;
 }
@@ -89,7 +79,8 @@ export async function GET() {
     const xml = await resp.text();
 
     if (xml.includes('LINEERROR') || xml.includes('ERRORS')) {
-      throw new Error('Tally returned an error — check if Purchase Register is accessible');
+      const errMatch = xml.match(/<LINEERROR>([\s\S]*?)<\/LINEERROR>/);
+      throw new Error('Tally error: ' + (errMatch ? errMatch[1].trim() : xml.slice(0, 200)));
     }
 
     const vouchers = parseVouchers(xml);
