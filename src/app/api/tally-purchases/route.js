@@ -5,22 +5,32 @@ const TALLY_URL = process.env.TALLY_URL || 'https://oxide-tomato-fiscal-ends.try
 const COMPANY = process.env.TALLY_COMPANY || 'Comfort Industries';
 
 function getPurchaseXML(fromDate, toDate) {
+  // Tally Prime format (VERSION 1)
   return `<ENVELOPE>
   <HEADER>
-    <TALLYREQUEST>Export Data</TALLYREQUEST>
+    <VERSION>1</VERSION>
+    <TALLYREQUEST>Export</TALLYREQUEST>
+    <TYPE>Data</TYPE>
+    <ID>Vouchers</ID>
   </HEADER>
   <BODY>
-    <EXPORTDATA>
-      <REQUESTDESC>
-        <REPORTNAME>DAYBOOK</REPORTNAME>
-        <STATICVARIABLES>
-          <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
-          <SVCURRENTCOMPANY>${COMPANY}</SVCURRENTCOMPANY>
-          <SVFROMDATE>${fromDate}</SVFROMDATE>
-          <SVTODATE>${toDate}</SVTODATE>
-        </STATICVARIABLES>
-      </REQUESTDESC>
-    </EXPORTDATA>
+    <DESC>
+      <STATICVARIABLES>
+        <SVCURRENTCOMPANY>${COMPANY}</SVCURRENTCOMPANY>
+        <SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>
+        <SVFROMDATE>${fromDate}</SVFROMDATE>
+        <SVTODATE>${toDate}</SVTODATE>
+      </STATICVARIABLES>
+      <TDL>
+        <TDLMESSAGE>
+          <COLLECTION NAME="PurchaseVouchers" ISMODIFY="No">
+            <TYPE>Voucher</TYPE>
+            <FILTERS>FilterPurchase</FILTERS>
+          </COLLECTION>
+          <SYSTEM TYPE="Formulae" NAME="FilterPurchase">@@VoucherTypeName Contains "Purchase"</SYSTEM>
+        </TDLMESSAGE>
+      </TDL>
+    </DESC>
   </BODY>
 </ENVELOPE>`;
 }
