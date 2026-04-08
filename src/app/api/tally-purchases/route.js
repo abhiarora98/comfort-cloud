@@ -4,9 +4,8 @@ import { Agent } from 'https';
 
 export const maxDuration = 30;
 
-const TALLY_URL = process.env.TALLY_URL || 'https://specialist-numbers-univ-annotated.trycloudflare.com';
+const TALLY_URL = process.env.TALLY_URL || 'http://localhost:9000';
 
-// Force HTTP/1.1 — Cloudflare drops the body when HTTP/2 is negotiated
 const http11Agent = new Agent({ ALPNProtocols: ['http/1.1'] });
 
 function getPurchaseXML(fromDate, toDate) {
@@ -36,13 +35,20 @@ function doRequest(url, body) {
       headers: {
         'Content-Type': 'text/xml',
         'Content-Length': buf.length,
+        'Connection': 'close',
+        'ngrok-skip-browser-warning': 'true',
       },
       agent: isHttps ? http11Agent : undefined,
     };
     const req = (isHttps ? httpsRequest : httpRequest)(opts, (res) => {
       const chunks = [];
       res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve({ status: res.statusCode, text: Buffer.concat(chunks).toString('utf8') }));
+      res.on('end', () => {
+        // Tally appends \x04 (EOT) and may embed other control chars — strip them
+        const raw = Buffer.concat(chunks).toString('utf8');
+        const text = raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+        resolve({ status: res.statusCode, text });
+      });
     });
     req.on('error', reject);
     req.setTimeout(20000, () => { req.destroy(); reject(new Error('Tally request timed out')); });
@@ -94,7 +100,7 @@ export async function GET() {
     }
 
     const vouchers = parseVouchers(xml);
-    const debug = vouchers.length === 0 ? xml.slice(0, 1000) : null;
+    const debug = vouchers.length === 0 ? xml.slice(0, 2000) : null;
     return Response.json({ ok: true, vouchers, count: vouchers.length, debug });
   } catch (e) {
     console.error('tally-purchases error:', e);
