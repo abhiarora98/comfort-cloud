@@ -1154,6 +1154,9 @@ export default function Dashboard(){
   const[liveOrders,setLiveOrders]=useState(null);
   const[lastUpdated,setLastUpdated]=useState(null);
   const[fetchStatus,setFetchStatus]=useState("idle");
+  const[newOrderIds,setNewOrderIds]=useState(new Set());
+  const[showNewOnly,setShowNewOnly]=useState(false);
+  const prevOrderIds=useRef(null);
 
   useEffect(()=>{
     var doFetch=function(){
@@ -1162,6 +1165,14 @@ export default function Dashboard(){
       .then(function(csv){
         var raw=parseCSV(csv);if(raw.length===0)throw new Error("Empty");
         var grouped=groupOrders(raw);
+        // Track new orders by comparing with previous set
+        var currentIds=new Set(grouped.map(function(o){return o.party+"||"+o.piDate;}));
+        if(prevOrderIds.current){
+          var added=new Set();
+          currentIds.forEach(function(id){if(!prevOrderIds.current.has(id))added.add(id);});
+          if(added.size>0)setNewOrderIds(added);
+        }
+        prevOrderIds.current=currentIds;
         setLiveOrders(grouped);setLastUpdated(new Date());setFetchStatus("ok");
       }).catch(function(){setFetchStatus(liveOrders?"error_cached":"error");});
     };
@@ -1184,9 +1195,11 @@ export default function Dashboard(){
   const pauseCarousel=useCallback(()=>setInsPaused(true),[]);
   const resumeCarousel=useCallback(()=>setInsPaused(false),[]);
 
+  const isNewOrder=useCallback((o)=>newOrderIds.has(o.party+"||"+o.piDate),[newOrderIds]);
   const filtered=useMemo(()=>{
     let r=ORDERS.filter(o=>{
       if(o.lineCount>0&&o.dispatchedCount>=o.lineCount)return false;
+      if(showNewOnly&&!newOrderIds.has(o.party+"||"+o.piDate))return false;
       if(cat!=="all"&&!o.categories.includes(cat))return false;
       if(poc&&o.salesPOC!==poc)return false;
       if(payF!=="all"){const appr=!!o.approvalDate;if(payF==="approved"&&!appr)return false;if(payF==="not_approved"&&appr)return false;}
@@ -1199,7 +1212,7 @@ export default function Dashboard(){
     else if(srt==="qd"){const cq=o=>cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0);r.sort((a,b)=>cq(b)-cq(a));}
     else if(srt==="vd")r.sort((a,b)=>b.totalValue-a.totalValue);
     return r;
-  },[cat,poc,srch,srt,payF,ORDERS]);
+  },[cat,poc,srch,srt,payF,ORDERS,showNewOnly,newOrderIds]);
 
   // Stable orders for insights & metrics — not affected by search
   const baseOrders=useMemo(()=>ORDERS.filter(o=>!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)),[ORDERS]);
@@ -1237,7 +1250,7 @@ export default function Dashboard(){
   return <div style={{fontFamily:SN,background:"#f8fafc",minHeight:"100vh",fontSize:13,color:"#1e293b"}}>
     
     {/* Fonts loaded in layout.js */}
-    <style>{`*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}`}</style>
+    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}`}</style>
 
     {/* Header */}
     <div style={{background:"#0f172a",color:"#fff",padding:mob?"0 16px":"0 28px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:200,borderBottom:"1px solid #1e293b"}}>
@@ -1401,6 +1414,13 @@ export default function Dashboard(){
         </div>
 
         {/* Search & Filters */}
+        {/* New orders banner */}
+        {showNewOnly&&<div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:10,padding:"10px 16px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#2563eb"}}>Showing {newOrderIds.size} new order{newOrderIds.size!==1?"s":""}</span>
+          <button onClick={()=>{setShowNewOnly(false);setNewOrderIds(new Set());}} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#64748b",background:"#fff",border:"1px solid #e2e8f0",borderRadius:6,padding:"4px 12px",cursor:"pointer"}}>Back to all</button>
+        </div>}
+
+        {/* Search & Filters */}
         <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:mob?"14px 16px":"16px 20px",marginBottom:20}}>
           <div style={{display:"flex",alignItems:"center",gap:mob?8:12,flexWrap:"wrap",marginBottom:12}}>
             <div style={{position:"relative",flex:1,minWidth:mob?140:220,maxWidth:320}}>
@@ -1409,7 +1429,8 @@ export default function Dashboard(){
             </div>
             <select value={srt} onChange={e=>setSrt(e.target.value)} style={S.select}><option value="da">Oldest</option><option value="dd">Newest</option><option value="pa">A→Z</option><option value="qd">Qty ↓</option><option value="vd">Value ↓</option></select>
             <select value={poc} onChange={e=>{setPoc(e.target.value);setPg(1);}} style={S.select}><option value="">All POC</option>{pocs.map(p=><option key={p}>{p}</option>)}</select>
-            {(srch||cat!=="all"||poc)&&<button onClick={()=>{setSrch("");setCat("all");setPoc("");setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8",background:"none",border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 12px",cursor:"pointer",whiteSpace:"nowrap"}}>Clear all</button>}
+            {newOrderIds.size>0&&!showNewOnly&&<button onClick={()=>{setShowNewOnly(true);setShowAllRtd(false);setShowAllPend(false);}} style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#2563eb",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:6,padding:"5px 12px",cursor:"pointer",whiteSpace:"nowrap",animation:"pulse 2s ease-in-out infinite"}}>+{newOrderIds.size} new</button>}
+            {(srch||cat!=="all"||poc||showNewOnly)&&<button onClick={()=>{setSrch("");setCat("all");setPoc("");setShowNewOnly(false);setNewOrderIds(new Set());setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8",background:"none",border:"1px solid #e2e8f0",borderRadius:6,padding:"5px 12px",cursor:"pointer",whiteSpace:"nowrap"}}>Clear all</button>}
           </div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {[["all","All",filtered.length],...Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>[c,(CC[c]||CC.Other).l,n])].map(([val,lbl,n])=>
@@ -1431,9 +1452,9 @@ export default function Dashboard(){
             </div>
             {(showAllRtd?rtdSorted:rtdSorted.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const dy=daysSince(o.approvalDate);const dC=dy>7?"#dc2626":dy>3?"#ea580c":"#059669";
               return <div key={o.id} style={{borderBottom:"1px solid #f1f5f9"}}>
-                <div onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#ecfdf5":oi%2?"#f0fdf4":"#fff",borderLeft:ep?"3px solid #059669":"3px solid transparent",transition:"background 0.15s"}}>
+                <div onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#ecfdf5":isNewOrder(o)?"#f0f9ff":oi%2?"#f0fdf4":"#fff",borderLeft:ep?"3px solid #059669":isNewOrder(o)?"3px solid #2563eb":"3px solid transparent",transition:"background 0.15s"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                    <span style={{fontWeight:700,fontSize:13}}>{o.party}</span>
+                    <span style={{fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:6}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:700,color:"#2563eb",background:"#eff6ff",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
                     <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:dC,background:dC+"15",padding:"2px 7px",borderRadius:10}}>{dy}d</span>
                   </div>
                   <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:4}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div>
@@ -1480,9 +1501,9 @@ export default function Dashboard(){
             </div>
             {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
               return <div key={o.id} style={{borderBottom:"1px solid #f1f5f9"}}>
-                <div onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#fffbeb":oi%2?"#f8fafc":"#fff",borderLeft:ep?"3px solid #d97706":"3px solid transparent",transition:"background 0.15s"}}>
+                <div onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#fffbeb":isNewOrder(o)?"#f0f9ff":oi%2?"#f8fafc":"#fff",borderLeft:ep?"3px solid #d97706":isNewOrder(o)?"3px solid #2563eb":"3px solid transparent",transition:"background 0.15s"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                    <span style={{fontWeight:700,fontSize:13}}>{o.party}</span>
+                    <span style={{fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:6}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:700,color:"#2563eb",background:"#eff6ff",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
                     <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:dc,background:dc+"15",padding:"2px 7px",borderRadius:10}}>{days}d</span>
                   </div>
                   <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:4}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div>
