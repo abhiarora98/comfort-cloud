@@ -136,7 +136,7 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
   if(rtdOverdue.length>0){
     insights.push({type:"overdue",impact:rtdOverdue.length>=3?S.H:S.M,urgency:S.H,actionability:S.H,
       text:rtdOverdue.length+" order"+(rtdOverdue.length>1?"s":"")+" worth "+fmtVal(odVal)+" "+(rtdOverdue.length>1?"have":"has")+" been approved but not shipped for over a week. Ship these first to avoid cancellations.",
-      action:"Clear overdue orders",cta:"Fix this now",tone:"urgent",
+      action:"Clear overdue orders",cta:"Review",tone:"urgent",
       orders:rtdOverdue.sort((a,b)=>b.totalValue-a.totalValue),orderAction:"dispatch",
       issue:o=>"Approved "+daysSince(o.approvalDate)+"d ago, not shipped"});
   }
@@ -144,13 +144,13 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
   if(pendPct>=65&&pendingApproval.length>=5){
     insights.push({type:"bottleneck",impact:S.H,urgency:S.H,actionability:S.H,
       text:pendingApproval.length+" orders worth "+fmtVal(pendVal)+" are waiting for approval. Nothing can ship until these are cleared.",
-      action:"Get approvals done",cta:"Fix this now",tone:"warning",
+      action:"Get approvals done",cta:"Review",tone:"warning",
       orders:pendingApproval.sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),orderAction:"approve",
       issue:o=>"Waiting "+daysSince(o.piDate)+"d for approval"});
   } else if(pendingApproval.length>readyToDispatch.length*2&&pendingApproval.length>=4){
     insights.push({type:"bottleneck",impact:S.M,urgency:S.M,actionability:S.H,
       text:pendingApproval.length+" orders are waiting for approval but only "+readyToDispatch.length+" are ready to ship. Approvals need to move faster.",
-      action:"Speed up approvals",cta:"Review now",tone:"warning",
+      action:"Speed up approvals",cta:"Review",tone:"warning",
       orders:pendingApproval.sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),orderAction:"approve",
       issue:o=>"Waiting "+daysSince(o.piDate)+"d for approval"});
   }
@@ -158,7 +158,7 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
   if(readyToDispatch.length>=5&&readyPct>=40&&rtdOverdue.length===0){
     insights.push({type:"ready_batch",impact:S.M,urgency:S.M,actionability:S.H,
       text:readyToDispatch.length+" orders worth "+fmtVal(rtdVal)+" are ready to ship and nothing is overdue. Good time to clear them all at once.",
-      action:"Ship ready orders",cta:"Start shipping",tone:"positive",
+      action:"Ship ready orders",cta:"Review",tone:"positive",
       orders:readyToDispatch.sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),orderAction:"dispatch",
       issue:o=>"Ready since "+o.approvalDate});
   }
@@ -167,7 +167,7 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
     const pocName=topPOC[0][0];
     insights.push({type:"poc_concentration",impact:S.L,urgency:S.L,actionability:S.M,
       text:pocName+" has "+topPOC[0][1]+" out of "+filtered.length+" orders. If anything slows down on their side, most of your orders get affected.",
-      action:"Review "+pocName+"'s orders",cta:"See orders",tone:"neutral",
+      action:"Review "+pocName+"'s orders",cta:"Review",tone:"neutral",
       orders:filtered.filter(o=>o.salesPOC===pocName).sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),orderAction:"follow_up",
       issue:o=>o.approvalDate?"Ready to ship":"Waiting for approval"});
   }
@@ -176,7 +176,7 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
     const catName=(CC[topCat[0][0]]||CC.Other).l||topCat[0][0];const catKey=topCat[0][0];
     insights.push({type:"category_dominance",impact:S.L,urgency:S.L,actionability:S.L,
       text:catName+" makes up most of your current orders at "+Math.round(topCat[0][1]/allLines.reduce((s,l)=>s+l.qty,0)*100)+"% of total quantity. Make sure you have enough stock to keep up.",
-      action:"Check "+catName+" orders",cta:"See orders",tone:"neutral",
+      action:"Check "+catName+" orders",cta:"Review",tone:"neutral",
       orders:filtered.filter(o=>o.categories.includes(catKey)).sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),orderAction:"follow_up",
       issue:o=>o.approvalDate?"Ready to ship":"Pending approval"});
   }
@@ -187,7 +187,7 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
     const blockedOrders=[...rtdOverdue,...pendingApproval].sort((a,b)=>b.totalValue-a.totalValue).slice(0,10);
     insights.push({type:"strong_blocked",impact:S.M,urgency:S.M,actionability:S.H,
       text:"You have "+fmtVal(totalVal)+" in orders but "+fmtVal(blockedVal)+" is stuck in approvals or overdue. Clear the blocks so this money can move.",
-      action:"Clear pending and overdue",cta:"Fix this now",tone:"warning",
+      action:"Clear pending and overdue",cta:"Review",tone:"warning",
       orders:blockedOrders,orderAction:"mixed",
       issue:o=>o.approvalDate&&daysSince(o.approvalDate)>7?"Overdue "+daysSince(o.approvalDate)+"d":"Waiting "+daysSince(o.piDate)+"d for approval"});
   }
@@ -198,7 +198,7 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
     const agedVal=aged.reduce((s,o)=>s+o.totalValue,0);
     insights.push({type:"aging",impact:aged.length>=5?S.H:S.M,urgency:S.M,actionability:S.H,
       text:aged.length+" orders worth "+fmtVal(agedVal)+" have been sitting for over 30 days without approval. The longer they wait, the more likely they get cancelled.",
-      action:"Review old orders",cta:"Review now",tone:"warning",
+      action:"Review old orders",cta:"Review",tone:"warning",
       orders:aged.sort((a,b)=>b.totalValue-a.totalValue),orderAction:"approve",
       issue:o=>daysSince(o.piDate)+"d without approval"});
   }
@@ -210,7 +210,7 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
     const hv=highValStuck[0];
     insights.push({type:"high_value_stuck",impact:S.M,urgency:S.M,actionability:S.H,
       text:hv.party+" has a big order worth "+fmtVal(hv.totalValue)+" waiting for approval for "+daysSince(hv.piDate)+" days. This is "+Math.round(hv.totalValue/totalVal*100)+"% of your total pipeline — get it approved fast.",
-      action:"Approve "+hv.party+"'s order",cta:"Fix this now",tone:"warning",
+      action:"Approve "+hv.party+"'s order",cta:"Review",tone:"warning",
       orders:highValStuck.slice(0,5),orderAction:"approve",
       issue:o=>daysSince(o.piDate)+"d waiting, "+fmtVal(o.totalValue)});
   }
@@ -1295,7 +1295,7 @@ export default function Dashboard(){
             <div style={{fontSize:mob?20:26,fontWeight:700,color:"#0f172a",lineHeight:1.3,letterSpacing:"-0.015em",marginBottom:12}}>{insight.headline}</div>
             <div style={{fontSize:mob?13:15,color:"#64748b",lineHeight:1.7,maxWidth:700,paddingBottom:32}}>{insight.body}</div>
             <div style={{position:"absolute",bottom:mob?28:36,left:mob?25:35,right:mob?22:32,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              {insight.cta?<button onClick={()=>setActionOpen(o=>!o)} style={{fontFamily:MN,fontSize:12,fontWeight:700,color:"#fff",background:ts.accent,border:"none",borderRadius:8,padding:"8px 18px",cursor:"pointer",transition:"opacity 0.15s",opacity:actionOpen?0.8:1}}>{actionOpen?"Close":insight.cta}</button>:<span/>}
+              {insight.cta?<button onClick={()=>setActionOpen(o=>!o)} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?ts.accent:"#fff",background:actionOpen?"transparent":ts.accent,border:actionOpen?"1px solid "+ts.accent+"30":"1px solid "+ts.accent,borderRadius:6,padding:"6px 14px",cursor:"pointer",transition:"all 0.15s"}}>{actionOpen?"Close":insight.cta}</button>:<span/>}
               {allInsights.length>1&&<div style={{display:"flex",gap:5}}>
                 {allInsights.map((_,i)=><span key={i} onClick={()=>{setInsIdx(i);setActionOpen(false);}} style={{width:i===ci?22:6,height:6,borderRadius:3,background:i===ci?ts.accent:"#e2e8f0",cursor:"pointer",transition:"all 0.2s"}}/>)}
               </div>}
@@ -1308,34 +1308,26 @@ export default function Dashboard(){
           const ci=Math.min(insIdx,allInsights.length-1);
           const insight=allInsights[ci];
           if(!actionOpen||!insight.orders||insight.orders.length===0)return null;
-          const visibleOrders=insight.orders.filter(o=>!doneIds.has(o.id));
-          const actionLabels={dispatch:"Mark Dispatched",approve:"Approve",follow_up:"Follow Up",mixed:"Resolve"};
-          const actionColors={dispatch:"#059669",approve:"#2563eb",follow_up:"#64748b",mixed:"#ea580c"};
+          const visibleOrders=insight.orders;
           return <div style={{background:"#fff",borderRadius:14,border:"1px solid #e2e8f0",marginBottom:28,overflow:"hidden"}}>
-            <div style={{padding:"16px 24px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontFamily:MN,fontSize:11,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:"#475569"}}>Priority Orders</span>
-                <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{visibleOrders.length} remaining</span>
-              </div>
-              {doneIds.size>0&&<span style={{fontFamily:MN,fontSize:11,color:"#059669",fontWeight:600}}>{doneIds.size} done</span>}
+            <div style={{padding:"14px 20px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#475569"}}>Priority Orders</span>
+              <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{visibleOrders.length}</span>
             </div>
-            {visibleOrders.length===0?<div style={{padding:"32px 24px",textAlign:"center",color:"#94a3b8",fontFamily:MN,fontSize:13}}>All done! No more orders to action.</div>:
-            visibleOrders.map((o,oi)=>{
+            {visibleOrders.map((o,oi)=>{
               const issueText=typeof insight.issue==="function"?insight.issue(o):"";
-              const oAction=o.approvalDate&&insight.orderAction==="mixed"?"dispatch":insight.orderAction;
-              return <div key={o.id} style={{padding:mob?"14px 16px":"16px 24px",borderBottom:oi<visibleOrders.length-1?"1px solid #f8fafc":"none",display:"flex",alignItems:mob?"flex-start":"center",gap:mob?0:16,flexDirection:mob?"column":"row",transition:"background 0.15s"}}>
-                <div style={{flex:1,minWidth:0,marginBottom:mob?10:0}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                    <span style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>{o.party}</span>
-                    <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>#{o.id}</span>
+              return <div key={o.id} style={{padding:mob?"12px 16px":"12px 20px",borderBottom:oi<visibleOrders.length-1?"1px solid #f8fafc":"none",display:"flex",alignItems:"center",gap:16}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
+                    <span style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{o.party}</span>
+                    <span style={{fontFamily:MN,fontSize:10,color:"#c0c7d1"}}>#{o.id}</span>
                   </div>
                   <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-                    <span style={{fontFamily:MN,fontSize:15,fontWeight:700,color:"#0f172a"}}>{fmtVal(o.totalValue)}</span>
-                    <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{o.totalQty} qty</span>
-                    {issueText&&<span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:insight.tone==="urgent"?"#dc2626":insight.tone==="warning"?"#ea580c":"#64748b",background:insight.tone==="urgent"?"#fef2f2":insight.tone==="warning"?"#fff7ed":"#f8fafc",padding:"2px 8px",borderRadius:4}}>{issueText}</span>}
+                    <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>{fmtVal(o.totalValue)}</span>
+                    <span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{o.totalQty} qty</span>
+                    {issueText&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#64748b",background:"#f8fafc",padding:"2px 8px",borderRadius:4}}>{issueText}</span>}
                   </div>
                 </div>
-                <button onClick={()=>setDoneIds(s=>{const n=new Set(s);n.add(o.id);return n;})} style={{fontFamily:MN,fontSize:11,fontWeight:700,color:actionColors[oAction]||"#64748b",background:(actionColors[oAction]||"#64748b")+"0a",border:"1px solid "+(actionColors[oAction]||"#64748b")+"20",borderRadius:8,padding:"8px 16px",cursor:"pointer",whiteSpace:"nowrap",transition:"all 0.15s",flexShrink:0}}>{actionLabels[oAction]||"Done"}</button>
               </div>;
             })}
           </div>;
