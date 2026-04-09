@@ -1280,8 +1280,8 @@ export default function Dashboard(){
           const ts=toneStyles[insight.tone]||toneStyles.neutral;
           const hasPrev=ci>0,hasNext=ci<allInsights.length-1;
           const navBtn=(dir,enabled,onClick)=><button onClick={onClick} disabled={!enabled} style={{width:30,height:30,borderRadius:6,border:"1px solid "+(enabled?"#e2e8f0":"transparent"),background:enabled?"#fff":"transparent",color:enabled?"#475569":"#d1d5db",cursor:enabled?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontFamily:MN,fontWeight:600,transition:"all 0.15s"}}>{dir}</button>;
-          return <div style={{background:ts.bg,borderRadius:14,border:"1px solid "+ts.border,borderLeft:"3px solid "+ts.accent,padding:mob?"28px 22px":"36px 32px",marginBottom:28,position:"relative",height:mob?220:230,overflow:"hidden"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+          return <div style={{background:ts.bg,borderRadius:14,border:"1px solid "+ts.border,borderLeft:"3px solid "+ts.accent,padding:mob?"24px 22px":"28px 32px",marginBottom:28,display:"flex",flexDirection:"column",height:mob?210:220,boxSizing:"border-box"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexShrink:0}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <span style={{fontFamily:MN,fontSize:10,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:ts.labelColor,background:ts.labelBg,padding:"3px 10px",borderRadius:4}}>{ts.label}</span>
                 <span style={{fontFamily:MN,fontSize:11,fontWeight:500,color:"#c0c7d1"}}>Orders Insight</span>
@@ -1292,9 +1292,9 @@ export default function Dashboard(){
                 {navBtn("→",hasNext,()=>setInsIdx(i=>Math.min(allInsights.length-1,i+1)))}
               </div>}
             </div>
-            <div style={{fontSize:mob?20:26,fontWeight:700,color:"#0f172a",lineHeight:1.3,letterSpacing:"-0.015em",marginBottom:12}}>{insight.headline}</div>
-            <div style={{fontSize:mob?13:15,color:"#64748b",lineHeight:1.7,maxWidth:700,paddingBottom:32}}>{insight.body}</div>
-            <div style={{position:"absolute",bottom:mob?28:36,left:mob?25:35,right:mob?22:32,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{fontSize:mob?18:22,fontWeight:700,color:"#0f172a",lineHeight:1.3,letterSpacing:"-0.015em",marginBottom:8,flexShrink:0}}>{insight.headline}</div>
+            <div style={{fontSize:mob?13:14,color:"#64748b",lineHeight:1.6,maxWidth:700,flex:1,overflow:"hidden"}}>{insight.body}</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,paddingTop:12}}>
               {insight.cta?<button onClick={()=>setActionOpen(o=>!o)} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?ts.accent:"#fff",background:actionOpen?"transparent":ts.accent,border:actionOpen?"1px solid "+ts.accent+"30":"1px solid "+ts.accent,borderRadius:6,padding:"6px 14px",cursor:"pointer",transition:"all 0.15s"}}>{actionOpen?"Close":insight.cta}</button>:<span/>}
               {allInsights.length>1&&<div style={{display:"flex",gap:5}}>
                 {allInsights.map((_,i)=><span key={i} onClick={()=>{setInsIdx(i);setActionOpen(false);}} style={{width:i===ci?22:6,height:6,borderRadius:3,background:i===ci?ts.accent:"#e2e8f0",cursor:"pointer",transition:"all 0.2s"}}/>)}
