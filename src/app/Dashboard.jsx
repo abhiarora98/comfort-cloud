@@ -135,23 +135,24 @@ function Badge({cat}){const x=CC[cat]||CC["Other"];return <span style={{...S.pil
 function Dot({c,s=6}){return <span style={{width:s,height:s,borderRadius:"50%",background:c,display:"inline-block",flexShrink:0}}/>;}
 
 function StatCard({icon,l,v,sub,sub2,accent,breakdown,unit,span2}){
-  const ac=accent||AC2;
-  const glassCard={padding:"14px 16px",borderRadius:16,background:"rgba(255,255,255,0.08)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:"1px solid rgba(255,255,255,0.15)",boxShadow:"0 1px 8px rgba(0,0,0,0.15)",position:"relative",overflow:"hidden"};
+  const ac=accent||"#2563eb";
   return(
-    <div style={{...glassCard,...(span2?{gridColumn:"span 2"}:{})}}>
-      <div style={{position:"absolute",top:-18,right:-18,width:64,height:64,borderRadius:"50%",background:ac,opacity:0.2,filter:"blur(16px)",pointerEvents:"none"}}/>
-      <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)",marginBottom:6}}>{l}</div>
-      <div style={{display:"flex",alignItems:"baseline",gap:4}}>
-        <div style={{fontFamily:MN,fontSize:26,fontWeight:700,color:"#fff",lineHeight:1}}>{v}</div>
-        {unit&&<div style={{fontFamily:MN,fontSize:10,color:ac,fontWeight:700}}>{unit}</div>}
+    <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7eb",padding:"14px 16px",...(span2?{gridColumn:"span 2"}:{})}}>
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+        {accent&&<span style={{width:6,height:6,borderRadius:"50%",background:ac,flexShrink:0}}/>}
+        <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8"}}>{l}</div>
       </div>
-      {sub&&<div style={{fontSize:11,color:"rgba(255,255,255,0.6)",fontWeight:500,marginTop:3,fontFamily:MN}}>{sub}</div>}
-      {sub2&&<div style={{fontSize:10,color:"rgba(255,255,255,0.4)",marginTop:2,fontFamily:MN}}>{sub2}</div>}
-      {breakdown&&<div style={{marginTop:8,paddingTop:6,borderTop:"1px solid rgba(255,255,255,0.1)",display:"flex",gap:4,flexWrap:"wrap"}}>
+      <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+        <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:"#0f172a",lineHeight:1}}>{v}</div>
+        {unit&&<div style={{fontFamily:MN,fontSize:10,color:"#94a3b8",fontWeight:600}}>{unit}</div>}
+      </div>
+      {sub&&<div style={{fontSize:11,color:"#64748b",fontWeight:500,marginTop:4,fontFamily:MN}}>{sub}</div>}
+      {sub2&&<div style={{fontSize:10,color:"#94a3b8",marginTop:2,fontFamily:MN}}>{sub2}</div>}
+      {breakdown&&<div style={{marginTop:8,paddingTop:6,borderTop:"1px solid #f1f5f9",display:"flex",gap:4,flexWrap:"wrap"}}>
         {breakdown.filter(([,q])=>q>0).map(([lbl,qty])=>(
-          <div key={lbl} style={{display:"flex",alignItems:"center",gap:3,background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.25)",padding:"2px 7px",borderRadius:8}}>
-            <span style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.55)"}}>{lbl}</span>
-            <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#fff"}}>{qty}</span>
+          <div key={lbl} style={{display:"flex",alignItems:"center",gap:3,background:"#f8fafc",border:"1px solid #e5e7eb",padding:"2px 7px",borderRadius:6}}>
+            <span style={{fontFamily:MN,fontSize:9,color:"#94a3b8"}}>{lbl}</span>
+            <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#0f172a"}}>{qty}</span>
           </div>
         ))}
       </div>}
@@ -1008,7 +1009,7 @@ export default function Dashboard(){
   const[cat,setCat]=useState("all");const[srch,setSrch]=useState("");const[srt,setSrt]=useState("da");const[poc,setPoc]=useState("");
   const[pg,setPg]=useState(1);const[exp,setExp]=useState(null);const[expParties,setExpParties]=useState({});
   const[selP,setSelP]=useState(null);const[pcf,setPcf]=useState("all");const[psrch,setPsrch]=useState("");
-  const[showHist,setShowHist]=useState(false);const[payF,setPayF]=useState("all");const[mpv,setMpv]=useState(false);
+  const[showHist,setShowHist]=useState(false);const[payF,setPayF]=useState("all");const[mpv,setMpv]=useState(false);const[showCats,setShowCats]=useState(false);
   const[liveOrders,setLiveOrders]=useState(null);
   const[lastUpdated,setLastUpdated]=useState(null);
   const[fetchStatus,setFetchStatus]=useState("idle");
@@ -1076,20 +1077,20 @@ export default function Dashboard(){
   const allTabs=[{id:"pending",l:"Orders",n:filtered.length},{id:"party",l:"Parties",n:pFilt.length},{id:"stock",l:"Stock",n:""},{id:"dispatch",l:"Dispatch",n:""},{id:"analytics",l:"Analytics",n:""},{id:"calls",l:"Calls",n:Object.keys(REORDER).length}];
   const tabs=allTabs.filter(t=>allowedTabs.includes(t.id));
 
-  return <div style={{fontFamily:SN,background:"#f1f5f9",minHeight:"100vh",fontSize:13,color:"#1e293b"}}>
+  return <div style={{fontFamily:SN,background:"#f8fafc",minHeight:"100vh",fontSize:13,color:"#1e293b"}}>
     
     {/* Fonts loaded in layout.js */}
-    <style>{`*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#64748b}input:focus,select:focus{border-color:#d97706!important;box-shadow:0 0 0 3px rgba(217,119,6,0.12)}::selection{background:#d9770633}`}</style>
+    <style>{`*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}`}</style>
 
     {/* Header */}
-    <div style={{background:"linear-gradient(135deg,#0c1222 0%,#1a2744 60%,#2a1f0e 100%)",color:"#fff",padding:mob?"0 16px":"0 28px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:200,borderBottom:"2px solid #d97706"}}>
+    <div style={{background:"#0f172a",color:"#fff",padding:mob?"0 16px":"0 28px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:200,borderBottom:"1px solid #1e293b"}}>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
         <div style={{background:"#fff",borderRadius:6,padding:"3px 8px",display:"flex",alignItems:"center",justifyContent:"center"}}><img src="/logo.png" alt="Comfort Mats" style={{height:28,width:"auto"}}/></div>
         <div><div style={{fontFamily:MN,fontSize:16,fontWeight:700,letterSpacing:"0.12em",wordSpacing:"-0.08em",textTransform:"uppercase"}}>Comfort Cloud</div>{!mob&&<div style={{fontSize:10,opacity:0.4,fontFamily:MN,marginTop:-1,letterSpacing:"0.06em"}}>Dashboard</div>}</div>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(217,119,6,0.12)",border:"1px solid rgba(217,119,6,0.25)",padding:"6px 14px",borderRadius:20,fontSize:11,fontFamily:MN}}>
-          <span style={{width:7,height:7,borderRadius:"50%",background:fetchStatus==="ok"?"#4ade80":fetchStatus==="loading"?"#fbbf24":"#d97706",boxShadow:fetchStatus==="ok"?"0 0 8px #4ade80":"0 0 8px #d97706"}}/>
+        <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",padding:"6px 14px",borderRadius:8,fontSize:11,fontFamily:MN}}>
+          <span style={{width:6,height:6,borderRadius:"50%",background:fetchStatus==="ok"?"#4ade80":fetchStatus==="loading"?"#fbbf24":"#94a3b8"}}/>
           {!mob&&<>{filtered.length} orders · {fmtVal(filtered.reduce((s,o)=>s+o.totalValue,0))}</>}
           {fetchStatus==="ok"&&lastUpdated&&<span style={{opacity:0.6,marginLeft:4}}>{mob?`Live ${lastUpdated.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}`:` · Live ${lastUpdated.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}`}</span>}
           {fetchStatus==="loading"&&<span style={{opacity:0.6,marginLeft:4}}>Fetching…</span>}
@@ -1114,9 +1115,9 @@ export default function Dashboard(){
     </div>
 
     {/* Tabs */}
-    <div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",display:"flex",padding:mob?"0 12px":"0 28px",position:"sticky",top:56,zIndex:99,overflowX:"auto",gap:4}}>
-      {tabs.map(t=><div key={t.id} onClick={()=>{setTab(t.id);if(t.id==="party")setMpv(false);}} style={{padding:mob?"12px 14px":"14px 22px",fontSize:13,fontWeight:tab===t.id?700:500,color:tab===t.id?"#0f172a":"#94a3b8",cursor:"pointer",borderBottom:tab===t.id?"3px solid #d97706":"3px solid transparent",whiteSpace:"nowrap",transition:"all 0.2s"}}>
-        {t.l}{t.n!==""&&<span style={{display:"inline-block",background:tab===t.id?"#fef3c7":"#f1f5f9",borderRadius:20,padding:"1px 8px",fontFamily:MN,fontSize:10,marginLeft:6,color:tab===t.id?"#d97706":"#94a3b8",fontWeight:600}}>{t.n}</span>}
+    <div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",display:"flex",padding:mob?"0 12px":"0 28px",position:"sticky",top:56,zIndex:99,overflowX:"auto",gap:2}}>
+      {tabs.map(t=><div key={t.id} onClick={()=>{setTab(t.id);if(t.id==="party")setMpv(false);}} style={{padding:mob?"12px 14px":"14px 22px",fontSize:13,fontWeight:tab===t.id?600:400,color:tab===t.id?"#0f172a":"#94a3b8",cursor:"pointer",borderBottom:tab===t.id?"2px solid #2563eb":"2px solid transparent",whiteSpace:"nowrap",transition:"all 0.2s"}}>
+        {t.l}{t.n!==""&&<span style={{display:"inline-block",background:tab===t.id?"#eff6ff":"#f8fafc",borderRadius:10,padding:"1px 8px",fontFamily:MN,fontSize:10,marginLeft:6,color:tab===t.id?"#2563eb":"#94a3b8",fontWeight:600}}>{t.n}</span>}
       </div>)}
       {role==="admin"&&<a href="/purchases" style={{padding:mob?"12px 14px":"14px 22px",fontSize:13,fontWeight:500,color:"#94a3b8",cursor:"pointer",borderBottom:"3px solid transparent",whiteSpace:"nowrap",transition:"all 0.2s",textDecoration:"none",display:"flex",alignItems:"center",gap:6}}>Purchases</a>}
     </div>
@@ -1125,8 +1126,39 @@ export default function Dashboard(){
 
       {/* ═══ PENDING ═══ */}
       {tab==="pending"&&<div>
-        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:24,padding:"16px",borderRadius:20,background:"linear-gradient(135deg,#16254a 0%,#243268 100%)"}}>
-          <StatCard l="Total Orders" v={filtered.length} sub={fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))+" ready · "+fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))+" pending"} accent="#3b82f6"/>
+        {/* Hero Insight */}
+        <div style={{background:"#fff",borderRadius:14,border:"1px solid #e2e8f0",padding:mob?"24px 20px":"32px 28px",marginBottom:16}}>
+          <div style={{fontFamily:MN,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8",marginBottom:8}}>Pending Pipeline</div>
+          <div style={{fontFamily:MN,fontSize:mob?36:48,fontWeight:700,color:"#0f172a",lineHeight:1,marginBottom:8,letterSpacing:"-0.02em"}}>{fmtVal(filtered.reduce((s,o)=>s+o.totalValue,0))}</div>
+          <div style={{fontSize:14,color:"#64748b",lineHeight:1.5}}>
+            {filtered.length} orders — <span style={{color:"#059669",fontWeight:600}}>{readyToDispatch.length} ready</span>, <span style={{color:"#ea580c",fontWeight:600}}>{pendingApproval.length} pending approval</span>
+          </div>
+          {readyToDispatch.length>0&&rtdOverdue.length>0&&<div style={{marginTop:14,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"10px 14px",display:"inline-flex",alignItems:"center",gap:8}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background:"#dc2626",flexShrink:0}}/>
+            <span style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#dc2626"}}>{rtdOverdue.length} overdue</span>
+            <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>·</span>
+            <span style={{fontFamily:MN,fontSize:11,color:"#64748b"}}>{fmtVal(rtdOverdue.reduce((s,o)=>s+o.totalValue,0))}</span>
+          </div>}
+        </div>
+
+        {/* Key Metrics */}
+        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:12,marginBottom:16}}>
+          {[["Ready to Dispatch",readyToDispatch.length,fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0)),"#059669"],["Pending Approval",pendingApproval.length,fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0)),"#ea580c"],["Total Quantity",pendQty,(cat==="all"?"across all categories":"in "+cat),"#2563eb"],["Avg Order",fmtVal(Math.round(filtered.reduce((s,o)=>s+o.totalValue,0)/Math.max(filtered.length,1))),filtered.length+" orders","#64748b"]].map(([label,value,sub,color])=>
+            <div key={label} style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"16px 18px"}}>
+              <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8",marginBottom:6}}>{label}</div>
+              <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color,lineHeight:1,marginBottom:4}}>{value}</div>
+              <div style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{sub}</div>
+            </div>
+          )}
+        </div>
+
+        {/* Category Breakdown - Collapsible */}
+        <div style={{marginBottom:40}}>
+          <div onClick={()=>setShowCats(c=>!c)} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"8px 0",marginBottom:showCats?12:0,userSelect:"none"}}>
+            <span style={{fontFamily:MN,fontSize:10,color:"#94a3b8",transition:"transform 0.15s",transform:showCats?"rotate(90deg)":"none",display:"inline-block"}}>▶</span>
+            <span style={{...S.section}}>Category Breakdown</span>
+          </div>
+          {showCats&&<div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
           {(()=>{
             const ROLL_CATS=["Loop Rolls","TEFNO","Turf","Grass","Wire","Monograss"];
             const rollLines=allLines.filter(l=>ROLL_CATS.includes(l.category));
@@ -1156,10 +1188,11 @@ export default function Dashboard(){
               {fmQty>0&&<StatCard l="Foot Mat" v={fmQty} sub={fmVal} unit="pcs" breakdown={fmBd} accent={(CC["Foot Mat"]||CC.Other).c} span2/>}
             </>);
           })()}
+          </div>}
         </div>
 
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
-          <div style={{...S.section}}>Orders</div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+          <div style={{...S.section,fontSize:12,color:"#475569"}}>Orders</div>
           <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
             <input value={srch} onChange={e=>{setSrch(e.target.value);setPg(1);}} placeholder="Search party, model..." style={{...S.input,width:mob?150:260}}/>
             <select value={srt} onChange={e=>setSrt(e.target.value)} style={S.select}><option value="da">Oldest</option><option value="dd">Newest</option><option value="pa">A→Z</option><option value="qd">Qty ↓</option><option value="vd">Value ↓</option></select>
@@ -1167,26 +1200,26 @@ export default function Dashboard(){
           </div>
         </div>
 
-        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:20}}>
           {[["all","All",filtered.length],...Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>[c,(CC[c]||CC.Other).l,n])].map(([val,lbl,n])=>
-            <div key={val} onClick={()=>{setCat(val);setPg(1);}} style={{padding:"6px 14px",borderRadius:20,border:"none",background:cat===val?"#0f172a":"#fff",color:cat===val?"#fff":"#475569",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:600,boxShadow:cat===val?"none":"0 1px 2px rgba(0,0,0,0.05)",display:"flex",alignItems:"center",gap:6}}>
-              {val!=="all"&&<Dot c={cat===val?"#fff":(CC[val]||CC.Other).c}/>}{lbl}<span style={{opacity:0.5,marginLeft:2}}>{n}</span>
+            <div key={val} onClick={()=>{setCat(val);setPg(1);}} style={{padding:"6px 14px",borderRadius:8,border:cat===val?"1px solid #2563eb":"1px solid #e2e8f0",background:cat===val?"#eff6ff":"#fff",color:cat===val?"#2563eb":"#475569",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
+              {val!=="all"&&<Dot c={cat===val?"#2563eb":(CC[val]||CC.Other).c}/>}{lbl}<span style={{opacity:0.5,marginLeft:2}}>{n}</span>
             </div>
           )}
         </div>
 
-        {mob?<div style={{display:"flex",flexDirection:"column",gap:16}}>
+        {mob?<div style={{display:"flex",flexDirection:"column",gap:24}}>
           {!pendingApproval.length&&!readyToDispatch.length&&<div style={{...S.card,padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</div>}
           {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden"}}>
-            <div style={{padding:"12px 16px",background:"linear-gradient(90deg,#1F305F,#2d3f7a)",borderBottom:"2px solid #059669",display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 0 3px #4ade8033"}}/>
+            <div style={{padding:"14px 16px",background:"#f0fdf4",borderBottom:"1px solid #dcfce7",display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:7,height:7,borderRadius:"50%",background:"#059669",flexShrink:0}}/>
               <div style={{flex:1}}>
-                <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#fff"}}>Ready to Dispatch</div>
-                <div style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.45)",marginTop:1}}>Approval date · oldest first</div>
+                <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>Ready to Dispatch</div>
+                <div style={{fontFamily:MN,fontSize:10,color:"#64748b",marginTop:1}}>Approval date · oldest first</div>
               </div>
-              <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:16,fontWeight:700,color:"#4ade80"}}>{readyToDispatch.length}</div><div style={{fontFamily:MN,fontSize:8,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:12,fontWeight:700,color:"#fff"}}>{fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:8,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>value</div></div>
+              <div style={{display:"flex",gap:14,alignItems:"center"}}>
+                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#059669"}}>{readyToDispatch.length}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
+                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>{fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>value</div></div>
               </div>
             </div>
             {rtdSorted.map((o,oi)=>{const ep=exp===o.id;const dy=daysSince(o.approvalDate);const dC=dy>7?"#dc2626":dy>3?"#ea580c":"#059669";
@@ -1226,15 +1259,15 @@ export default function Dashboard(){
             })}
           </div>}
           {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden"}}>
-            <div style={{padding:"12px 16px",background:"linear-gradient(90deg,#1F305F,#2d3f7a)",borderBottom:"2px solid #ea580c",display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:"#fb923c",boxShadow:"0 0 0 3px #fb923c33"}}/>
+            <div style={{padding:"14px 16px",background:"#fffbeb",borderBottom:"1px solid #fef3c7",display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:7,height:7,borderRadius:"50%",background:"#ea580c",flexShrink:0}}/>
               <div style={{flex:1}}>
-                <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#fff"}}>Pending Approval</div>
-                <div style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.45)",marginTop:1}}>PI date · awaiting sign-off</div>
+                <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>Pending Approval</div>
+                <div style={{fontFamily:MN,fontSize:10,color:"#64748b",marginTop:1}}>PI date · awaiting sign-off</div>
               </div>
-              <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:16,fontWeight:700,color:"#fb923c"}}>{pendingApproval.length}</div><div style={{fontFamily:MN,fontSize:8,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:12,fontWeight:700,color:"#fff"}}>{fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:8,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>value</div></div>
+              <div style={{display:"flex",gap:14,alignItems:"center"}}>
+                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#ea580c"}}>{pendingApproval.length}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
+                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>{fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>value</div></div>
               </div>
             </div>
             {pendingApproval.slice((pg-1)*PG,pg*PG).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
@@ -1281,47 +1314,47 @@ export default function Dashboard(){
             </div>}
           </div>}
         </div>:
-        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        <div style={{display:"flex",flexDirection:"column",gap:32}}>
           {!pendingApproval.length&&!readyToDispatch.length&&<div style={{...S.card,padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</div>}
           {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden"}}>
-            <div style={{padding:"16px 20px",background:"linear-gradient(90deg,#1F305F,#2d3f7a)",borderBottom:"2px solid #059669",display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:10,height:10,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 0 3px #4ade8033"}}/>
+            <div style={{padding:"16px 20px",background:"#f0fdf4",borderBottom:"1px solid #dcfce7",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:"#059669",flexShrink:0}}/>
               <div>
-                <div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#fff",letterSpacing:"-0.01em"}}>Ready to Dispatch</div>
-                <div style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.45)",marginTop:1}}>Approval date · oldest first</div>
+                <div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#0f172a",letterSpacing:"-0.01em"}}>Ready to Dispatch</div>
+                <div style={{fontFamily:MN,fontSize:10,color:"#64748b",marginTop:1}}>Approval date · oldest first</div>
               </div>
               <div style={{marginLeft:"auto",display:"flex",gap:16,alignItems:"center"}}>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#4ade80"}}>{readyToDispatch.length}</div><div style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#fff"}}>{fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>total value</div></div>
+                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#059669"}}>{readyToDispatch.length}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
+                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#0f172a"}}>{fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>total value</div></div>
               </div>
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
-                <th style={{width:22,background:"#0f172a"}}/>
-                {[["Date ↕",null],["Days",null],["Party",null],["Categories",null],["Qty",null],["POC",null],["Value",null],["DISPATCH",null]].map(([h])=>
-                  <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left"}}>{h}</th>
+                <th style={{width:22,background:"#f8fafc",borderBottom:"1px solid #e2e8f0"}}/>
+                {[["Date ↕",null],["Days",null],["Party",null],["Categories",null],["Qty",null],["POC",null],["Value",null],["Status",null]].map(([h])=>
+                  <th key={h} style={{background:"#f8fafc",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"10px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left",borderBottom:"1px solid #e2e8f0"}}>{h}</th>
                 )}
               </tr></thead>
               <tbody>{rtdRows}</tbody>
             </table>
           </div>}
           {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden"}}>
-            <div style={{padding:"16px 20px",background:"linear-gradient(90deg,#1F305F,#2d3f7a)",borderBottom:"2px solid #ea580c",display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:10,height:10,borderRadius:"50%",background:"#fb923c",boxShadow:"0 0 0 3px #fb923c33"}}/>
+            <div style={{padding:"16px 20px",background:"#fffbeb",borderBottom:"1px solid #fef3c7",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:"#ea580c",flexShrink:0}}/>
               <div>
-                <div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#fff",letterSpacing:"-0.01em"}}>Pending Approval</div>
-                <div style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.45)",marginTop:1}}>PI date · awaiting sign-off</div>
+                <div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#0f172a",letterSpacing:"-0.01em"}}>Pending Approval</div>
+                <div style={{fontFamily:MN,fontSize:10,color:"#64748b",marginTop:1}}>PI date · awaiting sign-off</div>
               </div>
               <div style={{marginLeft:"auto",display:"flex",gap:16,alignItems:"center"}}>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#fb923c"}}>{pendingApproval.length}</div><div style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#fff"}}>{fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>total value</div></div>
+                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#ea580c"}}>{pendingApproval.length}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
+                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#0f172a"}}>{fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>total value</div></div>
               </div>
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
-                <th style={{width:22,background:"#0f172a"}}/>
-                {[["Date ↕",null],["Days",null],["Party",null],["Categories",null],["Qty",null],["POC",null],["Value",null],["DISPATCH",null]].map(([h])=>
-                  <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left"}}>{h}</th>
+                <th style={{width:22,background:"#f8fafc",borderBottom:"1px solid #e2e8f0"}}/>
+                {[["Date ↕",null],["Days",null],["Party",null],["Categories",null],["Qty",null],["POC",null],["Value",null],["Status",null]].map(([h])=>
+                  <th key={h} style={{background:"#f8fafc",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"10px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left",borderBottom:"1px solid #e2e8f0"}}>{h}</th>
                 )}
               </tr></thead>
               <tbody>
