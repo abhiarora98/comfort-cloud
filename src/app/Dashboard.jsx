@@ -216,7 +216,7 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
   }
 
   if(filtered.length===0){
-    return {headline:"No pending orders right now.",body:"All orders are either dispatched or no orders match your current filters.",action:"",tone:"neutral"};
+    return [{headline:"No pending orders right now.",body:"All orders are either dispatched or there are no active orders.",action:"",cta:"",tone:"neutral",orders:[],orderAction:"",issue:()=>""}];
   }
 
   // --- Step 2: Rank by impact > urgency > actionability ---
@@ -1201,6 +1201,13 @@ export default function Dashboard(){
     return r;
   },[cat,poc,srch,srt,payF,ORDERS]);
 
+  // Stable orders for insights & metrics — not affected by search
+  const baseOrders=useMemo(()=>ORDERS.filter(o=>!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)),[ORDERS]);
+  const baseRtd=useMemo(()=>baseOrders.filter(o=>o.approvalDate&&o.dispatchedCount<o.lineCount),[baseOrders]);
+  const basePend=useMemo(()=>baseOrders.filter(o=>!o.approvalDate),[baseOrders]);
+  const baseOverdue=useMemo(()=>baseRtd.filter(o=>daysSince(o.approvalDate)>7),[baseRtd]);
+  const baseLines=useMemo(()=>baseOrders.flatMap(o=>o.lines),[baseOrders]);
+
   const readyToDispatch=filtered.filter(o=>o.approvalDate&&o.dispatchedCount<o.lineCount);const pendingApproval=filtered.filter(o=>!o.approvalDate);const page=filtered.slice((pg-1)*PG,pg*PG);const pages=Math.max(1,Math.ceil(pendingApproval.length/PG));
   const rtdSorted=(()=>{const r=[...readyToDispatch];if(srt==="dd")r.sort((a,b)=>pd(b.approvalDate)-pd(a.approvalDate));else if(srt==="pa")r.sort((a,b)=>a.party.localeCompare(b.party));else if(srt==="qd"){const cq=o=>cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0);r.sort((a,b)=>cq(b)-cq(a));}else if(srt==="vd")r.sort((a,b)=>b.totalValue-a.totalValue);else r.sort((a,b)=>pd(a.approvalDate)-pd(b.approvalDate));return r;})();const rtdOverdue=rtdSorted.filter(o=>daysSince(o.approvalDate)>7);const rtdOnTime=rtdSorted.filter(o=>daysSince(o.approvalDate)<=7);const rtdDetailTbl=(o)=>(<tr key={o.id+"x"}><td colSpan={9} style={{padding:0,borderBottom:"1px solid #86efac"}}><div style={{background:"#f8fafc",padding:"8px 16px 4px 36px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}><span style={{...S.section,fontSize:10}}>{o.lineCount} line items</span><span style={{fontFamily:MN,fontSize:11,color:"#64748b"}}>· {fmtVal(o.totalValue)}</span><span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>PI</span><span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#475569"}}>{o.id}</span><span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>PI Date</span><span style={{fontFamily:MN,fontSize:11,color:"#475569"}}>{o.piDate}</span></div><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["#","Code","Model","Backing","Colour","Width","Length","Qty","Rate","Value"].map(h=><th key={h} style={{padding:"8px 14px",...S.section,fontSize:9,background:"#f1f5f9",borderBottom:"1px solid #e2e8f0",textAlign:["Qty","Rate","Value"].includes(h)?"right":"left"}}>{h}</th>)}</tr></thead><tbody>{o.lines.map((l,i)=><tr key={l.no||i} style={{background:i%2?"#fafafa":"#fff"}}><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,color:"#94a3b8"}}>{i+1}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,fontWeight:600,color:"#64748b"}}>{l.partyCode||"—"}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,fontWeight:600}}>{l.model}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,color:"#64748b"}}>{l.backing}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12}}>{l.colour}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN}}>{l.width}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN,color:"#94a3b8"}}>{l.length}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:14,fontFamily:MN,fontWeight:700,textAlign:"right"}}>{l.qty}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN,textAlign:"right",color:"#64748b"}}>{l.actualRate||"—"}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,fontFamily:MN,fontWeight:600,textAlign:"right"}}>{fmtVal(l.value||0)}</td></tr>)}</tbody></table></td></tr>);
   const rtdRows=[];
@@ -1277,7 +1284,7 @@ export default function Dashboard(){
       {/* ═══ PENDING ═══ */}
       {tab==="pending"&&<div>
         {/* Orders Insight — scrollable */}
-        {(()=>{const allInsights=buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLines,cat);
+        {(()=>{const allInsights=buildInsight(baseOrders,baseRtd,basePend,baseOverdue,baseLines,cat);
           insCount.current=allInsights.length;
           const ci=Math.min(insIdx,allInsights.length-1);
           const insight=allInsights[ci];
@@ -1314,7 +1321,7 @@ export default function Dashboard(){
         })()}
 
         {/* Priority Orders — Action Flow */}
-        {(()=>{const allInsights=buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLines,cat);
+        {(()=>{const allInsights=buildInsight(baseOrders,baseRtd,basePend,baseOverdue,baseLines,cat);
           const ci=Math.min(insIdx,allInsights.length-1);
           const insight=allInsights[ci];
           if(!actionOpen||!insight.orders||insight.orders.length===0)return null;
@@ -1345,7 +1352,7 @@ export default function Dashboard(){
 
         {/* Supporting Metrics */}
         <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:12,marginBottom:20}}>
-          {[["Pipeline",fmtVal(filtered.reduce((s,o)=>s+o.totalValue,0)),filtered.length+" orders","#0f172a"],["Ready",readyToDispatch.length,fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0)),"#059669"],["Pending",pendingApproval.length,fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0)),"#ea580c"],["Overdue",rtdOverdue.length,rtdOverdue.length>0?fmtVal(rtdOverdue.reduce((s,o)=>s+o.totalValue,0)):"None","#dc2626"]].map(([label,value,sub,color])=>
+          {[["Pipeline",fmtVal(baseOrders.reduce((s,o)=>s+o.totalValue,0)),baseOrders.length+" orders","#0f172a"],["Ready",baseRtd.length,fmtVal(baseRtd.reduce((s,o)=>s+o.totalValue,0)),"#059669"],["Pending",basePend.length,fmtVal(basePend.reduce((s,o)=>s+o.totalValue,0)),"#ea580c"],["Overdue",baseOverdue.length,baseOverdue.length>0?fmtVal(baseOverdue.reduce((s,o)=>s+o.totalValue,0)):"None","#dc2626"]].map(([label,value,sub,color])=>
             <div key={label} style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"14px 16px"}}>
               <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8",marginBottom:4}}>{label}</div>
               <div style={{fontFamily:MN,fontSize:20,fontWeight:700,color:label==="Overdue"&&rtdOverdue.length===0?"#94a3b8":color,lineHeight:1,marginBottom:3}}>{value}</div>
