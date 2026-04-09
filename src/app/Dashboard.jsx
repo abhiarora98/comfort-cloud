@@ -1250,7 +1250,7 @@ export default function Dashboard(){
   return <div style={{fontFamily:SN,background:"#f8fafc",minHeight:"100vh",fontSize:13,color:"#1e293b"}}>
     
     {/* Fonts loaded in layout.js */}
-    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}`}</style>
+    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}.hv-row{transition:background 0.25s,box-shadow 0.25s}.hv-row:hover{background:#f8fafc!important;box-shadow:0 1px 4px rgba(0,0,0,0.03)}.hv-card{transition:background 0.25s,box-shadow 0.25s,border-color 0.25s}.hv-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.06);border-color:#d1d5db}.hv-pill{transition:background 0.2s,border-color 0.2s,transform 0.2s}.hv-pill:hover{background:#f1f5f9!important;border-color:#cbd5e1!important;transform:translateY(-1px)}.hv-btn{transition:background 0.2s,opacity 0.2s}.hv-btn:hover{opacity:0.85}select{transition:border-color 0.2s}select:hover{border-color:#cbd5e1}`}</style>
 
     {/* Header */}
     <div style={{background:"#0f172a",color:"#fff",padding:mob?"0 16px":"0 28px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:200,borderBottom:"1px solid #1e293b"}}>
@@ -1325,7 +1325,7 @@ export default function Dashboard(){
             <div style={{fontSize:mob?18:22,fontWeight:700,color:"#0f172a",lineHeight:1.3,letterSpacing:"-0.015em",marginBottom:8,flexShrink:0}}>{insight.headline}</div>
             <div style={{fontSize:mob?13:14,color:"#64748b",lineHeight:1.6,maxWidth:700,flex:1,overflow:"hidden"}}>{insight.body}</div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,paddingTop:12}}>
-              {insight.cta?<button onClick={()=>setActionOpen(o=>!o)} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?ts.accent:"#fff",background:actionOpen?"transparent":ts.accent,border:actionOpen?"1px solid "+ts.accent+"30":"1px solid "+ts.accent,borderRadius:6,padding:"6px 14px",cursor:"pointer",transition:"all 0.15s"}}>{actionOpen?"Close":insight.cta}</button>:<span/>}
+              {insight.cta?<button className="hv-btn" onClick={()=>setActionOpen(o=>!o)} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?ts.accent:"#fff",background:actionOpen?"transparent":ts.accent,border:actionOpen?"1px solid "+ts.accent+"30":"1px solid "+ts.accent,borderRadius:6,padding:"6px 14px",cursor:"pointer",transition:"all 0.15s"}}>{actionOpen?"Close":insight.cta}</button>:<span/>}
               {allInsights.length>1&&<div style={{display:"flex",gap:5}}>
                 {allInsights.map((_,i)=><span key={i} onClick={()=>{setInsIdx(i);setActionOpen(false);setInsPaused(true);setTimeout(()=>setInsPaused(false),12000);}} style={{width:i===ci?22:6,height:6,borderRadius:3,background:i===ci?ts.accent:"#e2e8f0",cursor:"pointer",transition:"all 0.2s"}}/>)}
               </div>}
@@ -1346,7 +1346,7 @@ export default function Dashboard(){
             </div>
             {visibleOrders.map((o,oi)=>{
               const issueText=typeof insight.issue==="function"?insight.issue(o):"";
-              return <div key={o.id} style={{padding:mob?"12px 16px":"12px 20px",borderBottom:oi<visibleOrders.length-1?"1px solid #f8fafc":"none",display:"flex",alignItems:"center",gap:16}}>
+              return <div key={o.id} className="hv-row" style={{padding:mob?"12px 16px":"12px 20px",borderBottom:oi<visibleOrders.length-1?"1px solid #f8fafc":"none",display:"flex",alignItems:"center",gap:16}}>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
                     <span style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{o.party}</span>
@@ -1366,7 +1366,7 @@ export default function Dashboard(){
         {/* Supporting Metrics */}
         <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:12,marginBottom:20}}>
           {[["Pipeline",fmtVal(baseOrders.reduce((s,o)=>s+o.totalValue,0)),baseOrders.length+" orders","#0f172a"],["Ready",baseRtd.length,fmtVal(baseRtd.reduce((s,o)=>s+o.totalValue,0)),"#059669"],["Pending",basePend.length,fmtVal(basePend.reduce((s,o)=>s+o.totalValue,0)),"#ea580c"],["Overdue",baseOverdue.length,baseOverdue.length>0?fmtVal(baseOverdue.reduce((s,o)=>s+o.totalValue,0)):"None","#dc2626"]].map(([label,value,sub,color])=>
-            <div key={label} style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"14px 16px"}}>
+            <div key={label} className="hv-card" style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"14px 16px",cursor:"default"}}>
               <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8",marginBottom:4}}>{label}</div>
               <div style={{fontFamily:MN,fontSize:20,fontWeight:700,color:label==="Overdue"&&rtdOverdue.length===0?"#94a3b8":color,lineHeight:1,marginBottom:3}}>{value}</div>
               <div style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{sub}</div>
@@ -1434,7 +1434,7 @@ export default function Dashboard(){
           </div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {[["all","All",filtered.length],...Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>[c,(CC[c]||CC.Other).l,n])].map(([val,lbl,n])=>
-              <div key={val} onClick={()=>{setCat(val);setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{padding:"5px 12px",borderRadius:6,border:cat===val?"1px solid #2563eb":"1px solid #f1f5f9",background:cat===val?"#eff6ff":"#f8fafc",color:cat===val?"#2563eb":"#475569",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:5}}>
+              <div key={val} className={cat!==val?"hv-pill":""} onClick={()=>{setCat(val);setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{padding:"5px 12px",borderRadius:6,border:cat===val?"1px solid #2563eb":"1px solid #f1f5f9",background:cat===val?"#eff6ff":"#f8fafc",color:cat===val?"#2563eb":"#475569",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:5}}>
                 {val!=="all"&&<Dot c={cat===val?"#2563eb":(CC[val]||CC.Other).c} s={5}/>}{lbl}<span style={{opacity:0.5,marginLeft:1}}>{n}</span>
               </div>
             )}
@@ -1452,7 +1452,7 @@ export default function Dashboard(){
             </div>
             {(showAllRtd?rtdSorted:rtdSorted.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const dy=daysSince(o.approvalDate);const dC=dy>7?"#dc2626":dy>3?"#ea580c":"#059669";
               return <div key={o.id} style={{borderBottom:"1px solid #f1f5f9"}}>
-                <div onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#ecfdf5":isNewOrder(o)?"#f0f9ff":oi%2?"#f0fdf4":"#fff",borderLeft:ep?"3px solid #059669":isNewOrder(o)?"3px solid #2563eb":"3px solid transparent",transition:"background 0.15s"}}>
+                <div className="hv-row" onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#ecfdf5":isNewOrder(o)?"#f0f9ff":oi%2?"#f0fdf4":"#fff",borderLeft:ep?"3px solid #059669":isNewOrder(o)?"3px solid #2563eb":"3px solid transparent"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                     <span style={{fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:6}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:700,color:"#2563eb",background:"#eff6ff",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
                     <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:dC,background:dC+"15",padding:"2px 7px",borderRadius:10}}>{dy}d</span>
@@ -1501,7 +1501,7 @@ export default function Dashboard(){
             </div>
             {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
               return <div key={o.id} style={{borderBottom:"1px solid #f1f5f9"}}>
-                <div onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#fffbeb":isNewOrder(o)?"#f0f9ff":oi%2?"#f8fafc":"#fff",borderLeft:ep?"3px solid #d97706":isNewOrder(o)?"3px solid #2563eb":"3px solid transparent",transition:"background 0.15s"}}>
+                <div className="hv-row" onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#fffbeb":isNewOrder(o)?"#f0f9ff":oi%2?"#f8fafc":"#fff",borderLeft:ep?"3px solid #d97706":isNewOrder(o)?"3px solid #2563eb":"3px solid transparent"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                     <span style={{fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:6}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:700,color:"#2563eb",background:"#eff6ff",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
                     <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:dc,background:dc+"15",padding:"2px 7px",borderRadius:10}}>{days}d</span>
