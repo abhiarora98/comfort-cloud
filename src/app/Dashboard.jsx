@@ -1245,29 +1245,34 @@ export default function Dashboard(){
         {(()=>{const allInsights=buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLines,cat);
           const ci=Math.min(insIdx,allInsights.length-1);
           const insight=allInsights[ci];
-          const toneStyles={urgent:{border:"#fecaca",bg:"#fff",dot:"#dc2626"},warning:{border:"#fed7aa",bg:"#fff",dot:"#ea580c"},positive:{border:"#bbf7d0",bg:"#fff",dot:"#059669"},neutral:{border:"#e2e8f0",bg:"#fff",dot:"#2563eb"}};
+          const toneStyles={
+            urgent:{accent:"#dc2626",bg:"#fef8f8",border:"#f5e1e1",label:"Critical",labelBg:"#dc262610",labelColor:"#dc2626"},
+            warning:{accent:"#ea580c",bg:"#fffaf6",border:"#f5e6d8",label:"Needs Attention",labelBg:"#ea580c10",labelColor:"#ea580c"},
+            positive:{accent:"#059669",bg:"#f6fdf9",border:"#d8f0e3",label:"On Track",labelBg:"#05966910",labelColor:"#059669"},
+            neutral:{accent:"#2563eb",bg:"#f8faff",border:"#dfe6f5",label:"Info",labelBg:"#2563eb10",labelColor:"#2563eb"}
+          };
           const ts=toneStyles[insight.tone]||toneStyles.neutral;
           const hasPrev=ci>0,hasNext=ci<allInsights.length-1;
-          const navBtn=(dir,enabled,onClick)=><button onClick={onClick} disabled={!enabled} style={{width:32,height:32,borderRadius:8,border:"1px solid "+(enabled?"#e2e8f0":"#f1f5f9"),background:enabled?"#fff":"#fafafa",color:enabled?"#475569":"#d1d5db",cursor:enabled?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontFamily:MN,fontWeight:600,transition:"all 0.15s"}}>{dir}</button>;
-          return <div style={{background:ts.bg,borderRadius:14,border:"1px solid "+ts.border,padding:mob?"24px 20px":"32px 28px",marginBottom:20}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{width:8,height:8,borderRadius:"50%",background:ts.dot,flexShrink:0}}/>
-                <span style={{fontFamily:MN,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8"}}>Orders Insight</span>
+          const navBtn=(dir,enabled,onClick)=><button onClick={onClick} disabled={!enabled} style={{width:30,height:30,borderRadius:6,border:"1px solid "+(enabled?"#e2e8f0":"transparent"),background:enabled?"#fff":"transparent",color:enabled?"#475569":"#d1d5db",cursor:enabled?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontFamily:MN,fontWeight:600,transition:"all 0.15s"}}>{dir}</button>;
+          return <div style={{background:ts.bg,borderRadius:14,border:"1px solid "+ts.border,borderLeft:"3px solid "+ts.accent,padding:mob?"28px 22px":"36px 32px",marginBottom:28,position:"relative"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontFamily:MN,fontSize:10,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:ts.labelColor,background:ts.labelBg,padding:"3px 10px",borderRadius:4}}>{ts.label}</span>
+                <span style={{fontFamily:MN,fontSize:11,fontWeight:500,color:"#c0c7d1"}}>Orders Insight</span>
               </div>
               {allInsights.length>1&&<div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{ci+1}/{allInsights.length}</span>
+                <span style={{fontFamily:MN,fontSize:11,color:"#c0c7d1"}}>{ci+1} of {allInsights.length}</span>
                 {navBtn("←",hasPrev,()=>setInsIdx(i=>Math.max(0,i-1)))}
                 {navBtn("→",hasNext,()=>setInsIdx(i=>Math.min(allInsights.length-1,i+1)))}
               </div>}
             </div>
-            <div style={{fontSize:mob?20:24,fontWeight:700,color:"#0f172a",lineHeight:1.3,letterSpacing:"-0.01em",marginBottom:10}}>{insight.headline}</div>
-            <div style={{fontSize:mob?13:15,color:"#64748b",lineHeight:1.6,maxWidth:680,marginBottom:insight.action?16:0}}>{insight.body}</div>
-            {insight.action&&<div style={{display:"inline-flex",alignItems:"center",gap:6,background:ts.dot+"0a",border:"1px solid "+ts.dot+"20",borderRadius:8,padding:"8px 14px"}}>
-              <span style={{fontSize:13,fontWeight:600,color:ts.dot}}>{insight.action}</span>
+            <div style={{fontSize:mob?20:26,fontWeight:700,color:"#0f172a",lineHeight:1.3,letterSpacing:"-0.015em",marginBottom:12}}>{insight.headline}</div>
+            <div style={{fontSize:mob?13:15,color:"#64748b",lineHeight:1.7,maxWidth:700,marginBottom:insight.action?20:0}}>{insight.body}</div>
+            {insight.action&&<div style={{display:"inline-flex",alignItems:"center",gap:6,background:ts.accent+"08",border:"1px solid "+ts.accent+"18",borderRadius:8,padding:"9px 16px"}}>
+              <span style={{fontSize:13,fontWeight:600,color:ts.accent,letterSpacing:"-0.01em"}}>{insight.action} →</span>
             </div>}
-            {allInsights.length>1&&<div style={{display:"flex",gap:5,marginTop:16}}>
-              {allInsights.map((_,i)=><span key={i} onClick={()=>setInsIdx(i)} style={{width:i===ci?20:6,height:6,borderRadius:3,background:i===ci?ts.dot:"#e2e8f0",cursor:"pointer",transition:"all 0.2s"}}/>)}
+            {allInsights.length>1&&<div style={{display:"flex",gap:5,marginTop:20}}>
+              {allInsights.map((_,i)=><span key={i} onClick={()=>setInsIdx(i)} style={{width:i===ci?22:6,height:6,borderRadius:3,background:i===ci?ts.accent:"#e2e8f0",cursor:"pointer",transition:"all 0.2s"}}/>)}
             </div>}
           </div>;
         })()}
