@@ -168,6 +168,71 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
       action:"",tone:"neutral"});
   }
 
+  // --- Aging orders: pending approval for 30+ days ---
+  const aged=pendingApproval.filter(o=>daysSince(o.piDate)>30);
+  if(aged.length>=2){
+    const agedVal=aged.reduce((s,o)=>s+o.totalValue,0);
+    insights.push({type:"aging",impact:aged.length>=5?S.H:S.M,urgency:S.M,actionability:S.H,
+      text:aged.length+" orders have been sitting without approval for over a month, worth "+fmtVal(agedVal)+". Old orders are harder to recover — they often turn into cancellations.",
+      action:"Review and close or escalate stale orders",tone:"warning"});
+  }
+
+  // --- Reorder overdue: regular customers past their predicted order date ---
+  const reorderEntries=Object.entries(REORDER||{});
+  const reorderOverdue=reorderEntries.filter(([,r])=>r.status==="active"&&r.du<-(r.mg/2)&&r.cf>=30);
+  if(reorderOverdue.length>=2){
+    const topReorder=reorderOverdue.sort((a,b)=>a[1].du-b[1].du).slice(0,3);
+    const names=topReorder.map(([n])=>n).join(", ");
+    insights.push({type:"reorder_overdue",impact:S.M,urgency:S.M,actionability:S.H,
+      text:reorderOverdue.length+" regular customer"+(reorderOverdue.length>1?"s are":" is")+" overdue for a reorder. "+names+(reorderOverdue.length>3?" and others":"")+" — these are repeat buyers who haven't placed their expected order yet.",
+      action:"Call overdue customers to check on reorders",tone:"warning"});
+  } else if(reorderOverdue.length===1){
+    insights.push({type:"reorder_overdue",impact:S.L,urgency:S.M,actionability:S.H,
+      text:reorderOverdue[0][0]+" is overdue for a reorder by "+Math.abs(reorderOverdue[0][1].du)+" days. They usually order every "+reorderOverdue[0][1].mg+" days with "+reorderOverdue[0][1].cf+"% confidence.",
+      action:"Follow up with "+reorderOverdue[0][0],tone:"neutral"});
+  }
+
+  // --- High-value stuck: a single large order stuck in pending ---
+  const avgVal=filtered.length>0?totalVal/filtered.length:0;
+  const highValStuck=pendingApproval.filter(o=>o.totalValue>=avgVal*3&&daysSince(o.piDate)>7).sort((a,b)=>b.totalValue-a.totalValue);
+  if(highValStuck.length>0){
+    const hv=highValStuck[0];
+    insights.push({type:"high_value_stuck",impact:S.M,urgency:S.M,actionability:S.H,
+      text:hv.party+" has a "+fmtVal(hv.totalValue)+" order pending approval for "+daysSince(hv.piDate)+" days. This single order is "+Math.round(hv.totalValue/totalVal*100)+"% of your total pipeline value.",
+      action:"Expedite approval for "+hv.party,tone:"warning"});
+  }
+
+  // --- Revenue trend: month-over-month dispatch change ---
+  const A=typeof ANALYTICS!=="undefined"?ANALYTICS:null;
+  if(A&&A.months&&A.months.length>=2){
+    const curM=A.overallMonthly[A.months[A.months.length-1]]||0;
+    const prevM=A.overallMonthly[A.months[A.months.length-2]]||0;
+    if(prevM>0){
+      const changePct=Math.round((curM-prevM)/prevM*100);
+      if(changePct<=-20){
+        insights.push({type:"revenue_drop",impact:S.M,urgency:S.L,actionability:S.M,
+          text:"This month's dispatch revenue is down "+Math.abs(changePct)+"% compared to last month ("+fmtVal(curM)+" vs "+fmtVal(prevM)+"). Worth checking if it's seasonal or something needs attention.",
+          action:"",tone:"warning"});
+      } else if(changePct>=20){
+        insights.push({type:"revenue_growth",impact:S.L,urgency:S.L,actionability:S.L,
+          text:"Dispatch revenue is up "+changePct+"% this month — "+fmtVal(curM)+" vs "+fmtVal(prevM)+" last month. Good momentum to maintain.",
+          action:"",tone:"positive"});
+      }
+    }
+  }
+
+  // --- Stock shortfall: demand exceeding available stock ---
+  if(typeof STOCK!=="undefined"&&STOCK.length>0){
+    const stockQty=STOCK.reduce((s,i)=>s+i.qty,0);
+    const demandQty=allLines.filter(l=>["Loop Rolls","TEFNO","Turf","Wire"].includes(l.category)).reduce((s,l)=>s+l.qty,0);
+    if(demandQty>stockQty&&stockQty>0){
+      const deficit=demandQty-stockQty;
+      insights.push({type:"stock_shortfall",impact:deficit>stockQty?S.H:S.M,urgency:S.M,actionability:S.H,
+        text:"Current roll demand ("+demandQty+" rolls) exceeds warehouse stock ("+stockQty+" rolls) by "+deficit+" rolls. Some orders may face dispatch delays unless production catches up.",
+        action:"Check stock tab and prioritise production",tone:deficit>stockQty?"urgent":"warning"});
+    }
+  }
+
   if(filtered.length===0){
     return {headline:"No pending orders right now.",body:"All orders are either dispatched or no orders match your current filters.",action:"",tone:"neutral"};
   }
@@ -194,7 +259,13 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
     bottleneck:"Approvals are holding up your pipeline",
     ready_batch:"Good window to clear a big batch",
     poc_concentration:"Pipeline is concentrated on one sales rep",
-    category_dominance:"One category dominates your current demand"
+    category_dominance:"One category dominates your current demand",
+    aging:aged.length+" order"+(aged.length>1?"s":"")+" going stale without approval",
+    reorder_overdue:reorderOverdue.length+" regular customer"+(reorderOverdue.length>1?"s":"")+" overdue for reorder",
+    high_value_stuck:"Large order stuck in approval",
+    revenue_drop:"Dispatch revenue dropped this month",
+    revenue_growth:"Dispatch revenue is trending up",
+    stock_shortfall:"Demand is outpacing your stock"
   };
 
   return insights.map(ins=>({
