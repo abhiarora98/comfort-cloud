@@ -123,43 +123,96 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
   const totalVal=filtered.reduce((s,o)=>s+o.totalValue,0);
   const rtdVal=readyToDispatch.reduce((s,o)=>s+o.totalValue,0);
   const odVal=rtdOverdue.reduce((s,o)=>s+o.totalValue,0);
-  const topCat=Object.entries(allLines.reduce((m,l)=>{m[l.category]=(m[l.category]||0)+l.qty;return m;},{})).sort((a,b)=>b[1]-a[1])[0];
+  const pendVal=pendingApproval.reduce((s,o)=>s+o.totalValue,0);
   const readyPct=filtered.length>0?Math.round(readyToDispatch.length/filtered.length*100):0;
+  const pendPct=filtered.length>0?Math.round(pendingApproval.length/filtered.length*100):0;
+  const topCat=Object.entries(allLines.reduce((m,l)=>{m[l.category]=(m[l.category]||0)+l.qty;return m;},{})).sort((a,b)=>b[1]-a[1]);
+  const topPOC=Object.entries(filtered.reduce((m,o)=>{const p=o.salesPOC||"?";m[p]=(m[p]||0)+1;return m;},{})).sort((a,b)=>b[1]-a[1]);
 
-  let headline="",body="",action="",tone="neutral";
+  // --- Step 1: Detect all insights ---
+  const insights=[];
+  const S={H:"high",M:"medium",L:"low"};
 
-  if(rtdOverdue.length>=3){
-    tone="urgent";
-    headline=rtdOverdue.length+" orders are overdue for dispatch";
-    body="These orders were approved over 7 days ago and haven't shipped yet, totalling "+fmtVal(odVal)+". Delays risk customer satisfaction and repeat orders.";
-    action="Prioritise dispatching overdue orders today";
-  } else if(rtdOverdue.length>0){
-    tone="warning";
-    headline=rtdOverdue.length+" order"+(rtdOverdue.length>1?"s are":" is")+" overdue — "+fmtVal(odVal)+" pending shipment";
-    body="Most of your pipeline is healthy, but "+(rtdOverdue.length===1?"this order needs":"these orders need")+" attention before they impact delivery timelines.";
-    action="Review and dispatch overdue orders";
-  } else if(readyToDispatch.length>0&&readyPct>=50){
-    tone="positive";
-    headline=readyToDispatch.length+" orders ready to ship — "+fmtVal(rtdVal)+" in value";
-    body="Over half your pipeline is approved and ready. No overdue dispatches right now. Strong position to clear the queue.";
-    action="Dispatch ready orders to free up pipeline";
-  } else if(pendingApproval.length>readyToDispatch.length*2){
-    tone="warning";
-    headline="Approval bottleneck — "+pendingApproval.length+" orders waiting";
-    body=fmtVal(totalVal-rtdVal)+" in orders are stuck waiting for approval. Only "+readyToDispatch.length+" of "+filtered.length+" orders can be dispatched right now.";
-    action="Follow up on pending approvals to unblock dispatch";
-  } else if(filtered.length===0){
-    tone="neutral";
-    headline="No pending orders";
-    body="All orders are either dispatched or there are no active orders matching your current filters.";
-    action="";
-  } else {
-    tone="neutral";
-    headline=filtered.length+" active orders worth "+fmtVal(totalVal);
-    body=readyToDispatch.length+" ready to dispatch, "+pendingApproval.length+" awaiting approval."+(topCat?" "+topCat[0]+" leads with "+topCat[1]+" units.":"");
-    action=readyToDispatch.length>0?"Dispatch ready orders to keep the pipeline moving":"Monitor pending approvals";
+  if(rtdOverdue.length>0){
+    insights.push({type:"overdue",impact:rtdOverdue.length>=3?S.H:S.M,urgency:S.H,actionability:S.H,
+      text:rtdOverdue.length+" order"+(rtdOverdue.length>1?"s have":" has")+" been approved but not shipped for over a week, worth "+fmtVal(odVal)+". The longer these sit, the higher the risk of complaints or cancelled reorders.",
+      action:"Dispatch these overdue orders first",tone:"urgent"});
   }
-  return {headline,body,action,tone};
+
+  if(pendPct>=65&&pendingApproval.length>=5){
+    insights.push({type:"bottleneck",impact:S.H,urgency:S.H,actionability:S.H,
+      text:pendingApproval.length+" of your "+filtered.length+" orders are still waiting for approval — that's "+fmtVal(pendVal)+" stuck in the pipeline. Until these clear, dispatch stays blocked.",
+      action:"Push pending approvals to unblock dispatch",tone:"warning"});
+  } else if(pendingApproval.length>readyToDispatch.length*2&&pendingApproval.length>=4){
+    insights.push({type:"bottleneck",impact:S.M,urgency:S.M,actionability:S.H,
+      text:"Approvals are lagging behind — "+pendingApproval.length+" orders pending vs only "+readyToDispatch.length+" ready to ship. This gap slows down your entire dispatch cycle.",
+      action:"Follow up on pending approvals",tone:"warning"});
+  }
+
+  if(readyToDispatch.length>=5&&readyPct>=40&&rtdOverdue.length===0){
+    insights.push({type:"ready_batch",impact:S.M,urgency:S.M,actionability:S.H,
+      text:readyToDispatch.length+" orders worth "+fmtVal(rtdVal)+" are approved and ready to go, with nothing overdue. This is a clean window to clear a big batch in one push.",
+      action:"Dispatch the ready batch now",tone:"positive"});
+  }
+
+  if(topPOC.length>0&&topPOC[0][1]>=filtered.length*0.5&&filtered.length>=6){
+    insights.push({type:"poc_concentration",impact:S.L,urgency:S.L,actionability:S.M,
+      text:"Over half your current orders are through "+topPOC[0][0]+" ("+topPOC[0][1]+" of "+filtered.length+"). If any delays happen on their end, it affects most of your pipeline.",
+      action:"",tone:"neutral"});
+  }
+
+  if(topCat.length>0&&topCat[0][1]>=allLines.reduce((s,l)=>s+l.qty,0)*0.5&&allLines.length>=10){
+    const catName=(CC[topCat[0][0]]||CC.Other).l||topCat[0][0];
+    insights.push({type:"category_dominance",impact:S.L,urgency:S.L,actionability:S.L,
+      text:catName+" makes up the bulk of your current demand at "+topCat[0][1]+" units. Make sure production and stock for "+catName+" are keeping up.",
+      action:"",tone:"neutral"});
+  }
+
+  if(filtered.length===0){
+    return {headline:"No pending orders right now.",body:"All orders are either dispatched or no orders match your current filters.",action:"",tone:"neutral"};
+  }
+
+  // --- Step 2: Rank by impact > urgency > actionability ---
+  const rank={high:3,medium:2,low:1};
+  insights.sort((a,b)=>{
+    const sa=rank[a.impact]*4+rank[a.urgency]*2+rank[a.actionability];
+    const sb=rank[b.impact]*4+rank[b.urgency]*2+rank[b.actionability];
+    return sb-sa;
+  });
+
+  // --- Step 3: Select top insight, optionally merge a supporting one ---
+  if(insights.length===0){
+    // Healthy state fallback
+    const body=readyToDispatch.length>0
+      ?"You have "+readyToDispatch.length+" orders ready to dispatch worth "+fmtVal(rtdVal)+", and "+pendingApproval.length+" awaiting approval. Nothing urgent — a good time to ship what's ready."
+      :filtered.length+" orders in the pipeline worth "+fmtVal(totalVal)+", all awaiting approval. No dispatch backlog.";
+    return {headline:"Things are running steady.",body,action:readyToDispatch.length>0?"Ship the ready orders to keep things moving":"",tone:"positive"};
+  }
+
+  const top=insights[0];
+  let body=top.text;
+
+  // Merge one supporting insight if it strengthens the main point
+  if(insights.length>=2){
+    const sec=insights[1];
+    if(top.type==="overdue"&&sec.type==="bottleneck"){
+      body+=" On top of that, "+pendingApproval.length+" more orders are stuck in approval.";
+    } else if(top.type==="bottleneck"&&sec.type==="overdue"){
+      body+=" Meanwhile, "+rtdOverdue.length+" already-approved order"+(rtdOverdue.length>1?"s are":" is")+" overdue for dispatch.";
+    } else if(top.type==="ready_batch"&&sec.type==="category_dominance"){
+      const catName=(CC[topCat[0][0]]||CC.Other).l||topCat[0][0];
+      body+=" Most of the demand is "+catName+".";
+    }
+  }
+
+  // Build headline — short, direct, no numbers overload
+  let headline="";
+  if(top.type==="overdue") headline=rtdOverdue.length+" overdue order"+(rtdOverdue.length>1?"s":"")+" need attention now";
+  else if(top.type==="bottleneck") headline="Approvals are holding up your pipeline";
+  else if(top.type==="ready_batch") headline="Good window to clear a big batch";
+  else headline="Your orders at a glance";
+
+  return {headline,body,action:top.action,tone:top.tone};
 }
 function useW(){const[w,setW]=useState(typeof window!=='undefined'?window.innerWidth:1200);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);return w;}
 
