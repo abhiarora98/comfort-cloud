@@ -180,39 +180,29 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
     return sb-sa;
   });
 
-  // --- Step 3: Select top insight, optionally merge a supporting one ---
+  // --- Step 3: Build headline for each insight, return all ranked ---
   if(insights.length===0){
-    // Healthy state fallback
-    const body=readyToDispatch.length>0
-      ?"You have "+readyToDispatch.length+" orders ready to dispatch worth "+fmtVal(rtdVal)+", and "+pendingApproval.length+" awaiting approval. Nothing urgent — a good time to ship what's ready."
-      :filtered.length+" orders in the pipeline worth "+fmtVal(totalVal)+", all awaiting approval. No dispatch backlog.";
-    return {headline:"Things are running steady.",body,action:readyToDispatch.length>0?"Ship the ready orders to keep things moving":"",tone:"positive"};
+    return [{headline:"Things are running steady.",
+      body:readyToDispatch.length>0
+        ?"You have "+readyToDispatch.length+" orders ready to dispatch worth "+fmtVal(rtdVal)+", and "+pendingApproval.length+" awaiting approval. Nothing urgent — a good time to ship what's ready."
+        :filtered.length+" orders in the pipeline worth "+fmtVal(totalVal)+", all awaiting approval. No dispatch backlog.",
+      action:readyToDispatch.length>0?"Ship the ready orders to keep things moving":"",tone:"positive"}];
   }
 
-  const top=insights[0];
-  let body=top.text;
+  const headlineMap={
+    overdue:rtdOverdue.length+" overdue order"+(rtdOverdue.length>1?"s":"")+" need attention now",
+    bottleneck:"Approvals are holding up your pipeline",
+    ready_batch:"Good window to clear a big batch",
+    poc_concentration:"Pipeline is concentrated on one sales rep",
+    category_dominance:"One category dominates your current demand"
+  };
 
-  // Merge one supporting insight if it strengthens the main point
-  if(insights.length>=2){
-    const sec=insights[1];
-    if(top.type==="overdue"&&sec.type==="bottleneck"){
-      body+=" On top of that, "+pendingApproval.length+" more orders are stuck in approval.";
-    } else if(top.type==="bottleneck"&&sec.type==="overdue"){
-      body+=" Meanwhile, "+rtdOverdue.length+" already-approved order"+(rtdOverdue.length>1?"s are":" is")+" overdue for dispatch.";
-    } else if(top.type==="ready_batch"&&sec.type==="category_dominance"){
-      const catName=(CC[topCat[0][0]]||CC.Other).l||topCat[0][0];
-      body+=" Most of the demand is "+catName+".";
-    }
-  }
-
-  // Build headline — short, direct, no numbers overload
-  let headline="";
-  if(top.type==="overdue") headline=rtdOverdue.length+" overdue order"+(rtdOverdue.length>1?"s":"")+" need attention now";
-  else if(top.type==="bottleneck") headline="Approvals are holding up your pipeline";
-  else if(top.type==="ready_batch") headline="Good window to clear a big batch";
-  else headline="Your orders at a glance";
-
-  return {headline,body,action:top.action,tone:top.tone};
+  return insights.map(ins=>({
+    headline:headlineMap[ins.type]||"Your orders at a glance",
+    body:ins.text,
+    action:ins.action,
+    tone:ins.tone
+  }));
 }
 function useW(){const[w,setW]=useState(typeof window!=='undefined'?window.innerWidth:1200);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);return w;}
 
@@ -1104,7 +1094,7 @@ export default function Dashboard(){
   const[cat,setCat]=useState("all");const[srch,setSrch]=useState("");const[srt,setSrt]=useState("da");const[poc,setPoc]=useState("");
   const[pg,setPg]=useState(1);const[exp,setExp]=useState(null);const[expParties,setExpParties]=useState({});
   const[selP,setSelP]=useState(null);const[pcf,setPcf]=useState("all");const[psrch,setPsrch]=useState("");
-  const[showHist,setShowHist]=useState(false);const[payF,setPayF]=useState("all");const[mpv,setMpv]=useState(false);const[showCats,setShowCats]=useState(false);
+  const[showHist,setShowHist]=useState(false);const[payF,setPayF]=useState("all");const[mpv,setMpv]=useState(false);const[showCats,setShowCats]=useState(false);const[insIdx,setInsIdx]=useState(0);
   const[liveOrders,setLiveOrders]=useState(null);
   const[lastUpdated,setLastUpdated]=useState(null);
   const[fetchStatus,setFetchStatus]=useState("idle");
@@ -1221,19 +1211,33 @@ export default function Dashboard(){
 
       {/* ═══ PENDING ═══ */}
       {tab==="pending"&&<div>
-        {/* Orders Insight */}
-        {(()=>{const insight=buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLines,cat);
+        {/* Orders Insight — scrollable */}
+        {(()=>{const allInsights=buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLines,cat);
+          const ci=Math.min(insIdx,allInsights.length-1);
+          const insight=allInsights[ci];
           const toneStyles={urgent:{border:"#fecaca",bg:"#fff",dot:"#dc2626"},warning:{border:"#fed7aa",bg:"#fff",dot:"#ea580c"},positive:{border:"#bbf7d0",bg:"#fff",dot:"#059669"},neutral:{border:"#e2e8f0",bg:"#fff",dot:"#2563eb"}};
           const ts=toneStyles[insight.tone]||toneStyles.neutral;
+          const hasPrev=ci>0,hasNext=ci<allInsights.length-1;
+          const navBtn=(dir,enabled,onClick)=><button onClick={onClick} disabled={!enabled} style={{width:32,height:32,borderRadius:8,border:"1px solid "+(enabled?"#e2e8f0":"#f1f5f9"),background:enabled?"#fff":"#fafafa",color:enabled?"#475569":"#d1d5db",cursor:enabled?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontFamily:MN,fontWeight:600,transition:"all 0.15s"}}>{dir}</button>;
           return <div style={{background:ts.bg,borderRadius:14,border:"1px solid "+ts.border,padding:mob?"24px 20px":"32px 28px",marginBottom:20}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
-              <span style={{width:8,height:8,borderRadius:"50%",background:ts.dot,flexShrink:0}}/>
-              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8"}}>Orders Insight</span>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{width:8,height:8,borderRadius:"50%",background:ts.dot,flexShrink:0}}/>
+                <span style={{fontFamily:MN,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8"}}>Orders Insight</span>
+              </div>
+              {allInsights.length>1&&<div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{ci+1}/{allInsights.length}</span>
+                {navBtn("←",hasPrev,()=>setInsIdx(i=>Math.max(0,i-1)))}
+                {navBtn("→",hasNext,()=>setInsIdx(i=>Math.min(allInsights.length-1,i+1)))}
+              </div>}
             </div>
             <div style={{fontSize:mob?20:24,fontWeight:700,color:"#0f172a",lineHeight:1.3,letterSpacing:"-0.01em",marginBottom:10}}>{insight.headline}</div>
             <div style={{fontSize:mob?13:15,color:"#64748b",lineHeight:1.6,maxWidth:680,marginBottom:insight.action?16:0}}>{insight.body}</div>
             {insight.action&&<div style={{display:"inline-flex",alignItems:"center",gap:6,background:ts.dot+"0a",border:"1px solid "+ts.dot+"20",borderRadius:8,padding:"8px 14px"}}>
               <span style={{fontSize:13,fontWeight:600,color:ts.dot}}>{insight.action}</span>
+            </div>}
+            {allInsights.length>1&&<div style={{display:"flex",gap:5,marginTop:16}}>
+              {allInsights.map((_,i)=><span key={i} onClick={()=>setInsIdx(i)} style={{width:i===ci?20:6,height:6,borderRadius:3,background:i===ci?ts.dot:"#e2e8f0",cursor:"pointer",transition:"all 0.2s"}}/>)}
             </div>}
           </div>;
         })()}
