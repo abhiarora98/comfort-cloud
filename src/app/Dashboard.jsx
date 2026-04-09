@@ -1150,7 +1150,7 @@ export default function Dashboard(){
   const[cat,setCat]=useState("all");const[srch,setSrch]=useState("");const[srt,setSrt]=useState("da");const[poc,setPoc]=useState("");
   const[pg,setPg]=useState(1);const[exp,setExp]=useState(null);const[expParties,setExpParties]=useState({});
   const[selP,setSelP]=useState(null);const[pcf,setPcf]=useState("all");const[psrch,setPsrch]=useState("");
-  const[showHist,setShowHist]=useState(false);const[payF,setPayF]=useState("all");const[mpv,setMpv]=useState(false);const[showCats,setShowCats]=useState(false);const[insIdx,setInsIdx]=useState(0);const[actionOpen,setActionOpen]=useState(false);const[doneIds,setDoneIds]=useState(new Set());
+  const[showHist,setShowHist]=useState(false);const[payF,setPayF]=useState("all");const[mpv,setMpv]=useState(false);const[showCats,setShowCats]=useState(false);const[insIdx,setInsIdx]=useState(0);const[actionOpen,setActionOpen]=useState(false);const[doneIds,setDoneIds]=useState(new Set());const[showAllRtd,setShowAllRtd]=useState(false);const[showAllPend,setShowAllPend]=useState(false);
   const[liveOrders,setLiveOrders]=useState(null);
   const[lastUpdated,setLastUpdated]=useState(null);
   const[fetchStatus,setFetchStatus]=useState("idle");
@@ -1406,15 +1406,10 @@ export default function Dashboard(){
             <div style={{padding:"14px 16px",background:"#f0fdf4",borderBottom:"1px solid #dcfce7",display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:7,height:7,borderRadius:"50%",background:"#059669",flexShrink:0}}/>
               <div style={{flex:1}}>
-                <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>Ready to Dispatch</div>
-                <div style={{fontFamily:MN,fontSize:10,color:"#64748b",marginTop:1}}>Approval date · oldest first</div>
-              </div>
-              <div style={{display:"flex",gap:14,alignItems:"center"}}>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#059669"}}>{readyToDispatch.length}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>{fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>value</div></div>
+                <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>Ready to Dispatch ({readyToDispatch.length}) · {fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</div>
               </div>
             </div>
-            {rtdSorted.map((o,oi)=>{const ep=exp===o.id;const dy=daysSince(o.approvalDate);const dC=dy>7?"#dc2626":dy>3?"#ea580c":"#059669";
+            {(showAllRtd?rtdSorted:rtdSorted.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const dy=daysSince(o.approvalDate);const dC=dy>7?"#dc2626":dy>3?"#ea580c":"#059669";
               return <div key={o.id} style={{borderBottom:"1px solid #f1f5f9"}}>
                 <div onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#ecfdf5":oi%2?"#f0fdf4":"#fff",borderLeft:ep?"3px solid #059669":"3px solid transparent",transition:"background 0.15s"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
@@ -1449,20 +1444,21 @@ export default function Dashboard(){
                 </div>}
               </div>;
             })}
+            {!showAllRtd&&rtdSorted.length>5&&<div onClick={()=>setShowAllRtd(true)} style={{padding:"12px 16px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#059669"}}>View all {rtdSorted.length} orders</span>
+            </div>}
+            {showAllRtd&&rtdSorted.length>5&&<div onClick={()=>setShowAllRtd(false)} style={{padding:"12px 16px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8"}}>Show less</span>
+            </div>}
           </div>}
           {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden"}}>
             <div style={{padding:"14px 16px",background:"#fffbeb",borderBottom:"1px solid #fef3c7",display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:7,height:7,borderRadius:"50%",background:"#ea580c",flexShrink:0}}/>
               <div style={{flex:1}}>
-                <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>Pending Approval</div>
-                <div style={{fontFamily:MN,fontSize:10,color:"#64748b",marginTop:1}}>PI date · awaiting sign-off</div>
-              </div>
-              <div style={{display:"flex",gap:14,alignItems:"center"}}>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#ea580c"}}>{pendingApproval.length}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>{fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>value</div></div>
+                <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>Pending Approval ({pendingApproval.length}) · {fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</div>
               </div>
             </div>
-            {pendingApproval.slice((pg-1)*PG,pg*PG).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
+            {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
               return <div key={o.id} style={{borderBottom:"1px solid #f1f5f9"}}>
                 <div onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#fffbeb":oi%2?"#f8fafc":"#fff",borderLeft:ep?"3px solid #d97706":"3px solid transparent",transition:"background 0.15s"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
@@ -1498,27 +1494,20 @@ export default function Dashboard(){
                 </div>}
               </div>;
             })}
-            {pages>1&&<div style={{padding:"12px 16px",borderTop:"1px solid #e2e8f0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{(pg-1)*PG+1}–{Math.min(pg*PG,pendingApproval.length)} of {pendingApproval.length}</span>
-              <div style={{display:"flex",gap:4}}>{Array.from({length:pages},(_,i)=>i+1).filter(p=>pages<=7||p<=2||p>=pages-1||Math.abs(p-pg)<=1).map(p=>
-                <button key={p} onClick={()=>setPg(p)} style={{padding:"5px 11px",border:"none",borderRadius:6,background:p===pg?"#0f172a":"#f1f5f9",color:p===pg?"#fff":"#64748b",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:600}}>{p}</button>
-              )}</div>
+            {!showAllPend&&pendingApproval.length>5&&<div onClick={()=>setShowAllPend(true)} style={{padding:"12px 16px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#ea580c"}}>View all {pendingApproval.length} orders</span>
+            </div>}
+            {showAllPend&&pendingApproval.length>5&&<div onClick={()=>setShowAllPend(false)} style={{padding:"12px 16px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8"}}>Show less</span>
             </div>}
           </div>}
         </div>:
         <div style={{display:"flex",flexDirection:"column",gap:32}}>
           {!pendingApproval.length&&!readyToDispatch.length&&<div style={{...S.card,padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</div>}
           {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden"}}>
-            <div style={{padding:"16px 20px",background:"#f0fdf4",borderBottom:"1px solid #dcfce7",display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:"#059669",flexShrink:0}}/>
-              <div>
-                <div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#0f172a",letterSpacing:"-0.01em"}}>Ready to Dispatch</div>
-                <div style={{fontFamily:MN,fontSize:10,color:"#64748b",marginTop:1}}>Approval date · oldest first</div>
-              </div>
-              <div style={{marginLeft:"auto",display:"flex",gap:16,alignItems:"center"}}>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#059669"}}>{readyToDispatch.length}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#0f172a"}}>{fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>total value</div></div>
-              </div>
+            <div style={{padding:"14px 20px",background:"#f0fdf4",borderBottom:"1px solid #dcfce7",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:7,height:7,borderRadius:"50%",background:"#059669",flexShrink:0}}/>
+              <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>Ready to Dispatch ({readyToDispatch.length}) · {fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</div>
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
@@ -1527,20 +1516,19 @@ export default function Dashboard(){
                   <th key={h} style={{background:"#f8fafc",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"10px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left",borderBottom:"1px solid #e2e8f0"}}>{h}</th>
                 )}
               </tr></thead>
-              <tbody>{rtdRows}</tbody>
+              <tbody>{showAllRtd?rtdRows:rtdRows.slice(0,10)}</tbody>
             </table>
+            {!showAllRtd&&rtdRows.length>10&&<div onClick={()=>setShowAllRtd(true)} style={{padding:"12px 20px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#059669"}}>View all {readyToDispatch.length} orders</span>
+            </div>}
+            {showAllRtd&&rtdRows.length>10&&<div onClick={()=>setShowAllRtd(false)} style={{padding:"12px 20px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8"}}>Show less</span>
+            </div>}
           </div>}
           {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden"}}>
-            <div style={{padding:"16px 20px",background:"#fffbeb",borderBottom:"1px solid #fef3c7",display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:"#ea580c",flexShrink:0}}/>
-              <div>
-                <div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#0f172a",letterSpacing:"-0.01em"}}>Pending Approval</div>
-                <div style={{fontFamily:MN,fontSize:10,color:"#64748b",marginTop:1}}>PI date · awaiting sign-off</div>
-              </div>
-              <div style={{marginLeft:"auto",display:"flex",gap:16,alignItems:"center"}}>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#ea580c"}}>{pendingApproval.length}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#0f172a"}}>{fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.05em"}}>total value</div></div>
-              </div>
+            <div style={{padding:"14px 20px",background:"#fffbeb",borderBottom:"1px solid #fef3c7",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:7,height:7,borderRadius:"50%",background:"#ea580c",flexShrink:0}}/>
+              <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>Pending Approval ({pendingApproval.length}) · {fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</div>
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
@@ -1550,7 +1538,7 @@ export default function Dashboard(){
                 )}
               </tr></thead>
               <tbody>
-              {pendingApproval.slice((pg-1)*PG,pg*PG).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
+              {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
                 return[
                   <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#fffbeb":oi%2?"#f8fafc":"#fff",borderLeft:ep?"3px solid #d97706":"3px solid transparent",transition:"background 0.15s"}}>
                     <td style={{padding:"13px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
@@ -1589,12 +1577,12 @@ export default function Dashboard(){
               })}
               </tbody>
             </table>
-            {pages>1&&<div style={{padding:"12px 16px",borderTop:"1px solid #e2e8f0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{(pg-1)*PG+1}–{Math.min(pg*PG,pendingApproval.length)} of {pendingApproval.length}</span>
-            <div style={{display:"flex",gap:4}}>{Array.from({length:pages},(_,i)=>i+1).filter(p=>pages<=7||p<=2||p>=pages-1||Math.abs(p-pg)<=1).map(p=>
-              <button key={p} onClick={()=>setPg(p)} style={{padding:"5px 11px",border:"none",borderRadius:6,background:p===pg?"#0f172a":"#f1f5f9",color:p===pg?"#fff":"#64748b",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:600}}>{p}</button>
-            )}</div>
-          </div>}
+            {!showAllPend&&pendingApproval.length>5&&<div onClick={()=>setShowAllPend(true)} style={{padding:"12px 20px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#ea580c"}}>View all {pendingApproval.length} orders</span>
+            </div>}
+            {showAllPend&&pendingApproval.length>5&&<div onClick={()=>setShowAllPend(false)} style={{padding:"12px 20px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8"}}>Show less</span>
+            </div>}
           </div>}
         </div>
       }
