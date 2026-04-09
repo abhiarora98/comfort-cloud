@@ -1254,7 +1254,7 @@ export default function Dashboard(){
           const ts=toneStyles[insight.tone]||toneStyles.neutral;
           const hasPrev=ci>0,hasNext=ci<allInsights.length-1;
           const navBtn=(dir,enabled,onClick)=><button onClick={onClick} disabled={!enabled} style={{width:30,height:30,borderRadius:6,border:"1px solid "+(enabled?"#e2e8f0":"transparent"),background:enabled?"#fff":"transparent",color:enabled?"#475569":"#d1d5db",cursor:enabled?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontFamily:MN,fontWeight:600,transition:"all 0.15s"}}>{dir}</button>;
-          return <div style={{background:ts.bg,borderRadius:14,border:"1px solid "+ts.border,borderLeft:"3px solid "+ts.accent,padding:mob?"28px 22px":"36px 32px",marginBottom:28,position:"relative",minHeight:mob?200:210}}>
+          return <div style={{background:ts.bg,borderRadius:14,border:"1px solid "+ts.border,borderLeft:"3px solid "+ts.accent,padding:mob?"28px 22px":"36px 32px",marginBottom:28,position:"relative",height:mob?220:230,overflow:"hidden"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <span style={{fontFamily:MN,fontSize:10,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:ts.labelColor,background:ts.labelBg,padding:"3px 10px",borderRadius:4}}>{ts.label}</span>
