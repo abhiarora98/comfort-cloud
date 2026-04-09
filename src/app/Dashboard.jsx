@@ -185,21 +185,6 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
       action:"Review stale orders",tone:"warning"});
   }
 
-  // --- Reorder overdue ---
-  const reorderEntries=Object.entries(REORDER||{});
-  const reorderOverdue=reorderEntries.filter(([,r])=>r.status==="active"&&r.du<-(r.mg/2)&&r.cf>=30);
-  if(reorderOverdue.length>=2){
-    const topReorder=reorderOverdue.sort((a,b)=>a[1].du-b[1].du).slice(0,3);
-    const names=topReorder.map(([n])=>n).join(", ");
-    insights.push({type:"reorder_overdue",impact:S.M,urgency:S.M,actionability:S.H,
-      text:reorderOverdue.length+" repeat buyers are past their expected reorder date — "+names+(reorderOverdue.length>3?" and others":"")+". Call them now before they switch to a competitor.",
-      action:"Call overdue customers",tone:"warning"});
-  } else if(reorderOverdue.length===1){
-    insights.push({type:"reorder_overdue",impact:S.L,urgency:S.M,actionability:S.H,
-      text:reorderOverdue[0][0]+" is "+Math.abs(reorderOverdue[0][1].du)+" days past their expected reorder. They order every ~"+reorderOverdue[0][1].mg+" days — follow up before the gap widens.",
-      action:"Call "+reorderOverdue[0][0],tone:"neutral"});
-  }
-
   // --- High-value stuck ---
   const avgVal=filtered.length>0?totalVal/filtered.length:0;
   const highValStuck=pendingApproval.filter(o=>o.totalValue>=avgVal*3&&daysSince(o.piDate)>7).sort((a,b)=>b.totalValue-a.totalValue);
@@ -208,37 +193,6 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
     insights.push({type:"high_value_stuck",impact:S.M,urgency:S.M,actionability:S.H,
       text:hv.party+"'s "+fmtVal(hv.totalValue)+" order has been stuck in approval for "+daysSince(hv.piDate)+" days — "+Math.round(hv.totalValue/totalVal*100)+"% of your pipeline. Expedite this to unlock major revenue.",
       action:"Expedite "+hv.party,tone:"warning"});
-  }
-
-  // --- Revenue trend ---
-  const A=typeof ANALYTICS!=="undefined"?ANALYTICS:null;
-  if(A&&A.months&&A.months.length>=2){
-    const curM=A.overallMonthly[A.months[A.months.length-1]]||0;
-    const prevM=A.overallMonthly[A.months[A.months.length-2]]||0;
-    if(prevM>0){
-      const changePct=Math.round((curM-prevM)/prevM*100);
-      if(changePct<=-20){
-        insights.push({type:"revenue_drop",impact:S.M,urgency:S.L,actionability:S.M,
-          text:"Dispatch revenue dropped "+Math.abs(changePct)+"% this month ("+fmtVal(curM)+" vs "+fmtVal(prevM)+"). This could impact cash flow if it continues — investigate and act quickly.",
-          action:"",tone:"warning"});
-      } else if(changePct>=20){
-        insights.push({type:"revenue_growth",impact:S.L,urgency:S.L,actionability:S.L,
-          text:"Dispatch revenue increased "+changePct+"% this month — "+fmtVal(curM)+" vs "+fmtVal(prevM)+". Strong momentum — push top categories to maximise gains.",
-          action:"",tone:"positive"});
-      }
-    }
-  }
-
-  // --- Stock shortfall ---
-  if(typeof STOCK!=="undefined"&&STOCK.length>0){
-    const stockQty=STOCK.reduce((s,i)=>s+i.qty,0);
-    const demandQty=allLines.filter(l=>["Loop Rolls","TEFNO","Turf","Wire"].includes(l.category)).reduce((s,l)=>s+l.qty,0);
-    if(demandQty>stockQty&&stockQty>0){
-      const deficit=demandQty-stockQty;
-      insights.push({type:"stock_shortfall",impact:deficit>stockQty?S.H:S.M,urgency:S.M,actionability:S.H,
-        text:"Demand exceeds stock by "+deficit+" rolls ("+demandQty+" needed, "+stockQty+" available). Orders will face dispatch delays unless production catches up.",
-        action:"Prioritise production",tone:deficit>stockQty?"urgent":"warning"});
-    }
   }
 
   if(filtered.length===0){
@@ -270,11 +224,7 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
     category_dominance:"Top category driving demand",
     strong_blocked:"Strong pipeline, execution lagging",
     aging:"Stale orders increasing risk",
-    reorder_overdue:"Repeat buyers missing reorders",
-    high_value_stuck:"High-value order stuck",
-    revenue_drop:"Revenue dropped this month",
-    revenue_growth:"Revenue trending up",
-    stock_shortfall:"Stock can't meet demand"
+    high_value_stuck:"High-value order stuck"
   };
 
   return insights.map(ins=>({
