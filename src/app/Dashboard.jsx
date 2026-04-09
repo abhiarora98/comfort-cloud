@@ -119,6 +119,48 @@ function payStatus(approved){
   if(approved) return {label:"Approved",color:"#059669",bg:"#ecfdf5",border:"#86efac"};
   return {label:"Not Approved",color:"#ea580c",bg:"#fff7ed",border:"#fed7aa"};
 }
+function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLines,cat){
+  const totalVal=filtered.reduce((s,o)=>s+o.totalValue,0);
+  const rtdVal=readyToDispatch.reduce((s,o)=>s+o.totalValue,0);
+  const odVal=rtdOverdue.reduce((s,o)=>s+o.totalValue,0);
+  const topCat=Object.entries(allLines.reduce((m,l)=>{m[l.category]=(m[l.category]||0)+l.qty;return m;},{})).sort((a,b)=>b[1]-a[1])[0];
+  const readyPct=filtered.length>0?Math.round(readyToDispatch.length/filtered.length*100):0;
+
+  let headline="",body="",action="",tone="neutral";
+
+  if(rtdOverdue.length>=3){
+    tone="urgent";
+    headline=rtdOverdue.length+" orders are overdue for dispatch";
+    body="These orders were approved over 7 days ago and haven't shipped yet, totalling "+fmtVal(odVal)+". Delays risk customer satisfaction and repeat orders.";
+    action="Prioritise dispatching overdue orders today";
+  } else if(rtdOverdue.length>0){
+    tone="warning";
+    headline=rtdOverdue.length+" order"+(rtdOverdue.length>1?"s are":" is")+" overdue — "+fmtVal(odVal)+" pending shipment";
+    body="Most of your pipeline is healthy, but "+(rtdOverdue.length===1?"this order needs":"these orders need")+" attention before they impact delivery timelines.";
+    action="Review and dispatch overdue orders";
+  } else if(readyToDispatch.length>0&&readyPct>=50){
+    tone="positive";
+    headline=readyToDispatch.length+" orders ready to ship — "+fmtVal(rtdVal)+" in value";
+    body="Over half your pipeline is approved and ready. No overdue dispatches right now. Strong position to clear the queue.";
+    action="Dispatch ready orders to free up pipeline";
+  } else if(pendingApproval.length>readyToDispatch.length*2){
+    tone="warning";
+    headline="Approval bottleneck — "+pendingApproval.length+" orders waiting";
+    body=fmtVal(totalVal-rtdVal)+" in orders are stuck waiting for approval. Only "+readyToDispatch.length+" of "+filtered.length+" orders can be dispatched right now.";
+    action="Follow up on pending approvals to unblock dispatch";
+  } else if(filtered.length===0){
+    tone="neutral";
+    headline="No pending orders";
+    body="All orders are either dispatched or there are no active orders matching your current filters.";
+    action="";
+  } else {
+    tone="neutral";
+    headline=filtered.length+" active orders worth "+fmtVal(totalVal);
+    body=readyToDispatch.length+" ready to dispatch, "+pendingApproval.length+" awaiting approval."+(topCat?" "+topCat[0]+" leads with "+topCat[1]+" units.":"");
+    action=readyToDispatch.length>0?"Dispatch ready orders to keep the pipeline moving":"Monitor pending approvals";
+  }
+  return {headline,body,action,tone};
+}
 function useW(){const[w,setW]=useState(typeof window!=='undefined'?window.innerWidth:1200);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);return w;}
 
 /* ═══════════════ MICRO COMPONENTS ═══════════════ */
@@ -1126,27 +1168,29 @@ export default function Dashboard(){
 
       {/* ═══ PENDING ═══ */}
       {tab==="pending"&&<div>
-        {/* Hero Insight */}
-        <div style={{background:"#fff",borderRadius:14,border:"1px solid #e2e8f0",padding:mob?"24px 20px":"32px 28px",marginBottom:16}}>
-          <div style={{fontFamily:MN,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8",marginBottom:8}}>Pending Pipeline</div>
-          <div style={{fontFamily:MN,fontSize:mob?36:48,fontWeight:700,color:"#0f172a",lineHeight:1,marginBottom:8,letterSpacing:"-0.02em"}}>{fmtVal(filtered.reduce((s,o)=>s+o.totalValue,0))}</div>
-          <div style={{fontSize:14,color:"#64748b",lineHeight:1.5}}>
-            {filtered.length} orders — <span style={{color:"#059669",fontWeight:600}}>{readyToDispatch.length} ready</span>, <span style={{color:"#ea580c",fontWeight:600}}>{pendingApproval.length} pending approval</span>
-          </div>
-          {readyToDispatch.length>0&&rtdOverdue.length>0&&<div style={{marginTop:14,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"10px 14px",display:"inline-flex",alignItems:"center",gap:8}}>
-            <span style={{width:6,height:6,borderRadius:"50%",background:"#dc2626",flexShrink:0}}/>
-            <span style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#dc2626"}}>{rtdOverdue.length} overdue</span>
-            <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>·</span>
-            <span style={{fontFamily:MN,fontSize:11,color:"#64748b"}}>{fmtVal(rtdOverdue.reduce((s,o)=>s+o.totalValue,0))}</span>
-          </div>}
-        </div>
+        {/* Orders Insight */}
+        {(()=>{const insight=buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLines,cat);
+          const toneStyles={urgent:{border:"#fecaca",bg:"#fff",dot:"#dc2626"},warning:{border:"#fed7aa",bg:"#fff",dot:"#ea580c"},positive:{border:"#bbf7d0",bg:"#fff",dot:"#059669"},neutral:{border:"#e2e8f0",bg:"#fff",dot:"#2563eb"}};
+          const ts=toneStyles[insight.tone]||toneStyles.neutral;
+          return <div style={{background:ts.bg,borderRadius:14,border:"1px solid "+ts.border,padding:mob?"24px 20px":"32px 28px",marginBottom:20}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+              <span style={{width:8,height:8,borderRadius:"50%",background:ts.dot,flexShrink:0}}/>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8"}}>Orders Insight</span>
+            </div>
+            <div style={{fontSize:mob?20:24,fontWeight:700,color:"#0f172a",lineHeight:1.3,letterSpacing:"-0.01em",marginBottom:10}}>{insight.headline}</div>
+            <div style={{fontSize:mob?13:15,color:"#64748b",lineHeight:1.6,maxWidth:680,marginBottom:insight.action?16:0}}>{insight.body}</div>
+            {insight.action&&<div style={{display:"inline-flex",alignItems:"center",gap:6,background:ts.dot+"0a",border:"1px solid "+ts.dot+"20",borderRadius:8,padding:"8px 14px"}}>
+              <span style={{fontSize:13,fontWeight:600,color:ts.dot}}>{insight.action}</span>
+            </div>}
+          </div>;
+        })()}
 
-        {/* Key Metrics */}
-        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:12,marginBottom:16}}>
-          {[["Ready to Dispatch",readyToDispatch.length,fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0)),"#059669"],["Pending Approval",pendingApproval.length,fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0)),"#ea580c"],["Total Quantity",pendQty,(cat==="all"?"across all categories":"in "+cat),"#2563eb"],["Avg Order",fmtVal(Math.round(filtered.reduce((s,o)=>s+o.totalValue,0)/Math.max(filtered.length,1))),filtered.length+" orders","#64748b"]].map(([label,value,sub,color])=>
-            <div key={label} style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"16px 18px"}}>
-              <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8",marginBottom:6}}>{label}</div>
-              <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color,lineHeight:1,marginBottom:4}}>{value}</div>
+        {/* Supporting Metrics */}
+        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:12,marginBottom:20}}>
+          {[["Pipeline",fmtVal(filtered.reduce((s,o)=>s+o.totalValue,0)),filtered.length+" orders","#0f172a"],["Ready",readyToDispatch.length,fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0)),"#059669"],["Pending",pendingApproval.length,fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0)),"#ea580c"],["Overdue",rtdOverdue.length,rtdOverdue.length>0?fmtVal(rtdOverdue.reduce((s,o)=>s+o.totalValue,0)):"None","#dc2626"]].map(([label,value,sub,color])=>
+            <div key={label} style={{background:"#fff",borderRadius:12,border:"1px solid #e2e8f0",padding:"14px 16px"}}>
+              <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8",marginBottom:4}}>{label}</div>
+              <div style={{fontFamily:MN,fontSize:20,fontWeight:700,color:label==="Overdue"&&rtdOverdue.length===0?"#94a3b8":color,lineHeight:1,marginBottom:3}}>{value}</div>
               <div style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{sub}</div>
             </div>
           )}
