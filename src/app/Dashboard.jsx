@@ -1267,13 +1267,13 @@ export default function Dashboard(){
               </div>}
             </div>
             <div style={{fontSize:mob?20:26,fontWeight:700,color:"#0f172a",lineHeight:1.3,letterSpacing:"-0.015em",marginBottom:12}}>{insight.headline}</div>
-            <div style={{fontSize:mob?13:15,color:"#64748b",lineHeight:1.7,maxWidth:700}}>{insight.body}</div>
-            <div style={{position:"absolute",bottom:mob?28:36,left:mob?25:35}}>
-              {insight.action&&<span style={{fontFamily:MN,fontSize:12,fontWeight:600,color:ts.accent}}>{insight.action}</span>}
+            <div style={{fontSize:mob?13:15,color:"#64748b",lineHeight:1.7,maxWidth:700,paddingBottom:32}}>{insight.body}</div>
+            <div style={{position:"absolute",bottom:mob?28:36,left:mob?25:35,right:mob?22:32,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              {insight.action?<span style={{fontFamily:MN,fontSize:12,fontWeight:600,color:ts.accent}}>{insight.action}</span>:<span/>}
+              {allInsights.length>1&&<div style={{display:"flex",gap:5}}>
+                {allInsights.map((_,i)=><span key={i} onClick={()=>setInsIdx(i)} style={{width:i===ci?22:6,height:6,borderRadius:3,background:i===ci?ts.accent:"#e2e8f0",cursor:"pointer",transition:"all 0.2s"}}/>)}
+              </div>}
             </div>
-            {allInsights.length>1&&<div style={{display:"flex",gap:5,position:"absolute",bottom:mob?28:36,right:mob?22:32}}>
-              {allInsights.map((_,i)=><span key={i} onClick={()=>setInsIdx(i)} style={{width:i===ci?22:6,height:6,borderRadius:3,background:i===ci?ts.accent:"#e2e8f0",cursor:"pointer",transition:"all 0.2s"}}/>)}
-            </div>}
           </div>;
         })()}
 
