@@ -1341,7 +1341,7 @@ export default function Dashboard(){
         <div><div style={{fontFamily:MN,fontSize:16,fontWeight:700,letterSpacing:"0.12em",wordSpacing:"-0.08em",textTransform:"uppercase"}}>Comfort Cloud</div>{!mob&&<div style={{fontSize:10,opacity:0.4,fontFamily:MN,marginTop:-1,letterSpacing:"0.06em"}}>Dashboard</div>}</div>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <button onClick={()=>{setReportOpen(o=>!o);setReportResult(null);setReportError("");}} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"6px 12px",borderRadius:6,cursor:"pointer",fontFamily:MN,fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:13}}>📊</span>{!mob&&"Report"}</button>
+        <button onClick={()=>{setReportOpen(o=>!o);if(!reportOpen){setReportResult(null);setReportError("");setChatMsgs([]);setChatInput("");}}} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"6px 12px",borderRadius:6,cursor:"pointer",fontFamily:MN,fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:13}}>✦</span>{!mob&&"Talk to Neo"}</button>
         <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",padding:"6px 14px",borderRadius:8,fontSize:11,fontFamily:MN}}>
           <span style={{width:6,height:6,borderRadius:"50%",background:fetchStatus==="ok"?"#4ade80":fetchStatus==="loading"?"#fbbf24":"#94a3b8"}}/>
           {!mob&&<>{filtered.length} orders · {fmtVal(filtered.reduce((s,o)=>s+o.totalValue,0))}</>}
@@ -1761,27 +1761,35 @@ export default function Dashboard(){
     {reportOpen&&<div style={{position:"fixed",top:0,right:0,bottom:0,width:mob?"100%":480,background:"#fff",borderLeft:mob?"none":"1px solid #E5E7EB",zIndex:500,display:"flex",flexDirection:"column",boxShadow:"-4px 0 24px rgba(0,0,0,0.06)"}}>
       {/* Header */}
       <div style={{padding:"16px 24px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-        <div>
-          <div style={{fontFamily:MN,fontSize:14,fontWeight:600,color:"#0F172A"}}>Generate Report</div>
-          <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:2}}>{reportRemaining} reports left today</div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:32,height:32,borderRadius:"50%",background:"#0F172A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>✦</div>
+          <div>
+            <div style={{fontFamily:SN,fontSize:14,fontWeight:600,color:"#0F172A"}}>Neo</div>
+            <div style={{fontFamily:MN,fontSize:10,color:"#16A34A"}}>Online</div>
+          </div>
         </div>
         <button onClick={()=>setReportOpen(false)} style={{background:"none",border:"none",color:"#94A3B8",fontSize:20,cursor:"pointer",padding:"4px 8px"}}>×</button>
       </div>
 
       {/* Content */}
       <div style={{flex:1,overflowY:"auto",padding:"24px"}}>
-        {/* Input */}
+        {/* Welcome + Input */}
         {!reportResult&&!reportLoading&&<div>
-          <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94A3B8",marginBottom:12}}>What do you want to analyze?</div>
-          <div style={{position:"relative",marginBottom:20}}>
-            <input value={reportQ} onChange={e=>setReportQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")generateReport(reportQ);}} placeholder='e.g. "Compare AR vs VS performance"' style={{...S.input,width:"100%",padding:"12px 16px",fontSize:14,borderRadius:10,border:"1px solid #E5E7EB"}}/>
+          {/* Greeting */}
+          <div style={{background:"#F1F5F9",borderRadius:"12px 12px 12px 2px",padding:"16px 18px",marginBottom:20,maxWidth:"90%"}}>
+            <div style={{fontSize:14,color:"#0F172A",lineHeight:1.6}}>Hi{user?.firstName?" "+user.firstName:""}, I'm <strong>Neo</strong> — your business analyst.</div>
+            <div style={{fontSize:13,color:"#475569",lineHeight:1.6,marginTop:6}}>Tell me what you'd like to know about your orders, and I'll put together a report for you. You can also pick from the suggestions below.</div>
           </div>
-          <button onClick={()=>generateReport(reportQ)} disabled={!reportQ.trim()} style={{width:"100%",padding:"12px",background:reportQ.trim()?"#0F172A":"#E5E7EB",color:reportQ.trim()?"#fff":"#94A3B8",border:"none",borderRadius:8,fontFamily:MN,fontSize:12,fontWeight:600,cursor:reportQ.trim()?"pointer":"default",marginBottom:28}}>Generate Report</button>
 
-          <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94A3B8",marginBottom:12}}>Quick Reports</div>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <div style={{position:"relative",marginBottom:16}}>
+            <input value={reportQ} onChange={e=>setReportQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")generateReport(reportQ);}} placeholder="What would you like me to look into?" style={{...S.input,width:"100%",padding:"12px 16px",fontSize:13,borderRadius:10,border:"1px solid #E5E7EB"}}/>
+          </div>
+          <button onClick={()=>generateReport(reportQ)} disabled={!reportQ.trim()} style={{width:"100%",padding:"11px",background:reportQ.trim()?"#0F172A":"#E5E7EB",color:reportQ.trim()?"#fff":"#94A3B8",border:"none",borderRadius:8,fontFamily:MN,fontSize:12,fontWeight:600,cursor:reportQ.trim()?"pointer":"default",marginBottom:24}}>Generate Report</button>
+
+          <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94A3B8",marginBottom:10}}>I can help you with</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
             {reportSuggestions.map((s,i)=>
-              <div key={i} className="hv-row" onClick={()=>generateReport(s)} style={{padding:"12px 16px",background:"#F8FAFC",borderRadius:8,border:"1px solid #E5E7EB",cursor:"pointer",fontFamily:MN,fontSize:12,color:"#475569",fontWeight:500}}>{s}</div>
+              <div key={i} className="hv-row" onClick={()=>generateReport(s)} style={{padding:"11px 16px",background:"#F8FAFC",borderRadius:8,border:"1px solid #E5E7EB",cursor:"pointer",fontSize:12,color:"#475569",fontWeight:500}}>{s}</div>
             )}
           </div>
 
@@ -1789,7 +1797,7 @@ export default function Dashboard(){
 
           {/* Report History */}
           {reportHistory.length>0&&<div style={{marginTop:28}}>
-            <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94A3B8",marginBottom:12}}>Previous Reports</div>
+            <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94A3B8",marginBottom:12}}>Earlier today</div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {reportHistory.map((r,i)=>
                 <div key={i} className="hv-row" onClick={()=>setReportResult(r)} style={{padding:"14px 16px",background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",cursor:"pointer"}}>
@@ -1806,22 +1814,22 @@ export default function Dashboard(){
 
         {/* Loading */}
         {reportLoading&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 20px",textAlign:"center"}}>
-          <div style={{width:40,height:40,border:"3px solid #E5E7EB",borderTop:"3px solid #0F172A",borderRadius:"50%",animation:"spin 1s linear infinite",marginBottom:20}}/>
-          <div style={{fontFamily:MN,fontSize:13,fontWeight:600,color:"#0F172A",marginBottom:4}}>Analyzing your data...</div>
-          <div style={{fontFamily:MN,fontSize:11,color:"#94A3B8"}}>This takes 2-3 seconds</div>
+          <div style={{width:36,height:36,border:"3px solid #E5E7EB",borderTop:"3px solid #0F172A",borderRadius:"50%",animation:"spin 1s linear infinite",marginBottom:20}}/>
+          <div style={{fontSize:13,fontWeight:500,color:"#0F172A",marginBottom:4}}>Neo is looking into this...</div>
+          <div style={{fontFamily:MN,fontSize:11,color:"#94A3B8"}}>Just a moment</div>
         </div>}
 
         {/* Report Result + Chat */}
         {reportResult&&<div style={{display:"flex",flexDirection:"column",height:"100%"}}>
           <div style={{flex:1,overflowY:"auto"}}>
-            {/* Report card */}
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
-              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#16A34A"}}>Report Ready</span>
-              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{new Date(reportResult.generatedAt).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</span>
-            </div>
-            <div style={{background:"#F8FAFC",borderRadius:10,border:"1px solid #E5E7EB",padding:"20px",marginBottom:16}}>
-              <div style={{fontSize:15,fontWeight:600,color:"#0F172A",marginBottom:10,lineHeight:1.3}}>{reportResult.title}</div>
+            {/* Neo's report */}
+            <div style={{background:"#F1F5F9",borderRadius:"12px 12px 12px 2px",padding:"18px 20px",marginBottom:16,maxWidth:"92%"}}>
+              <div style={{fontSize:14,fontWeight:600,color:"#0F172A",marginBottom:8,lineHeight:1.3}}>Here's what I found — {reportResult.title}</div>
               <div style={{fontSize:13,color:"#475569",lineHeight:1.7,whiteSpace:"pre-wrap"}}>{reportResult.body}</div>
+              <div style={{display:"flex",gap:12,marginTop:12,fontFamily:MN,fontSize:10,color:"#94A3B8"}}>
+                <span>{new Date(reportResult.generatedAt).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</span>
+                {reportResult.cost&&<span>₹{reportResult.cost.inr}</span>}
+              </div>
             </div>
 
             {/* Chat messages */}
@@ -1833,18 +1841,18 @@ export default function Dashboard(){
               </div>
             )}
             {chatLoading&&<div style={{marginBottom:12,display:"flex",justifyContent:"flex-start"}}>
-              <div style={{padding:"10px 14px",borderRadius:"12px 12px 12px 2px",background:"#F1F5F9",color:"#94A3B8",fontSize:13,fontFamily:MN}}>Thinking...</div>
+              <div style={{padding:"10px 14px",borderRadius:"12px 12px 12px 2px",background:"#F1F5F9",color:"#94A3B8",fontSize:13}}>Neo is thinking...</div>
             </div>}
           </div>
 
           {/* Bottom bar */}
           <div style={{flexShrink:0,borderTop:"1px solid #E5E7EB",paddingTop:16,marginTop:8}}>
             <div style={{display:"flex",gap:8,marginBottom:10}}>
-              <input value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")sendChat(chatInput);}} placeholder="Ask a follow-up..." style={{...S.input,flex:1,padding:"10px 14px",fontSize:13,borderRadius:8,border:"1px solid #E5E7EB"}}/>
+              <input value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")sendChat(chatInput);}} placeholder="Ask Neo anything..." style={{...S.input,flex:1,padding:"10px 14px",fontSize:13,borderRadius:8,border:"1px solid #E5E7EB"}}/>
               <button onClick={()=>sendChat(chatInput)} disabled={!chatInput.trim()||chatLoading} style={{padding:"10px 16px",background:chatInput.trim()&&!chatLoading?"#0F172A":"#E5E7EB",color:chatInput.trim()&&!chatLoading?"#fff":"#94A3B8",border:"none",borderRadius:8,fontFamily:MN,fontSize:12,fontWeight:600,cursor:chatInput.trim()&&!chatLoading?"pointer":"default"}}>Send</button>
             </div>
             <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>{setReportResult(null);setReportError("");setChatMsgs([]);setChatInput("");}} style={{flex:1,padding:"8px",background:"#F8FAFC",color:"#475569",border:"1px solid #E5E7EB",borderRadius:6,fontFamily:MN,fontSize:11,fontWeight:600,cursor:"pointer"}}>New Report</button>
+              <button onClick={()=>{setReportResult(null);setReportError("");setChatMsgs([]);setChatInput("");}} style={{flex:1,padding:"8px",background:"#F8FAFC",color:"#475569",border:"1px solid #E5E7EB",borderRadius:6,fontFamily:MN,fontSize:11,fontWeight:600,cursor:"pointer"}}>Ask something else</button>
               <button onClick={()=>setReportOpen(false)} style={{flex:1,padding:"8px",background:"#F8FAFC",color:"#94A3B8",border:"1px solid #E5E7EB",borderRadius:6,fontFamily:MN,fontSize:11,fontWeight:500,cursor:"pointer"}}>Close</button>
             </div>
             <div style={{textAlign:"center",fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:8}}>{reportRemaining} reports left today</div>
