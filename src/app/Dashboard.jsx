@@ -236,27 +236,63 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
     return sb-sa;
   });
 
-  // --- Step 3: Select top 3 with diversity (no duplication) ---
-  if(insights.length===0){
-    return [{headline:"Operations running smoothly",
-      body:readyToDispatch.length>0?readyToDispatch.length+" orders worth "+fmtVal(rtdVal)+" ready to ship. No blockers."
-        :filtered.length+" orders in pipeline worth "+fmtVal(totalVal)+". No issues detected.",
-      cta:readyToDispatch.length>0?"Review ready orders":"",tone:"positive",cat:"opportunity",
-      orders:readyToDispatch.sort((a,b)=>b.totalValue-a.totalValue).slice(0,8),issue:o=>"Ready since "+o.approvalDate}];
+  // --- Step 3: State-aware selection — always 1 primary + 1-2 secondary ---
+  const hasCritical=insights.some(i=>rank[i.impact]>=3&&rank[i.urgency]>=3);
+  const hasModerate=insights.some(i=>rank[i.impact]>=2||rank[i.urgency]>=2);
+
+  // Generate "healthy" and "watch" fallback insights
+  const healthyPrimary={headline:"Operations running smoothly",
+    body:readyToDispatch.length>0
+      ?readyToDispatch.length+" orders worth "+fmtVal(rtdVal)+" ready to ship, no blockers in the pipeline."
+      :filtered.length+" orders in pipeline worth "+fmtVal(totalVal)+". No critical issues detected.",
+    cta:readyToDispatch.length>0?"Review ready orders":"",tone:"positive",cat:"opportunity",
+    orders:readyToDispatch.sort((a,b)=>b.totalValue-a.totalValue).slice(0,8),issue:o=>o.approvalDate?"Ready since "+o.approvalDate:"Pending"};
+
+  const healthySecondary=[];
+  // Always generate a pipeline summary as a secondary
+  if(filtered.length>0)healthySecondary.push({headline:fmtVal(totalVal)+" across "+filtered.length+" active orders",
+    body:readyToDispatch.length+" ready, "+pendingApproval.length+" pending approval.",
+    cta:"",tone:"neutral",cat:"context",orders:[],issue:()=>""});
+  // Add a velocity note if there's dispatch data
+  if(readyToDispatch.length>0&&pendingApproval.length>0){
+    const ratio=Math.round(readyToDispatch.length/(readyToDispatch.length+pendingApproval.length)*100);
+    healthySecondary.push({headline:ratio+"% of orders are dispatch-ready",
+      body:ratio>=50?"Healthy conversion rate — keep clearing approvals.":"Approval rate is below 50% — room to improve.",
+      cta:"",tone:ratio>=50?"positive":"neutral",cat:"context",orders:[],issue:()=>""});
   }
 
-  // Pick primary (highest ranked)
-  const result=[insights[0]];
-  // Pick up to 2 secondary — different category than primary, no duplicates
-  const primaryCat=insights[0].cat;
-  const seen=new Set([insights[0].type]);
-  for(let i=1;i<insights.length&&result.length<3;i++){
-    if(!seen.has(insights[i].type)){
-      // Prefer diverse categories: if primary is "problem", prefer "risk" or "context" or "opportunity"
-      seen.add(insights[i].type);
-      result.push(insights[i]);
+  let result=[];
+
+  if(insights.length===0){
+    // --- Healthy state: no detected issues ---
+    result=[healthyPrimary,...healthySecondary.slice(0,2)];
+  } else if(!hasCritical&&!hasModerate){
+    // --- Healthy with low-priority context available ---
+    result=[healthyPrimary,...insights.slice(0,2)];
+  } else if(!hasCritical&&hasModerate){
+    // --- Watch state: no critical, but moderate concerns ---
+    // Promote the top moderate concern to primary, add context as secondary
+    result=[insights[0]];
+    const seen=new Set([insights[0].type]);
+    for(let i=1;i<insights.length&&result.length<3;i++){
+      if(!seen.has(insights[i].type)){seen.add(insights[i].type);result.push(insights[i]);}
     }
+    // If we only got 1, backfill with healthy context
+    if(result.length<2)result.push(...healthySecondary.slice(0,3-result.length));
+  } else {
+    // --- Critical state: urgent issues exist ---
+    result=[insights[0]];
+    const seen=new Set([insights[0].type]);
+    for(let i=1;i<insights.length&&result.length<3;i++){
+      if(!seen.has(insights[i].type)){seen.add(insights[i].type);result.push(insights[i]);}
+    }
+    // If we only got 1, backfill from context insights
+    if(result.length<2)result.push(...healthySecondary.slice(0,3-result.length));
   }
+
+  // Guarantee at least 1 primary + 1 secondary (never leave section looking empty)
+  if(result.length<2)result.push(...healthySecondary.slice(0,2-result.length));
+
   return result;
 }
 function useW(){const[w,setW]=useState(typeof window!=='undefined'?window.innerWidth:1200);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);return w;}
