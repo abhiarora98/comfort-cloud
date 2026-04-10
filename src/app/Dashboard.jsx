@@ -1194,7 +1194,10 @@ export default function Dashboard(){
   const[agoText,setAgoText]=useState("");const[dataVer,setDataVer]=useState(0);
   const[newOrderIds,setNewOrderIds]=useState(new Set());
   const[showNewOnly,setShowNewOnly]=useState(false);
+  const[activityFeed,setActivityFeed]=useState([]);
+  const[insightOpen,setInsightOpen]=useState(false);
   const prevOrderIds=useRef(null);
+  const prevSnap=useRef(null);
 
   useEffect(()=>{
     var doFetch=function(){
@@ -1203,7 +1206,8 @@ export default function Dashboard(){
       .then(function(csv){
         var raw=parseCSV(csv);if(raw.length===0)throw new Error("Empty");
         var grouped=groupOrders(raw);
-        // Track new orders by comparing with previous set
+        var active=grouped.filter(function(o){return!(o.lineCount>0&&o.dispatchedCount>=o.lineCount);});
+        // Track new orders
         var currentIds=new Set(grouped.map(function(o){return o.party+"||"+o.piDate;}));
         if(prevOrderIds.current){
           var added=new Set();
@@ -1211,6 +1215,45 @@ export default function Dashboard(){
           if(added.size>0)setNewOrderIds(added);
         }
         prevOrderIds.current=currentIds;
+
+        // Build activity feed by comparing with previous snapshot
+        var now=new Date();
+        var ts=now.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+        if(prevSnap.current){
+          var ps=prevSnap.current;var newActs=[];
+          // New orders added
+          var prevIds=new Set(ps.orders.map(function(o){return o.id;}));
+          active.forEach(function(o){if(!prevIds.has(o.id)){newActs.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,icon:"+"});}});
+          // Orders approved (moved from pending to ready)
+          var prevPendIds=new Set(ps.orders.filter(function(o){return!o.approvalDate;}).map(function(o){return o.id;}));
+          active.forEach(function(o){if(o.approvalDate&&prevPendIds.has(o.id)){newActs.push({type:"approved",text:o.party+" approved — "+fmtVal(o.totalValue)+" ready to ship",time:ts,icon:"✓"});}});
+          // Orders dispatched (disappeared from active)
+          var curIds=new Set(active.map(function(o){return o.id;}));
+          ps.orders.forEach(function(o){if(!curIds.has(o.id)){newActs.push({type:"dispatched",text:o.party+" dispatched — "+fmtVal(o.totalValue),time:ts,icon:"→"});}});
+          // Overdue changes
+          var prevOD=ps.orders.filter(function(o){return o.approvalDate&&daysSince(o.approvalDate)>7;}).length;
+          var curOD=active.filter(function(o){return o.approvalDate&&daysSince(o.approvalDate)>7;}).length;
+          if(curOD>prevOD){newActs.push({type:"overdue",text:(curOD-prevOD)+" more order"+(curOD-prevOD>1?"s":"")+" now overdue",time:ts,icon:"!"});}
+          // Value changes
+          var prevVal=ps.orders.reduce(function(s,o){return s+o.totalValue;},0);
+          var curVal=active.reduce(function(s,o){return s+o.totalValue;},0);
+          var diff=curVal-prevVal;
+          if(Math.abs(diff)>10000){newActs.push({type:diff>0?"value_up":"value_down",text:"Pipeline "+(diff>0?"up":"down")+" "+fmtVal(Math.abs(diff))+" to "+fmtVal(curVal),time:ts,icon:diff>0?"↑":"↓"});}
+          if(newActs.length>0)setActivityFeed(function(f){return newActs.concat(f).slice(0,20);});
+        } else {
+          // First load — seed with current state summary
+          var rtd=active.filter(function(o){return o.approvalDate&&o.dispatchedCount<o.lineCount;});
+          var pend=active.filter(function(o){return!o.approvalDate;});
+          var od=rtd.filter(function(o){return daysSince(o.approvalDate)>7;});
+          var totalVal=active.reduce(function(s,o){return s+o.totalValue;},0);
+          var seed=[];
+          seed.push({type:"summary",text:active.length+" active orders worth "+fmtVal(totalVal),time:ts,icon:"◆"});
+          if(rtd.length>0)seed.push({type:"ready",text:rtd.length+" orders ready to dispatch — "+fmtVal(rtd.reduce(function(s,o){return s+o.totalValue;},0)),time:ts,icon:"✓"});
+          if(pend.length>0)seed.push({type:"pending",text:pend.length+" orders awaiting approval",time:ts,icon:"◷"});
+          if(od.length>0)seed.push({type:"overdue",text:od.length+" orders overdue for shipping",time:ts,icon:"!"});
+          setActivityFeed(seed);
+        }
+        prevSnap.current={orders:active};
         setLiveOrders(grouped);setLastUpdated(new Date());setFetchStatus("ok");setDataVer(v=>v+1);
       }).catch(function(){setFetchStatus(liveOrders?"error_cached":"error");});
     };
@@ -1394,66 +1437,83 @@ export default function Dashboard(){
 
       {/* ═══ PENDING ═══ */}
       {tab==="pending"&&<div>
-        {/* Stacked Insights */}
-        {(()=>{const allInsights=buildInsight(baseOrders,baseRtd,basePend,baseOverdue,baseLines,cat);
-          const toneStyles={
-            urgent:{accent:"#DC2626",label:"Critical"},
-            warning:{accent:"#D97706",label:"Attention"},
-            positive:{accent:"#16A34A",label:"Opportunity"},
-            neutral:{accent:"#2563EB",label:"Context"}
-          };
-          const primary=allInsights[0];const secondary=allInsights.slice(1,3);
-          const isCritical=primary.tone==="urgent"||primary.tone==="warning";
-          const pts=toneStyles[primary.tone]||toneStyles.neutral;
-          return <div style={{marginBottom:44}}>
-            {/* Primary Insight */}
-            <div className="hv-insight" style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",borderLeft:"3px solid "+pts.accent,padding:mob?"28px 24px":"36px 40px",marginBottom:secondary.length>0?20:0}}>
-              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.14em",textTransform:"uppercase",color:pts.accent,marginBottom:20}}>{pts.label}</div>
-              <div style={{fontSize:mob?19:22,fontWeight:600,color:"#0F172A",lineHeight:1.35,letterSpacing:"-0.01em",marginBottom:12}}>{primary.headline}</div>
-              <div style={{fontSize:mob?13:14,color:"#475569",lineHeight:1.65,maxWidth:580,marginBottom:primary.cta?26:0}}>{primary.body}</div>
-              {primary.cta&&<button className="hv-btn" onClick={()=>setActionOpen(o=>!o)} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?pts.accent:"#fff",background:actionOpen?"transparent":pts.accent,border:actionOpen?"1px solid "+pts.accent:"none",borderRadius:6,padding:"8px 20px",cursor:"pointer",boxShadow:actionOpen?"none":"0 1px 3px rgba(0,0,0,0.1)"}}>{actionOpen?"Close":primary.cta}</button>}
+        {/* Activity Feed — Hero */}
+        <div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:20,overflow:"hidden"}}>
+          <div style={{padding:"16px 24px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{width:7,height:7,borderRadius:"50%",background:"#16A34A",boxShadow:"0 0 6px #16A34A60"}}/>
+              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Live Activity</span>
             </div>
-            {/* Secondary Insights */}
-            {secondary.length>0&&<div>
-              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.14em",textTransform:"uppercase",color:"#94A3B8",marginBottom:12,paddingLeft:2}}>Context</div>
-              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat("+Math.min(secondary.length,2)+",1fr)",gap:12}}>
-              {secondary.map((ins,si)=>{const sts=toneStyles[ins.tone]||toneStyles.neutral;
-                return <div key={si} className="hv-insight-s" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",borderLeft:"2px solid "+sts.accent,padding:mob?"18px 18px":"20px 24px"}}>
-                  <div style={{fontSize:mob?13:14,fontWeight:600,color:"#0F172A",lineHeight:1.4,marginBottom:6}}>{ins.headline}</div>
-                  <div style={{fontSize:12,color:"#475569",lineHeight:1.55}}>{ins.body}</div>
-                </div>;
-              })}
-              </div>
-            </div>}
-          </div>;
-        })()}
-
-        {/* Priority Orders — Action Flow */}
-        {(()=>{const allInsights=buildInsight(baseOrders,baseRtd,basePend,baseOverdue,baseLines,cat);
-          const primary=allInsights[0];
-          if(!actionOpen||!primary.orders||primary.orders.length===0)return null;
-          const visibleOrders=primary.orders;
-          return <div style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",marginBottom:32,overflow:"hidden"}}>
-            <div style={{padding:"14px 24px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Priority Orders</span>
-              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{visibleOrders.length}</span>
-            </div>
-            {visibleOrders.map((o,oi)=>{
-              const issueText=typeof primary.issue==="function"?primary.issue(o):"";
-              return <div key={o.id} className="hv-row" style={{padding:mob?"12px 16px":"13px 24px",borderBottom:oi<visibleOrders.length-1?"1px solid #E5E7EB":"none",display:"flex",alignItems:"center",gap:16}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
-                    <span style={{fontSize:13,fontWeight:600,color:"#0F172A"}}>{o.party}</span>
-                    <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>#{o.id}</span>
-                  </div>
-                  <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-                    <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0F172A"}}>{fmtVal(o.totalValue)}</span>
-                    <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{o.totalQty} qty</span>
-                    {issueText&&<span style={{fontFamily:MN,fontSize:10,fontWeight:500,color:"#475569"}}>{issueText}</span>}
-                  </div>
-                </div>
+            {agoText&&<span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{agoText}</span>}
+          </div>
+          <div style={{maxHeight:mob?200:180,overflowY:"auto"}}>
+            {activityFeed.length===0?<div style={{padding:"24px",textAlign:"center",fontFamily:MN,fontSize:12,color:"#94A3B8"}}>Waiting for first sync...</div>:
+            activityFeed.slice(0,8).map((a,i)=>{
+              const colors={new_order:"#2563EB",approved:"#16A34A",dispatched:"#16A34A",overdue:"#DC2626",value_up:"#16A34A",value_down:"#DC2626",summary:"#475569",ready:"#16A34A",pending:"#D97706"};
+              const c=colors[a.type]||"#475569";
+              return <div key={i} className="hv-row" style={{padding:mob?"10px 16px":"10px 24px",borderBottom:i<Math.min(activityFeed.length,8)-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12}}>
+                <span style={{width:22,height:22,borderRadius:6,background:c+"10",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:c,fontFamily:MN,fontWeight:700,flexShrink:0}}>{a.icon}</span>
+                <span style={{flex:1,fontSize:13,color:"#0F172A",lineHeight:1.4}}>{a.text}</span>
+                <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8",flexShrink:0}}>{a.time}</span>
               </div>;
             })}
+          </div>
+        </div>
+
+        {/* Insight Badge — Compact, expandable */}
+        {(()=>{const allInsights=buildInsight(baseOrders,baseRtd,basePend,baseOverdue,baseLines,cat);
+          const toneStyles={urgent:{accent:"#DC2626",label:"Critical",glow:"#DC262630"},warning:{accent:"#D97706",label:"Attention",glow:"#D9770630"},positive:{accent:"#16A34A",label:"On Track",glow:"#16A34A30"},neutral:{accent:"#2563EB",label:"Info",glow:"#2563EB30"}};
+          const primary=allInsights[0];const secondary=allInsights.slice(1,3);
+          const pts=toneStyles[primary.tone]||toneStyles.neutral;
+          return <div style={{marginBottom:24}}>
+            {/* Badge */}
+            <div onClick={()=>setInsightOpen(o=>!o)} className="hv-row" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:mob?"12px 16px":"14px 20px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
+              <span style={{width:8,height:8,borderRadius:"50%",background:pts.accent,boxShadow:"0 0 8px "+pts.glow,flexShrink:0,animation:"pulse 2s ease-in-out infinite"}}/>
+              <div style={{flex:1}}>
+                <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:pts.accent,marginRight:8}}>{pts.label}</span>
+                <span style={{fontSize:13,fontWeight:600,color:"#0F172A"}}>{primary.headline}</span>
+              </div>
+              <span style={{fontFamily:MN,fontSize:12,color:"#94A3B8",transition:"transform 0.2s",transform:insightOpen?"rotate(180deg)":"none"}}>▾</span>
+            </div>
+
+            {/* Expanded insight content */}
+            {insightOpen&&<div style={{marginTop:8}}>
+              <div style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",borderLeft:"3px solid "+pts.accent,padding:mob?"20px 20px":"24px 28px",marginBottom:secondary.length>0?12:0}}>
+                <div style={{fontSize:mob?13:14,color:"#475569",lineHeight:1.65,maxWidth:580,marginBottom:primary.cta?20:0}}>{primary.body}</div>
+                {primary.cta&&<button className="hv-btn" onClick={(e)=>{e.stopPropagation();setActionOpen(o=>!o);}} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?pts.accent:"#fff",background:actionOpen?"transparent":pts.accent,border:actionOpen?"1px solid "+pts.accent:"none",borderRadius:6,padding:"7px 16px",cursor:"pointer",boxShadow:actionOpen?"none":"0 1px 3px rgba(0,0,0,0.1)"}}>{actionOpen?"Close":primary.cta}</button>}
+              </div>
+              {secondary.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat("+Math.min(secondary.length,2)+",1fr)",gap:10}}>
+                {secondary.map((ins,si)=>{const sts=toneStyles[ins.tone]||toneStyles.neutral;
+                  return <div key={si} className="hv-insight-s" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",borderLeft:"2px solid "+sts.accent,padding:mob?"14px 16px":"16px 20px"}}>
+                    <div style={{fontSize:13,fontWeight:600,color:"#0F172A",lineHeight:1.4,marginBottom:4}}>{ins.headline}</div>
+                    <div style={{fontSize:12,color:"#475569",lineHeight:1.5}}>{ins.body}</div>
+                  </div>;
+                })}
+              </div>}
+
+              {/* Priority Orders inline */}
+              {actionOpen&&primary.orders&&primary.orders.length>0&&<div style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",marginTop:12,overflow:"hidden"}}>
+                <div style={{padding:"12px 20px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Priority Orders</span>
+                  <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{primary.orders.length}</span>
+                </div>
+                {primary.orders.slice(0,5).map((o,oi)=>{
+                  const issueText=typeof primary.issue==="function"?primary.issue(o):"";
+                  return <div key={o.id} className="hv-row" style={{padding:mob?"10px 16px":"10px 20px",borderBottom:oi<Math.min(primary.orders.length,5)-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12}}>
+                    <div style={{flex:1}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                        <span style={{fontSize:12,fontWeight:600,color:"#0F172A"}}>{o.party}</span>
+                        <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>#{o.id}</span>
+                      </div>
+                      <div style={{display:"flex",gap:8,fontSize:11,fontFamily:MN,color:"#94A3B8"}}>
+                        <span style={{fontWeight:700,color:"#0F172A"}}>{fmtVal(o.totalValue)}</span>
+                        {issueText&&<span>{issueText}</span>}
+                      </div>
+                    </div>
+                  </div>;
+                })}
+              </div>}
+            </div>}
           </div>;
         })()}
 
