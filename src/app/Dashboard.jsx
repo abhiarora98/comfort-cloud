@@ -132,91 +132,100 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
   // --- Step 1: Detect all insights ---
   const insights=[];
   const S={H:"high",M:"medium",L:"low"};
+  const totalQty=allLines.reduce((s,l)=>s+l.qty,0);
+
+  // --- Detect insights with sharp, specific copy ---
 
   if(rtdOverdue.length>0){
-    insights.push({type:"overdue",impact:rtdOverdue.length>=3?S.H:S.M,urgency:S.H,actionability:S.H,
-      text:rtdOverdue.length+" order"+(rtdOverdue.length>1?"s":"")+" worth "+fmtVal(odVal)+" "+(rtdOverdue.length>1?"have":"has")+" been approved but not shipped for over a week. Ship these first to avoid cancellations.",
-      action:"Clear overdue orders",cta:"Review",tone:"urgent",
-      orders:rtdOverdue.sort((a,b)=>b.totalValue-a.totalValue),orderAction:"dispatch",
-      issue:o=>"Approved "+daysSince(o.approvalDate)+"d ago, not shipped"});
+    insights.push({type:"overdue",cat:"problem",impact:rtdOverdue.length>=3?S.H:S.M,urgency:S.H,actionability:S.H,
+      headline:fmtVal(odVal)+" in "+rtdOverdue.length+" order"+(rtdOverdue.length>1?"s":"")+" overdue for dispatch",
+      body:"Approved but not shipped for 7+ days. Each day increases cancellation risk.",
+      cta:"Review overdue orders",tone:"urgent",
+      orders:rtdOverdue.sort((a,b)=>b.totalValue-a.totalValue),
+      issue:o=>daysSince(o.approvalDate)+"d since approval"});
   }
 
   if(pendPct>=65&&pendingApproval.length>=5){
-    insights.push({type:"bottleneck",impact:S.H,urgency:S.H,actionability:S.H,
-      text:pendingApproval.length+" orders worth "+fmtVal(pendVal)+" are waiting for approval. Nothing can ship until these are cleared.",
-      action:"Get approvals done",cta:"Review",tone:"warning",
-      orders:pendingApproval.sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),orderAction:"approve",
-      issue:o=>"Waiting "+daysSince(o.piDate)+"d for approval"});
+    insights.push({type:"bottleneck",cat:"problem",impact:S.H,urgency:S.H,actionability:S.H,
+      headline:fmtVal(pendVal)+" blocked — "+pendingApproval.length+" orders awaiting approval",
+      body:Math.round(pendPct)+"% of your pipeline can't move until approvals clear.",
+      cta:"Review pending orders",tone:"warning",
+      orders:pendingApproval.sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),
+      issue:o=>daysSince(o.piDate)+"d waiting"});
   } else if(pendingApproval.length>readyToDispatch.length*2&&pendingApproval.length>=4){
-    insights.push({type:"bottleneck",impact:S.M,urgency:S.M,actionability:S.H,
-      text:pendingApproval.length+" orders are waiting for approval but only "+readyToDispatch.length+" are ready to ship. Approvals need to move faster.",
-      action:"Speed up approvals",cta:"Review",tone:"warning",
-      orders:pendingApproval.sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),orderAction:"approve",
-      issue:o=>"Waiting "+daysSince(o.piDate)+"d for approval"});
+    insights.push({type:"bottleneck",cat:"problem",impact:S.M,urgency:S.M,actionability:S.H,
+      headline:"Approval backlog growing — "+pendingApproval.length+" pending vs "+readyToDispatch.length+" ready",
+      body:"Dispatch is constrained by slow approvals.",
+      cta:"Review pending orders",tone:"warning",
+      orders:pendingApproval.sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),
+      issue:o=>daysSince(o.piDate)+"d waiting"});
   }
 
   if(readyToDispatch.length>=5&&readyPct>=40&&rtdOverdue.length===0){
-    insights.push({type:"ready_batch",impact:S.M,urgency:S.M,actionability:S.H,
-      text:readyToDispatch.length+" orders worth "+fmtVal(rtdVal)+" are ready to ship and nothing is overdue. Good time to clear them all at once.",
-      action:"Ship ready orders",cta:"Review",tone:"positive",
-      orders:readyToDispatch.sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),orderAction:"dispatch",
+    insights.push({type:"ready_batch",cat:"opportunity",impact:S.M,urgency:S.M,actionability:S.H,
+      headline:readyToDispatch.length+" orders worth "+fmtVal(rtdVal)+" ready to ship",
+      body:"No overdue items. Clean window to dispatch a large batch.",
+      cta:"Review ready orders",tone:"positive",
+      orders:readyToDispatch.sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),
       issue:o=>"Ready since "+o.approvalDate});
   }
 
-  if(topPOC.length>0&&topPOC[0][1]>=filtered.length*0.5&&filtered.length>=6){
-    const pocName=topPOC[0][0];
-    insights.push({type:"poc_concentration",impact:S.L,urgency:S.L,actionability:S.M,
-      text:pocName+" has "+topPOC[0][1]+" out of "+filtered.length+" orders. If anything slows down on their side, most of your orders get affected.",
-      action:"Review "+pocName+"'s orders",cta:"Review",tone:"neutral",
-      orders:filtered.filter(o=>o.salesPOC===pocName).sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),orderAction:"follow_up",
-      issue:o=>o.approvalDate?"Ready to ship":"Waiting for approval"});
-  }
-
-  if(topCat.length>0&&topCat[0][1]>=allLines.reduce((s,l)=>s+l.qty,0)*0.5&&allLines.length>=10){
-    const catName=(CC[topCat[0][0]]||CC.Other).l||topCat[0][0];const catKey=topCat[0][0];
-    insights.push({type:"category_dominance",impact:S.L,urgency:S.L,actionability:S.L,
-      text:catName+" makes up most of your current orders at "+Math.round(topCat[0][1]/allLines.reduce((s,l)=>s+l.qty,0)*100)+"% of total quantity. Make sure you have enough stock to keep up.",
-      action:"Check "+catName+" orders",cta:"Review",tone:"neutral",
-      orders:filtered.filter(o=>o.categories.includes(catKey)).sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),orderAction:"follow_up",
-      issue:o=>o.approvalDate?"Ready to ship":"Pending approval"});
-  }
-
-  // --- Strong but blocked ---
-  if(totalVal>0&&(rtdOverdue.length>0||pendPct>=40)&&readyToDispatch.length>=3){
+  // --- Strong but blocked (skip if overdue or bottleneck already covers it) ---
+  if(totalVal>0&&(rtdOverdue.length>0||pendPct>=40)&&readyToDispatch.length>=3&&!insights.some(i=>i.type==="overdue")&&!insights.some(i=>i.type==="bottleneck")){
     const blockedVal=odVal+pendVal;
-    const blockedOrders=[...rtdOverdue,...pendingApproval].sort((a,b)=>b.totalValue-a.totalValue).slice(0,10);
-    insights.push({type:"strong_blocked",impact:S.M,urgency:S.M,actionability:S.H,
-      text:"You have "+fmtVal(totalVal)+" in orders but "+fmtVal(blockedVal)+" is stuck in approvals or overdue. Clear the blocks so this money can move.",
-      action:"Clear pending and overdue",cta:"Review",tone:"warning",
-      orders:blockedOrders,orderAction:"mixed",
-      issue:o=>o.approvalDate&&daysSince(o.approvalDate)>7?"Overdue "+daysSince(o.approvalDate)+"d":"Waiting "+daysSince(o.piDate)+"d for approval"});
+    insights.push({type:"strong_blocked",cat:"problem",impact:S.M,urgency:S.M,actionability:S.H,
+      headline:fmtVal(blockedVal)+" stuck in pipeline out of "+fmtVal(totalVal)+" total",
+      body:"Strong demand but execution is lagging. Overdue and unapproved orders are blocking revenue.",
+      cta:"Review blocked orders",tone:"warning",
+      orders:[...rtdOverdue,...pendingApproval].sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),
+      issue:o=>o.approvalDate&&daysSince(o.approvalDate)>7?"Overdue "+daysSince(o.approvalDate)+"d":"Pending "+daysSince(o.piDate)+"d"});
   }
 
-  // --- Aging orders ---
+  // --- Aging (skip if bottleneck already selected, similar message) ---
   const aged=pendingApproval.filter(o=>daysSince(o.piDate)>30);
-  if(aged.length>=2){
+  if(aged.length>=2&&!insights.some(i=>i.type==="bottleneck")){
     const agedVal=aged.reduce((s,o)=>s+o.totalValue,0);
-    insights.push({type:"aging",impact:aged.length>=5?S.H:S.M,urgency:S.M,actionability:S.H,
-      text:aged.length+" orders worth "+fmtVal(agedVal)+" have been sitting for over 30 days without approval. The longer they wait, the more likely they get cancelled.",
-      action:"Review old orders",cta:"Review",tone:"warning",
-      orders:aged.sort((a,b)=>b.totalValue-a.totalValue),orderAction:"approve",
-      issue:o=>daysSince(o.piDate)+"d without approval"});
+    insights.push({type:"aging",cat:"risk",impact:aged.length>=5?S.H:S.M,urgency:S.M,actionability:S.H,
+      headline:aged.length+" orders stale for 30+ days — "+fmtVal(agedVal)+" at risk",
+      body:"Unapproved orders this old rarely convert. Decide: escalate or close.",
+      cta:"Review stale orders",tone:"warning",
+      orders:aged.sort((a,b)=>b.totalValue-a.totalValue),
+      issue:o=>daysSince(o.piDate)+"d old"});
   }
 
   // --- High-value stuck ---
   const avgVal=filtered.length>0?totalVal/filtered.length:0;
   const highValStuck=pendingApproval.filter(o=>o.totalValue>=avgVal*3&&daysSince(o.piDate)>7).sort((a,b)=>b.totalValue-a.totalValue);
   if(highValStuck.length>0){
-    const hv=highValStuck[0];
-    insights.push({type:"high_value_stuck",impact:S.M,urgency:S.M,actionability:S.H,
-      text:hv.party+" has a big order worth "+fmtVal(hv.totalValue)+" waiting for approval for "+daysSince(hv.piDate)+" days. This is "+Math.round(hv.totalValue/totalVal*100)+"% of your total pipeline — get it approved fast.",
-      action:"Approve "+hv.party+"'s order",cta:"Review",tone:"warning",
-      orders:highValStuck.slice(0,5),orderAction:"approve",
-      issue:o=>daysSince(o.piDate)+"d waiting, "+fmtVal(o.totalValue)});
+    const hv=highValStuck[0];const hvPct=Math.round(hv.totalValue/totalVal*100);
+    insights.push({type:"high_value_stuck",cat:"risk",impact:S.M,urgency:S.M,actionability:S.H,
+      headline:hv.party+"'s "+fmtVal(hv.totalValue)+" order stuck for "+daysSince(hv.piDate)+"d",
+      body:hvPct+"% of pipeline value in one unapproved order.",
+      cta:"Review this order",tone:"warning",
+      orders:highValStuck.slice(0,5),
+      issue:o=>daysSince(o.piDate)+"d, "+fmtVal(o.totalValue)});
+  }
+
+  // --- Context insights (lower priority, never primary) ---
+  if(topPOC.length>0&&topPOC[0][1]>=filtered.length*0.5&&filtered.length>=6){
+    const pocPct=Math.round(topPOC[0][1]/filtered.length*100);
+    insights.push({type:"poc_concentration",cat:"context",impact:S.L,urgency:S.L,actionability:S.M,
+      headline:topPOC[0][0]+" holds "+pocPct+"% of active orders",
+      body:topPOC[0][1]+" of "+filtered.length+" orders. High concentration risk.",
+      cta:"",tone:"neutral",orders:[],issue:()=>""});
+  }
+
+  if(topCat.length>0&&topCat[0][1]>=totalQty*0.5&&totalQty>=10){
+    const catName=(CC[topCat[0][0]]||CC.Other).l||topCat[0][0];
+    const catPct=Math.round(topCat[0][1]/totalQty*100);
+    insights.push({type:"category_dominance",cat:"context",impact:S.L,urgency:S.L,actionability:S.L,
+      headline:catName+" driving "+catPct+"% of demand",
+      body:topCat[0][1]+" of "+totalQty+" units. Verify stock coverage.",
+      cta:"",tone:"neutral",orders:[],issue:()=>""});
   }
 
   if(filtered.length===0){
-    return [{headline:"No pending orders right now.",body:"All orders are either dispatched or there are no active orders.",action:"",cta:"",tone:"neutral",orders:[],orderAction:"",issue:()=>""}];
+    return [{headline:"No pending orders",body:"All orders dispatched or no matches for current filters.",cta:"",tone:"neutral",orders:[],issue:()=>"",cat:"context"}];
   }
 
   // --- Step 2: Rank by impact > urgency > actionability ---
@@ -227,38 +236,28 @@ function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLin
     return sb-sa;
   });
 
-  // --- Step 3: Build headline for each insight, return all ranked ---
+  // --- Step 3: Select top 3 with diversity (no duplication) ---
   if(insights.length===0){
-    return [{headline:"Everything looks good",
-      body:readyToDispatch.length>0
-        ?"No issues right now. "+readyToDispatch.length+" orders worth "+fmtVal(rtdVal)+" are ready to ship. Keep going."
-        :"No issues right now. "+filtered.length+" orders in the pipeline worth "+fmtVal(totalVal)+". Keep clearing pending approvals.",
-      action:readyToDispatch.length>0?"Ship ready orders":"",cta:readyToDispatch.length>0?"Start shipping":"",tone:"positive",
-      orders:readyToDispatch.sort((a,b)=>b.totalValue-a.totalValue).slice(0,8),orderAction:"dispatch",
-      issue:o=>o.approvalDate?"Ready since "+o.approvalDate:"Pending"}];
+    return [{headline:"Operations running smoothly",
+      body:readyToDispatch.length>0?readyToDispatch.length+" orders worth "+fmtVal(rtdVal)+" ready to ship. No blockers."
+        :filtered.length+" orders in pipeline worth "+fmtVal(totalVal)+". No issues detected.",
+      cta:readyToDispatch.length>0?"Review ready orders":"",tone:"positive",cat:"opportunity",
+      orders:readyToDispatch.sort((a,b)=>b.totalValue-a.totalValue).slice(0,8),issue:o=>"Ready since "+o.approvalDate}];
   }
 
-  const headlineMap={
-    overdue:rtdOverdue.length+" order"+(rtdOverdue.length>1?"s":"")+" overdue for shipping",
-    bottleneck:"Too many orders waiting for approval",
-    ready_batch:"Ready to ship a big batch",
-    poc_concentration:"Most orders are with one person",
-    category_dominance:"One product type is leading",
-    strong_blocked:"Orders are there, but stuck",
-    aging:"Some orders have been waiting too long",
-    high_value_stuck:"A big order is stuck"
-  };
-
-  return insights.map(ins=>({
-    headline:headlineMap[ins.type]||"Your orders at a glance",
-    body:ins.text,
-    action:ins.action,
-    cta:ins.cta||"",
-    tone:ins.tone,
-    orders:ins.orders||[],
-    orderAction:ins.orderAction||"follow_up",
-    issue:ins.issue||(()=>"")
-  }));
+  // Pick primary (highest ranked)
+  const result=[insights[0]];
+  // Pick up to 2 secondary — different category than primary, no duplicates
+  const primaryCat=insights[0].cat;
+  const seen=new Set([insights[0].type]);
+  for(let i=1;i<insights.length&&result.length<3;i++){
+    if(!seen.has(insights[i].type)){
+      // Prefer diverse categories: if primary is "problem", prefer "risk" or "context" or "opportunity"
+      seen.add(insights[i].type);
+      result.push(insights[i]);
+    }
+  }
+  return result;
 }
 function useW(){const[w,setW]=useState(typeof window!=='undefined'?window.innerWidth:1200);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);return w;}
 
@@ -1306,26 +1305,27 @@ export default function Dashboard(){
           };
           const primary=allInsights[0];const secondary=allInsights.slice(1,3);
           const pts=toneStyles[primary.tone]||toneStyles.neutral;
-          return <div style={{marginBottom:28}}>
+          return <div style={{marginBottom:32}}>
             {/* Primary Insight */}
-            <div className="hv-insight" style={{background:pts.bg,borderRadius:14,border:"1px solid "+pts.border,borderLeft:"3px solid "+pts.accent,padding:mob?"24px 22px":"28px 32px",marginBottom:secondary.length>0?12:0}}>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+            <div className="hv-insight" style={{background:pts.bg,borderRadius:14,border:"1px solid "+pts.border,borderLeft:"3px solid "+pts.accent,padding:mob?"24px 22px":"30px 32px",marginBottom:secondary.length>0?20:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
                 <span style={{fontFamily:MN,fontSize:10,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:pts.labelColor,background:pts.labelBg,padding:"3px 10px",borderRadius:4}}>{pts.label}</span>
-                <span style={{fontFamily:MN,fontSize:11,fontWeight:500,color:"#c0c7d1"}}>Orders Insight</span>
               </div>
-              <div style={{fontSize:mob?18:22,fontWeight:700,color:"#0f172a",lineHeight:1.3,letterSpacing:"-0.015em",marginBottom:10}}>{primary.headline}</div>
-              <div style={{fontSize:mob?13:15,color:"#64748b",lineHeight:1.7,maxWidth:720,marginBottom:primary.cta?18:0}}>{primary.body}</div>
+              <div style={{fontSize:mob?18:22,fontWeight:700,color:"#0f172a",lineHeight:1.3,letterSpacing:"-0.015em",marginBottom:8}}>{primary.headline}</div>
+              <div style={{fontSize:mob?13:14,color:"#64748b",lineHeight:1.6,maxWidth:640,marginBottom:primary.cta?20:0}}>{primary.body}</div>
               {primary.cta&&<button className="hv-btn" onClick={()=>setActionOpen(o=>!o)} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?pts.accent:"#fff",background:actionOpen?"transparent":pts.accent,border:actionOpen?"1px solid "+pts.accent+"30":"1px solid "+pts.accent,borderRadius:6,padding:"6px 14px",cursor:"pointer"}}>{actionOpen?"Close":primary.cta}</button>}
             </div>
             {/* Secondary Insights */}
-            {secondary.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat("+Math.min(secondary.length,2)+",1fr)",gap:10}}>
+            {secondary.length>0&&<div>
+              <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#c0c7d1",marginBottom:10}}>Also worth noting</div>
+              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat("+Math.min(secondary.length,2)+",1fr)",gap:10}}>
               {secondary.map((ins,si)=>{const sts=toneStyles[ins.tone]||toneStyles.neutral;
-                return <div key={si} className="hv-insight-s" style={{background:"#fff",borderRadius:10,border:"1px solid #e8eaed",borderLeft:"2px solid "+sts.accent,padding:mob?"14px 16px":"16px 20px"}}>
-                  <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:sts.labelColor,marginBottom:6}}>{sts.label}</div>
-                  <div style={{fontSize:mob?13:14,fontWeight:600,color:"#0f172a",lineHeight:1.4,marginBottom:4}}>{ins.headline}</div>
+                return <div key={si} className="hv-insight-s" style={{background:"#fff",borderRadius:10,border:"1px solid #eef0f2",borderLeft:"2px solid "+sts.accent,padding:mob?"14px 16px":"16px 20px"}}>
+                  <div style={{fontSize:mob?13:14,fontWeight:600,color:"#1e293b",lineHeight:1.4,marginBottom:4}}>{ins.headline}</div>
                   <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.5}}>{ins.body}</div>
                 </div>;
               })}
+              </div>
             </div>}
           </div>;
         })()}
