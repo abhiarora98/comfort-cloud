@@ -3,9 +3,9 @@ import { google } from 'googleapis';
 
 export const maxDuration = 30;
 
-const MAIN_SHEET_ID = '1CQS5w9VLTjHcZ9Gzw3P6wGgZ0K6YDKuL1Ux42LQeRSQ';
+const DATA_SHEET_ID = '1CQS5w9VLTjHcZ9Gzw3P6wGgZ0K6YDKuL1Ux42LQeRSQ';
 const DATA_SHEET = 'APP_DATA';
-const USAGE_SHEET = 'AI_USAGE';
+const USAGE_SHEET_NAME = 'Usage';
 const HAIKU_INPUT_RATE = 1.0 / 1000000;   // $1 per 1M tokens
 const HAIKU_OUTPUT_RATE = 5.0 / 1000000;  // $5 per 1M tokens
 const DAILY_LIMIT = 10;
@@ -26,31 +26,64 @@ async function getSheets() {
   return google.sheets({ version: 'v4', auth });
 }
 
-// --- Ensure usage sheet exists ---
-async function ensureUsageSheet(sheets) {
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: MAIN_SHEET_ID });
-  const exists = meta.data.sheets.some(s => s.properties.title === USAGE_SHEET);
-  if (!exists) {
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: MAIN_SHEET_ID,
-      requestBody: { requests: [{ addSheet: { properties: { title: USAGE_SHEET } } }] },
+// --- Get or create usage spreadsheet ---
+let _usageSheetId = null;
+
+async function getUsageSheetId(sheets) {
+  // Use env var if set
+  if (process.env.USAGE_SHEET_ID) return process.env.USAGE_SHEET_ID;
+  if (_usageSheetId) return _usageSheetId;
+
+  // Check if we stored the ID in a hidden cell of the main sheet
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: DATA_SHEET_ID,
+      range: 'APP_DATA!Z1',
     });
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: MAIN_SHEET_ID,
-      range: `${USAGE_SHEET}!A1`,
+    const stored = res.data.values?.[0]?.[0];
+    if (stored && stored.startsWith('1')) {
+      _usageSheetId = stored;
+      return stored;
+    }
+  } catch {}
+
+  // Create a new spreadsheet
+  const create = await sheets.spreadsheets.create({
+    requestBody: {
+      properties: { title: 'Comfort Cloud — AI Usage Tracking' },
+      sheets: [{ properties: { title: USAGE_SHEET_NAME } }],
+    },
+  });
+  _usageSheetId = create.data.spreadsheetId;
+
+  // Add headers
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: _usageSheetId,
+    range: `${USAGE_SHEET_NAME}!A1`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [['Date', 'Time', 'User', 'Question', 'Type', 'Model', 'Input Tokens', 'Output Tokens', 'Cost USD', 'Cost INR', 'Response Time (s)']] },
+  });
+
+  // Store the ID in main sheet for future lookups
+  try {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: DATA_SHEET_ID,
+      range: 'APP_DATA!Z1',
       valueInputOption: 'RAW',
-      requestBody: { values: [['Date', 'Time', 'User', 'Question', 'Type', 'Model', 'Input Tokens', 'Output Tokens', 'Cost USD', 'Cost INR', 'Response Time (s)']] },
+      requestBody: { values: [[_usageSheetId]] },
     });
-  }
+  } catch {}
+
+  return _usageSheetId;
 }
 
 // --- Check daily usage for rate limiting ---
-async function getDailyUsage(sheets, userEmail) {
+async function getDailyUsage(sheets, usageId, userEmail) {
   const today = new Date().toISOString().split('T')[0];
   try {
     const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: MAIN_SHEET_ID,
-      range: `${USAGE_SHEET}!A:C`,
+      spreadsheetId: usageId,
+      range: `${USAGE_SHEET_NAME}!A:C`,
     });
     const rows = res.data.values || [];
     return rows.filter(r => r[0] === today && r[2] === userEmail).length;
@@ -60,15 +93,15 @@ async function getDailyUsage(sheets, userEmail) {
 }
 
 // --- Log usage ---
-async function logUsage(sheets, { user, question, type, inputTokens, outputTokens, costUSD, responseTime }) {
+async function logUsage(sheets, usageId, { user, question, type, inputTokens, outputTokens, costUSD, responseTime }) {
   const now = new Date();
   const date = now.toISOString().split('T')[0];
   const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const costINR = (costUSD * 83.5).toFixed(4);
 
   await sheets.spreadsheets.values.append({
-    spreadsheetId: MAIN_SHEET_ID,
-    range: `${USAGE_SHEET}!A1`,
+    spreadsheetId: usageId,
+    range: `${USAGE_SHEET_NAME}!A1`,
     valueInputOption: 'RAW',
     requestBody: {
       values: [[date, time, user, question, type, 'claude-haiku-4-5', inputTokens, outputTokens, costUSD.toFixed(6), costINR, responseTime.toFixed(1)]],
@@ -78,7 +111,7 @@ async function logUsage(sheets, { user, question, type, inputTokens, outputToken
 
 // --- Fetch order data from sheet ---
 async function fetchOrderData() {
-  const url = `https://docs.google.com/spreadsheets/d/${MAIN_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${DATA_SHEET}`;
+  const url = `https://docs.google.com/spreadsheets/d/${DATA_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${DATA_SHEET}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch sheet data');
   const csv = await res.text();
@@ -186,11 +219,11 @@ export async function POST(req) {
     const userEmail = user || 'anonymous';
     const sheets = await getSheets();
 
-    // Ensure usage sheet exists
-    await ensureUsageSheet(sheets);
+    // Get or create usage sheet
+    const usageId = await getUsageSheetId(sheets);
 
     // Rate limit check
-    const todayUsage = await getDailyUsage(sheets, userEmail);
+    const todayUsage = await getDailyUsage(sheets, usageId, userEmail);
     if (todayUsage >= DAILY_LIMIT) {
       return Response.json({
         error: 'Daily limit reached',
@@ -252,8 +285,8 @@ RULES:
       body = text.substring(split + 1).trim();
     }
 
-    // Log usage to Google Sheets
-    await logUsage(sheets, {
+    // Log usage to separate Google Sheet
+    await logUsage(sheets, usageId, {
       user: userEmail,
       question: question.trim().substring(0, 200),
       type: 'custom',
