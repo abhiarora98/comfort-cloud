@@ -1187,7 +1187,7 @@ export default function Dashboard(){
   const[pg,setPg]=useState(1);const[exp,setExp]=useState(null);const[expParties,setExpParties]=useState({});
   const[selP,setSelP]=useState(null);const[pcf,setPcf]=useState("all");const[psrch,setPsrch]=useState("");
   const[showHist,setShowHist]=useState(false);const[payF,setPayF]=useState("all");const[mpv,setMpv]=useState(false);const[showCats,setShowCats]=useState(false);const[insIdx,setInsIdx]=useState(0);const[actionOpen,setActionOpen]=useState(false);const[doneIds,setDoneIds]=useState(new Set());const[showAllRtd,setShowAllRtd]=useState(false);const[showAllPend,setShowAllPend]=useState(false);const[insPaused,setInsPaused]=useState(false);const insCount=useRef(1);
-  const[reportOpen,setReportOpen]=useState(false);const[reportQ,setReportQ]=useState("");const[reportLoading,setReportLoading]=useState(false);const[reportResult,setReportResult]=useState(null);const[reportRemaining,setReportRemaining]=useState(10);const[reportError,setReportError]=useState("");
+  const[reportOpen,setReportOpen]=useState(false);const[reportQ,setReportQ]=useState("");const[reportLoading,setReportLoading]=useState(false);const[reportResult,setReportResult]=useState(null);const[reportRemaining,setReportRemaining]=useState(10);const[reportError,setReportError]=useState("");const[reportHistory,setReportHistory]=useState([]);
   const[liveOrders,setLiveOrders]=useState(null);
   const[lastUpdated,setLastUpdated]=useState(null);
   const[fetchStatus,setFetchStatus]=useState("idle");
@@ -1269,6 +1269,7 @@ export default function Dashboard(){
       const data=await res.json();
       if(!res.ok){setReportError(data.message||"Failed to generate report");setReportRemaining(data.remaining??reportRemaining);return;}
       setReportResult(data.report);setReportRemaining(data.remaining??reportRemaining);setReportQ("");
+      setReportHistory(h=>[{...data.report,question:q.trim()},...h]);
     }catch(e){setReportError("Something went wrong. Try again.");}
     finally{setReportLoading(false);}
   },[reportLoading,user,reportRemaining]);
@@ -1766,6 +1767,22 @@ export default function Dashboard(){
           </div>
 
           {reportError&&<div style={{marginTop:16,padding:"12px 16px",background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:8,fontFamily:MN,fontSize:12,color:"#DC2626"}}>{reportError}</div>}
+
+          {/* Report History */}
+          {reportHistory.length>0&&<div style={{marginTop:28}}>
+            <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94A3B8",marginBottom:12}}>Previous Reports</div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {reportHistory.map((r,i)=>
+                <div key={i} className="hv-row" onClick={()=>setReportResult(r)} style={{padding:"14px 16px",background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",cursor:"pointer"}}>
+                  <div style={{fontSize:13,fontWeight:600,color:"#0F172A",marginBottom:4}}>{r.title}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{new Date(r.generatedAt).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</span>
+                    {r.cost&&<span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>₹{r.cost.inr}</span>}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>}
         </div>}
 
         {/* Loading */}
