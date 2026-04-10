@@ -1334,29 +1334,29 @@ export default function Dashboard(){
         {/* Stacked Insights */}
         {(()=>{const allInsights=buildInsight(baseOrders,baseRtd,basePend,baseOverdue,baseLines,cat);
           const toneStyles={
-            urgent:{accent:"#991b1b",bg:"#fefbfb",border:"#f0e4e4",label:"Critical"},
-            warning:{accent:"#9a3412",bg:"#fffdf9",border:"#f0ead9",label:"Attention"},
-            positive:{accent:"#065f46",bg:"#f8fefb",border:"#daeee2",label:"Opportunity"},
-            neutral:{accent:"#1e40af",bg:"#fafbff",border:"#e0e5f0",label:"Context"}
+            urgent:{accent:"#991b1b",bg:"#fefbfb",label:"Critical"},
+            warning:{accent:"#9a3412",bg:"#fffdf9",label:"Attention"},
+            positive:{accent:"#065f46",bg:"#f8fefb",label:"Opportunity"},
+            neutral:{accent:"#1e40af",bg:"#fafbff",label:"Context"}
           };
           const primary=allInsights[0];const secondary=allInsights.slice(1,3);
           const isCritical=primary.tone==="urgent"||primary.tone==="warning";
           const pts=toneStyles[primary.tone]||toneStyles.neutral;
-          return <div style={{marginBottom:40}}>
-            {/* Primary Insight */}
-            <div className="hv-insight" style={{background:pts.bg,borderRadius:14,border:"1px solid "+pts.border,borderLeft:"3px solid "+pts.accent,padding:mob?"28px 24px":"36px 40px",marginBottom:secondary.length>0?28:0}}>
-              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.12em",textTransform:"uppercase",color:pts.accent,opacity:0.5,marginBottom:20}}>{pts.label}</div>
+          return <div style={{marginBottom:44}}>
+            {/* Primary Insight — section feel, not card */}
+            <div className="hv-insight" style={{background:pts.bg,borderRadius:16,borderLeft:"3px solid "+pts.accent,padding:mob?"30px 24px":"40px 44px",marginBottom:secondary.length>0?20:0}}>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.14em",textTransform:"uppercase",color:pts.accent,opacity:0.45,marginBottom:22}}>{pts.label}</div>
               <div style={{fontSize:mob?19:22,fontWeight:600,color:"#0f172a",lineHeight:1.35,letterSpacing:"-0.01em",marginBottom:12}}>{primary.headline}</div>
-              <div style={{fontSize:mob?13:14,color:"#78716c",lineHeight:1.65,maxWidth:600,marginBottom:primary.cta?24:0}}>{primary.body}</div>
-              {primary.cta&&<button className="hv-btn" onClick={()=>setActionOpen(o=>!o)} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?pts.accent:"#fff",background:actionOpen?"transparent":pts.accent,border:actionOpen?"1px solid "+pts.accent+"25":"1px solid "+pts.accent,borderRadius:6,padding:"8px 18px",cursor:"pointer",letterSpacing:"0.01em"}}>{actionOpen?"Close":primary.cta}</button>}
+              <div style={{fontSize:mob?13:14,color:"#78716c",lineHeight:1.65,maxWidth:580,marginBottom:primary.cta?26:0}}>{primary.body}</div>
+              {primary.cta&&<button className="hv-btn" onClick={()=>setActionOpen(o=>!o)} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?pts.accent:"#fff",background:actionOpen?"transparent":pts.accent,border:actionOpen?"1px solid "+pts.accent+"20":"none",borderRadius:6,padding:"8px 20px",cursor:"pointer",letterSpacing:"0.01em"}}>{actionOpen?"Close":primary.cta}</button>}
             </div>
-            {/* Secondary Insights */}
+            {/* Secondary Insights — supporting context */}
             {secondary.length>0&&<div>
-              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.12em",textTransform:"uppercase",color:"#d0d5dd",marginBottom:12}}>Context</div>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.14em",textTransform:"uppercase",color:"#d4d4d8",marginBottom:12,paddingLeft:2}}>Context</div>
               <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat("+Math.min(secondary.length,2)+",1fr)",gap:12}}>
               {secondary.map((ins,si)=>{const sts=toneStyles[ins.tone]||toneStyles.neutral;
-                return <div key={si} className="hv-insight-s" style={{background:isCritical?"#fafafa":"#fff",borderRadius:10,border:"1px solid #f3f4f6",borderLeft:"2px solid "+sts.accent+"40",padding:mob?"18px 18px":"20px 24px",opacity:isCritical?0.85:1}}>
-                  <div style={{fontSize:mob?13:14,fontWeight:600,color:"#1e293b",lineHeight:1.4,marginBottom:6}}>{ins.headline}</div>
+                return <div key={si} className="hv-insight-s" style={{background:isCritical?"#fafafa":"#fff",borderRadius:10,borderLeft:"2px solid "+sts.accent+"30",padding:mob?"18px 18px":"22px 26px",opacity:isCritical?0.8:1}}>
+                  <div style={{fontSize:mob?13:14,fontWeight:600,color:"#27272a",lineHeight:1.4,marginBottom:6}}>{ins.headline}</div>
                   <div style={{fontSize:12,color:"#a1a1aa",lineHeight:1.55}}>{ins.body}</div>
                 </div>;
               })}
@@ -1370,23 +1370,23 @@ export default function Dashboard(){
           const primary=allInsights[0];
           if(!actionOpen||!primary.orders||primary.orders.length===0)return null;
           const visibleOrders=primary.orders;
-          return <div style={{background:"#fff",borderRadius:14,border:"1px solid #e2e8f0",marginBottom:28,overflow:"hidden"}}>
-            <div style={{padding:"14px 20px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#475569"}}>Priority Orders</span>
-              <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{visibleOrders.length}</span>
+          return <div style={{borderRadius:12,border:"1px solid #f0f1f3",marginBottom:32,overflow:"hidden"}}>
+            <div style={{padding:"14px 24px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#6b7280"}}>Priority Orders</span>
+              <span style={{fontFamily:MN,fontSize:10,color:"#c0c7d1"}}>{visibleOrders.length}</span>
             </div>
             {visibleOrders.map((o,oi)=>{
               const issueText=typeof primary.issue==="function"?primary.issue(o):"";
-              return <div key={o.id} className="hv-row" style={{padding:mob?"12px 16px":"12px 20px",borderBottom:oi<visibleOrders.length-1?"1px solid #f8fafc":"none",display:"flex",alignItems:"center",gap:16}}>
+              return <div key={o.id} className="hv-row" style={{padding:mob?"12px 16px":"13px 24px",borderBottom:oi<visibleOrders.length-1?"1px solid #fafafa":"none",display:"flex",alignItems:"center",gap:16}}>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
-                    <span style={{fontSize:13,fontWeight:600,color:"#0f172a"}}>{o.party}</span>
-                    <span style={{fontFamily:MN,fontSize:10,color:"#c0c7d1"}}>#{o.id}</span>
+                    <span style={{fontSize:13,fontWeight:600,color:"#18181b"}}>{o.party}</span>
+                    <span style={{fontFamily:MN,fontSize:10,color:"#d4d4d8"}}>#{o.id}</span>
                   </div>
                   <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-                    <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>{fmtVal(o.totalValue)}</span>
-                    <span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{o.totalQty} qty</span>
-                    {issueText&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#64748b",background:"#f8fafc",padding:"2px 8px",borderRadius:4}}>{issueText}</span>}
+                    <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#18181b"}}>{fmtVal(o.totalValue)}</span>
+                    <span style={{fontFamily:MN,fontSize:10,color:"#a1a1aa"}}>{o.totalQty} qty</span>
+                    {issueText&&<span style={{fontFamily:MN,fontSize:10,fontWeight:500,color:"#78716c",background:"#f5f5f4",padding:"2px 8px",borderRadius:4}}>{issueText}</span>}
                   </div>
                 </div>
               </div>;
@@ -1395,12 +1395,12 @@ export default function Dashboard(){
         })()}
 
         {/* Supporting Metrics */}
-        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:14,marginBottom:28}}>
-          {[["Pipeline",fmtVal(baseOrders.reduce((s,o)=>s+o.totalValue,0)),baseOrders.length+" orders","#0f172a",true],["Ready",baseRtd.length,fmtVal(baseRtd.reduce((s,o)=>s+o.totalValue,0)),"#059669",false],["Pending",basePend.length,fmtVal(basePend.reduce((s,o)=>s+o.totalValue,0)),"#ea580c",false],["Overdue",baseOverdue.length,baseOverdue.length>0?fmtVal(baseOverdue.reduce((s,o)=>s+o.totalValue,0)):"None","#dc2626",false]].map(([label,value,sub,color,isPrimary])=>
-            <div key={label} className="hv-card" style={{background:isPrimary?"#fafafa":"#fff",borderRadius:12,border:"1px solid "+(isPrimary?"#e0e0e0":"#f0f1f3"),padding:isPrimary?"18px 20px":"14px 16px",cursor:"default"}}>
-              <div style={{fontFamily:MN,fontSize:isPrimary?10:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:isPrimary?"#6b7280":"#b0b5bf",marginBottom:isPrimary?6:4}}>{label}</div>
-              <div style={{fontFamily:MN,fontSize:isPrimary?24:18,fontWeight:isPrimary?700:600,color:label==="Overdue"&&baseOverdue.length===0?"#c0c7d1":color,lineHeight:1,marginBottom:4}}>{value}</div>
-              <div style={{fontFamily:MN,fontSize:isPrimary?11:10,color:isPrimary?"#94a3b8":"#c0c7d1"}}>{sub}</div>
+        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"1fr repeat(3,minmax(0,0.7fr))",gap:mob?12:16,marginBottom:32}}>
+          {[["Pipeline",fmtVal(baseOrders.reduce((s,o)=>s+o.totalValue,0)),baseOrders.length+" orders","#18181b",true],["Ready",baseRtd.length,fmtVal(baseRtd.reduce((s,o)=>s+o.totalValue,0)),"#059669",false],["Pending",basePend.length,fmtVal(basePend.reduce((s,o)=>s+o.totalValue,0)),"#ea580c",false],["Overdue",baseOverdue.length,baseOverdue.length>0?fmtVal(baseOverdue.reduce((s,o)=>s+o.totalValue,0)):"None","#dc2626",false]].map(([label,value,sub,color,isPrimary])=>
+            <div key={label} className="hv-card" style={{background:"#fff",borderRadius:12,border:isPrimary?"1px solid #e4e4e7":"1px solid #f4f4f5",padding:isPrimary?mob?"18px 18px":"20px 24px":"14px 16px",cursor:"default"}}>
+              <div style={{fontFamily:MN,fontSize:isPrimary?10:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:isPrimary?"#71717a":"#c0c7d1",marginBottom:isPrimary?8:4}}>{label}</div>
+              <div style={{fontFamily:MN,fontSize:isPrimary?28:17,fontWeight:isPrimary?700:600,color:label==="Overdue"&&baseOverdue.length===0?"#d4d4d8":color,lineHeight:1,marginBottom:isPrimary?6:3}}>{value}</div>
+              <div style={{fontFamily:MN,fontSize:isPrimary?12:10,color:isPrimary?"#a1a1aa":"#d4d4d8"}}>{sub}</div>
             </div>
           )}
         </div>
@@ -1452,8 +1452,8 @@ export default function Dashboard(){
         </div>}
 
         {/* Search & Filters */}
-        <div style={{background:"#fff",borderRadius:12,border:"1px solid #f0f1f3",padding:mob?"16px 16px":"20px 24px",marginBottom:24}}>
-          <div style={{display:"flex",alignItems:"center",gap:mob?8:14,flexWrap:"wrap",marginBottom:14}}>
+        <div style={{borderRadius:12,padding:mob?"16px 0":"0",marginBottom:28}}>
+          <div style={{display:"flex",alignItems:"center",gap:mob?8:14,flexWrap:"wrap",marginBottom:16}}>
             <div style={{position:"relative",flex:1,minWidth:mob?140:220,maxWidth:320}}>
               <input value={srch} onChange={e=>{setSrch(e.target.value);setPg(1);setShowAllRtd(false);setShowAllPend(false);}} placeholder="Search by party name, model, or colour..." style={{...S.input,width:"100%",paddingRight:srch?60:14}}/>
               {srch&&<span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontFamily:MN,fontSize:10,fontWeight:600,color:"#2563eb",background:"#eff6ff",padding:"2px 6px",borderRadius:4}}>{filtered.length} found</span>}
@@ -1463,13 +1463,13 @@ export default function Dashboard(){
             {newOrderIds.size>0&&!showNewOnly&&<button onClick={()=>{setShowNewOnly(true);setShowAllRtd(false);setShowAllPend(false);}} style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#2563eb",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:6,padding:"5px 12px",cursor:"pointer",whiteSpace:"nowrap",animation:"pulse 2s ease-in-out infinite"}}>+{newOrderIds.size} new</button>}
             {(srch||cat!=="all"||poc||showNewOnly)&&<button onClick={()=>{setSrch("");setCat("all");setPoc("");setShowNewOnly(false);setNewOrderIds(new Set());setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8",background:"none",border:"1px solid #e2e8f0",borderRadius:6,padding:"5px 12px",cursor:"pointer",whiteSpace:"nowrap"}}>Clear all</button>}
           </div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",paddingTop:2}}>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             {[["all","All orders",filtered.length,null],...Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>[c,(CC[c]||CC.Other).l,n,(CC[c]||CC.Other).c])].map(([val,lbl,n,dotC])=>{
               const isActive=cat===val;
-              return <div key={val} className={!isActive?"hv-pill":""} onClick={()=>{setCat(val);setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{padding:"6px 14px",borderRadius:8,border:isActive?"1px solid #2563eb":"1px solid #f0f1f3",background:isActive?"#eff6ff":"#fafafa",color:isActive?"#2563eb":"#6b7280",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:isActive?600:500,display:"flex",alignItems:"center",gap:6}}>
-                {val!=="all"&&<Dot c={isActive?"#2563eb":(dotC||"#b0b5bf")} s={4}/>}
+              return <div key={val} className={!isActive?"hv-pill":""} onClick={()=>{setCat(val);setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{padding:"6px 14px",borderRadius:20,border:isActive?"1px solid #2563eb":"1px solid #f0f0f0",background:isActive?"#eff6ff":"transparent",color:isActive?"#2563eb":"#71717a",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:isActive?600:400,display:"flex",alignItems:"center",gap:5}}>
+                {val!=="all"&&<Dot c={isActive?"#2563eb":(dotC||"#d4d4d8")} s={4}/>}
                 {lbl}
-                <span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:isActive?"#2563eb":"#b0b5bf"}}>{n}</span>
+                <span style={{fontFamily:MN,fontSize:10,color:isActive?"#2563eb":"#d4d4d8"}}>{n}</span>
               </div>;
             })}
           </div>
