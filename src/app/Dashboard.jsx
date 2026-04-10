@@ -1187,7 +1187,7 @@ export default function Dashboard(){
   const[pg,setPg]=useState(1);const[exp,setExp]=useState(null);const[expParties,setExpParties]=useState({});
   const[selP,setSelP]=useState(null);const[pcf,setPcf]=useState("all");const[psrch,setPsrch]=useState("");
   const[showHist,setShowHist]=useState(false);const[payF,setPayF]=useState("all");const[mpv,setMpv]=useState(false);const[showCats,setShowCats]=useState(false);const[insIdx,setInsIdx]=useState(0);const[actionOpen,setActionOpen]=useState(false);const[doneIds,setDoneIds]=useState(new Set());const[showAllRtd,setShowAllRtd]=useState(false);const[showAllPend,setShowAllPend]=useState(false);const[insPaused,setInsPaused]=useState(false);const insCount=useRef(1);
-  const[reportOpen,setReportOpen]=useState(false);const[reportQ,setReportQ]=useState("");const[reportLoading,setReportLoading]=useState(false);const[reportResult,setReportResult]=useState(null);const[reportRemaining,setReportRemaining]=useState(10);const[reportError,setReportError]=useState("");const[reportHistory,setReportHistory]=useState([]);
+  const[reportOpen,setReportOpen]=useState(false);const[reportQ,setReportQ]=useState("");const[reportLoading,setReportLoading]=useState(false);const[reportResult,setReportResult]=useState(null);const[reportRemaining,setReportRemaining]=useState(10);const[reportError,setReportError]=useState("");const[reportHistory,setReportHistory]=useState([]);const[chatMsgs,setChatMsgs]=useState([]);const[chatInput,setChatInput]=useState("");const[chatLoading,setChatLoading]=useState(false);
   const[liveOrders,setLiveOrders]=useState(null);
   const[lastUpdated,setLastUpdated]=useState(null);
   const[fetchStatus,setFetchStatus]=useState("idle");
@@ -1273,6 +1273,25 @@ export default function Dashboard(){
     }catch(e){setReportError("Something went wrong. Try again.");}
     finally{setReportLoading(false);}
   },[reportLoading,user,reportRemaining]);
+
+  // Follow-up chat after report
+  const sendChat=useCallback(async(msg)=>{
+    if(!msg.trim()||chatLoading||!reportResult)return;
+    const userMsg={role:"user",text:msg.trim()};
+    setChatMsgs(m=>[...m,userMsg]);setChatInput("");setChatLoading(true);
+    try{
+      // Build summary of conversation so far (compressed)
+      const history=chatMsgs.slice(-4).map(m=>m.role==="user"?"Q: "+m.text:"A: "+m.text).join("\n");
+      const res=await fetch("/api/report",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+        question:"FOLLOW-UP on report \""+reportResult.title+"\"\n\nPrevious report summary: "+reportResult.body.substring(0,300)+"\n\n"+(history?("Recent conversation:\n"+history+"\n\n"):"")+"User's follow-up question: "+msg.trim(),
+        user:user?.emailAddresses?.[0]?.emailAddress||user?.firstName||"anonymous"
+      })});
+      const data=await res.json();
+      if(!res.ok){setChatMsgs(m=>[...m,{role:"assistant",text:data.message||"Sorry, couldn't process that."}]);setReportRemaining(data.remaining??reportRemaining);return;}
+      setChatMsgs(m=>[...m,{role:"assistant",text:data.report.body}]);setReportRemaining(data.remaining??reportRemaining);
+    }catch{setChatMsgs(m=>[...m,{role:"assistant",text:"Something went wrong. Try again."}]);}
+    finally{setChatLoading(false);}
+  },[chatLoading,reportResult,chatMsgs,user,reportRemaining]);
 
   const reportSuggestions=useMemo(()=>{
     const s=[];
@@ -1792,26 +1811,43 @@ export default function Dashboard(){
           <div style={{fontFamily:MN,fontSize:11,color:"#94A3B8"}}>This takes 2-3 seconds</div>
         </div>}
 
-        {/* Report Result */}
-        {reportResult&&<div>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
-            <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#16A34A"}}>Report Ready</span>
-            <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{new Date(reportResult.generatedAt).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</span>
+        {/* Report Result + Chat */}
+        {reportResult&&<div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+          <div style={{flex:1,overflowY:"auto"}}>
+            {/* Report card */}
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#16A34A"}}>Report Ready</span>
+              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{new Date(reportResult.generatedAt).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</span>
+            </div>
+            <div style={{background:"#F8FAFC",borderRadius:10,border:"1px solid #E5E7EB",padding:"20px",marginBottom:16}}>
+              <div style={{fontSize:15,fontWeight:600,color:"#0F172A",marginBottom:10,lineHeight:1.3}}>{reportResult.title}</div>
+              <div style={{fontSize:13,color:"#475569",lineHeight:1.7,whiteSpace:"pre-wrap"}}>{reportResult.body}</div>
+            </div>
+
+            {/* Chat messages */}
+            {chatMsgs.map((m,i)=>
+              <div key={i} style={{marginBottom:12,display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
+                <div style={{maxWidth:"85%",padding:"10px 14px",borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",background:m.role==="user"?"#0F172A":"#F1F5F9",color:m.role==="user"?"#fff":"#475569",fontSize:13,lineHeight:1.6,whiteSpace:"pre-wrap"}}>
+                  {m.text}
+                </div>
+              </div>
+            )}
+            {chatLoading&&<div style={{marginBottom:12,display:"flex",justifyContent:"flex-start"}}>
+              <div style={{padding:"10px 14px",borderRadius:"12px 12px 12px 2px",background:"#F1F5F9",color:"#94A3B8",fontSize:13,fontFamily:MN}}>Thinking...</div>
+            </div>}
           </div>
 
-          <div style={{background:"#F8FAFC",borderRadius:10,border:"1px solid #E5E7EB",padding:"24px",marginBottom:20}}>
-            <div style={{fontSize:16,fontWeight:600,color:"#0F172A",marginBottom:12,lineHeight:1.3}}>{reportResult.title}</div>
-            <div style={{fontSize:13,color:"#475569",lineHeight:1.7,whiteSpace:"pre-wrap"}}>{reportResult.body}</div>
-          </div>
-
-          {reportResult.cost&&<div style={{display:"flex",gap:16,fontFamily:MN,fontSize:10,color:"#94A3B8",marginBottom:20}}>
-            <span>Tokens: {reportResult.tokens.input+reportResult.tokens.output}</span>
-            <span>Cost: ₹{reportResult.cost.inr}</span>
-          </div>}
-
-          <div style={{display:"flex",gap:10}}>
-            <button onClick={()=>{setReportResult(null);setReportError("");}} style={{flex:1,padding:"10px",background:"#0F172A",color:"#fff",border:"none",borderRadius:8,fontFamily:MN,fontSize:12,fontWeight:600,cursor:"pointer"}}>New Report</button>
-            <button onClick={()=>setReportOpen(false)} style={{flex:1,padding:"10px",background:"#F8FAFC",color:"#475569",border:"1px solid #E5E7EB",borderRadius:8,fontFamily:MN,fontSize:12,fontWeight:600,cursor:"pointer"}}>Close</button>
+          {/* Bottom bar */}
+          <div style={{flexShrink:0,borderTop:"1px solid #E5E7EB",paddingTop:16,marginTop:8}}>
+            <div style={{display:"flex",gap:8,marginBottom:10}}>
+              <input value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")sendChat(chatInput);}} placeholder="Ask a follow-up..." style={{...S.input,flex:1,padding:"10px 14px",fontSize:13,borderRadius:8,border:"1px solid #E5E7EB"}}/>
+              <button onClick={()=>sendChat(chatInput)} disabled={!chatInput.trim()||chatLoading} style={{padding:"10px 16px",background:chatInput.trim()&&!chatLoading?"#0F172A":"#E5E7EB",color:chatInput.trim()&&!chatLoading?"#fff":"#94A3B8",border:"none",borderRadius:8,fontFamily:MN,fontSize:12,fontWeight:600,cursor:chatInput.trim()&&!chatLoading?"pointer":"default"}}>Send</button>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>{setReportResult(null);setReportError("");setChatMsgs([]);setChatInput("");}} style={{flex:1,padding:"8px",background:"#F8FAFC",color:"#475569",border:"1px solid #E5E7EB",borderRadius:6,fontFamily:MN,fontSize:11,fontWeight:600,cursor:"pointer"}}>New Report</button>
+              <button onClick={()=>setReportOpen(false)} style={{flex:1,padding:"8px",background:"#F8FAFC",color:"#94A3B8",border:"1px solid #E5E7EB",borderRadius:6,fontFamily:MN,fontSize:11,fontWeight:500,cursor:"pointer"}}>Close</button>
+            </div>
+            <div style={{textAlign:"center",fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:8}}>{reportRemaining} reports left today</div>
           </div>
         </div>}
       </div>
