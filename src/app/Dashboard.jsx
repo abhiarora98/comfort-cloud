@@ -1194,7 +1194,19 @@ export default function Dashboard(){
   const[agoText,setAgoText]=useState("");const[dataVer,setDataVer]=useState(0);
   const[newOrderIds,setNewOrderIds]=useState(new Set());
   const[showNewOnly,setShowNewOnly]=useState(false);
-  const[activityFeed,setActivityFeed]=useState([]);
+  const[activityFeed,setActivityFeed]=useState(()=>{
+    if(typeof window==="undefined")return[];
+    try{
+      const stored=localStorage.getItem("cc_activity");
+      if(!stored)return[];
+      const parsed=JSON.parse(stored);
+      const today=new Date().toISOString().split("T")[0];
+      // Only keep today's items
+      const filtered=parsed.filter(a=>a.date===today);
+      if(filtered.length!==parsed.length)localStorage.setItem("cc_activity",JSON.stringify(filtered));
+      return filtered;
+    }catch{return[];}
+  });
   const[insightOpen,setInsightOpen]=useState(false);
   const prevOrderIds=useRef(null);
   const prevSnap=useRef(null);
@@ -1219,39 +1231,38 @@ export default function Dashboard(){
         // Build activity feed by comparing with previous snapshot
         var now=new Date();
         var ts=now.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+        var dateStr=now.toISOString().split("T")[0];
         if(prevSnap.current){
           var ps=prevSnap.current;var newActs=[];
-          // New orders added
           var prevIds=new Set(ps.orders.map(function(o){return o.id;}));
-          active.forEach(function(o){if(!prevIds.has(o.id)){newActs.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,icon:"+"});}});
-          // Orders approved (moved from pending to ready)
+          active.forEach(function(o){if(!prevIds.has(o.id)){newActs.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+"});}});
           var prevPendIds=new Set(ps.orders.filter(function(o){return!o.approvalDate;}).map(function(o){return o.id;}));
-          active.forEach(function(o){if(o.approvalDate&&prevPendIds.has(o.id)){newActs.push({type:"approved",text:o.party+" approved — "+fmtVal(o.totalValue)+" ready to ship",time:ts,icon:"✓"});}});
-          // Orders dispatched (disappeared from active)
+          active.forEach(function(o){if(o.approvalDate&&prevPendIds.has(o.id)){newActs.push({type:"approved",text:o.party+" approved — "+fmtVal(o.totalValue)+" ready to ship",time:ts,date:dateStr,icon:"✓"});}});
           var curIds=new Set(active.map(function(o){return o.id;}));
-          ps.orders.forEach(function(o){if(!curIds.has(o.id)){newActs.push({type:"dispatched",text:o.party+" dispatched — "+fmtVal(o.totalValue),time:ts,icon:"→"});}});
-          // Overdue changes
+          ps.orders.forEach(function(o){if(!curIds.has(o.id)){newActs.push({type:"dispatched",text:o.party+" dispatched — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"→"});}});
           var prevOD=ps.orders.filter(function(o){return o.approvalDate&&daysSince(o.approvalDate)>7;}).length;
           var curOD=active.filter(function(o){return o.approvalDate&&daysSince(o.approvalDate)>7;}).length;
-          if(curOD>prevOD){newActs.push({type:"overdue",text:(curOD-prevOD)+" more order"+(curOD-prevOD>1?"s":"")+" now overdue",time:ts,icon:"!"});}
-          // Value changes
+          if(curOD>prevOD){newActs.push({type:"overdue",text:(curOD-prevOD)+" more order"+(curOD-prevOD>1?"s":"")+" now overdue",time:ts,date:dateStr,icon:"!"});}
           var prevVal=ps.orders.reduce(function(s,o){return s+o.totalValue;},0);
           var curVal=active.reduce(function(s,o){return s+o.totalValue;},0);
           var diff=curVal-prevVal;
-          if(Math.abs(diff)>10000){newActs.push({type:diff>0?"value_up":"value_down",text:"Pipeline "+(diff>0?"up":"down")+" "+fmtVal(Math.abs(diff))+" to "+fmtVal(curVal),time:ts,icon:diff>0?"↑":"↓"});}
-          if(newActs.length>0)setActivityFeed(function(f){return newActs.concat(f).slice(0,20);});
+          if(Math.abs(diff)>10000){newActs.push({type:diff>0?"value_up":"value_down",text:"Pipeline "+(diff>0?"up":"down")+" "+fmtVal(Math.abs(diff))+" to "+fmtVal(curVal),time:ts,date:dateStr,icon:diff>0?"↑":"↓"});}
+          if(newActs.length>0)setActivityFeed(function(f){var updated=newActs.concat(f).slice(0,50);try{localStorage.setItem("cc_activity",JSON.stringify(updated));}catch{}return updated;});
         } else {
-          // First load — seed with current state summary
-          var rtd=active.filter(function(o){return o.approvalDate&&o.dispatchedCount<o.lineCount;});
-          var pend=active.filter(function(o){return!o.approvalDate;});
-          var od=rtd.filter(function(o){return daysSince(o.approvalDate)>7;});
-          var totalVal=active.reduce(function(s,o){return s+o.totalValue;},0);
-          var seed=[];
-          seed.push({type:"summary",text:active.length+" active orders worth "+fmtVal(totalVal),time:ts,icon:"◆"});
-          if(rtd.length>0)seed.push({type:"ready",text:rtd.length+" orders ready to dispatch — "+fmtVal(rtd.reduce(function(s,o){return s+o.totalValue;},0)),time:ts,icon:"✓"});
-          if(pend.length>0)seed.push({type:"pending",text:pend.length+" orders awaiting approval",time:ts,icon:"◷"});
-          if(od.length>0)seed.push({type:"overdue",text:od.length+" orders overdue for shipping",time:ts,icon:"!"});
-          setActivityFeed(seed);
+          // First load — only seed if localStorage was empty
+          if(activityFeed.length===0){
+            var rtd=active.filter(function(o){return o.approvalDate&&o.dispatchedCount<o.lineCount;});
+            var pend=active.filter(function(o){return!o.approvalDate;});
+            var od=rtd.filter(function(o){return daysSince(o.approvalDate)>7;});
+            var totalVal=active.reduce(function(s,o){return s+o.totalValue;},0);
+            var seed=[];
+            seed.push({type:"summary",text:active.length+" active orders worth "+fmtVal(totalVal),time:ts,date:dateStr,icon:"◆"});
+            if(rtd.length>0)seed.push({type:"ready",text:rtd.length+" orders ready to dispatch — "+fmtVal(rtd.reduce(function(s,o){return s+o.totalValue;},0)),time:ts,date:dateStr,icon:"✓"});
+            if(pend.length>0)seed.push({type:"pending",text:pend.length+" orders awaiting approval",time:ts,date:dateStr,icon:"◷"});
+            if(od.length>0)seed.push({type:"overdue",text:od.length+" orders overdue for shipping",time:ts,date:dateStr,icon:"!"});
+            setActivityFeed(seed);
+            try{localStorage.setItem("cc_activity",JSON.stringify(seed));}catch{}
+          }
         }
         prevSnap.current={orders:active};
         setLiveOrders(grouped);setLastUpdated(new Date());setFetchStatus("ok");setDataVer(v=>v+1);
@@ -1439,19 +1450,23 @@ export default function Dashboard(){
       {tab==="pending"&&<div>
         {/* Activity Feed — Hero */}
         <div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:20,overflow:"hidden"}}>
-          <div style={{padding:"16px 24px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{padding:"14px 24px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <span style={{width:7,height:7,borderRadius:"50%",background:"#16A34A",boxShadow:"0 0 6px #16A34A60"}}/>
-              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Live Activity</span>
+              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Today's Activity</span>
+              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</span>
             </div>
-            {agoText&&<span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{agoText}</span>}
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{activityFeed.length} events</span>
+              {agoText&&<span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>· {agoText}</span>}
+            </div>
           </div>
-          <div style={{maxHeight:mob?200:180,overflowY:"auto"}}>
+          <div style={{maxHeight:mob?240:220,overflowY:"auto"}}>
             {activityFeed.length===0?<div style={{padding:"24px",textAlign:"center",fontFamily:MN,fontSize:12,color:"#94A3B8"}}>Waiting for first sync...</div>:
-            activityFeed.slice(0,8).map((a,i)=>{
+            activityFeed.map((a,i)=>{
               const colors={new_order:"#2563EB",approved:"#16A34A",dispatched:"#16A34A",overdue:"#DC2626",value_up:"#16A34A",value_down:"#DC2626",summary:"#475569",ready:"#16A34A",pending:"#D97706"};
               const c=colors[a.type]||"#475569";
-              return <div key={i} className="hv-row" style={{padding:mob?"10px 16px":"10px 24px",borderBottom:i<Math.min(activityFeed.length,8)-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12}}>
+              return <div key={i} className="hv-row" style={{padding:mob?"10px 16px":"10px 24px",borderBottom:i<activityFeed.length-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12}}>
                 <span style={{width:22,height:22,borderRadius:6,background:c+"10",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:c,fontFamily:MN,fontWeight:700,flexShrink:0}}>{a.icon}</span>
                 <span style={{flex:1,fontSize:13,color:"#0F172A",lineHeight:1.4}}>{a.text}</span>
                 <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8",flexShrink:0}}>{a.time}</span>
