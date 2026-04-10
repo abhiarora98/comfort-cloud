@@ -1260,13 +1260,13 @@ export default function Dashboard(){
   const rtdSorted=(()=>{const r=[...readyToDispatch];if(srt==="dd")r.sort((a,b)=>pd(b.approvalDate)-pd(a.approvalDate));else if(srt==="pa")r.sort((a,b)=>a.party.localeCompare(b.party));else if(srt==="qd"){const cq=o=>cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0);r.sort((a,b)=>cq(b)-cq(a));}else if(srt==="vd")r.sort((a,b)=>b.totalValue-a.totalValue);else r.sort((a,b)=>pd(a.approvalDate)-pd(b.approvalDate));return r;})();const rtdOverdue=rtdSorted.filter(o=>daysSince(o.approvalDate)>7);const rtdOnTime=rtdSorted.filter(o=>daysSince(o.approvalDate)<=7);const rtdDetailTbl=(o)=>(<tr key={o.id+"x"}><td colSpan={9} style={{padding:0,borderBottom:"1px solid #86efac"}}><div style={{background:"#f8fafc",padding:"8px 16px 4px 36px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}><span style={{...S.section,fontSize:10}}>{o.lineCount} line items</span><span style={{fontFamily:MN,fontSize:11,color:"#64748b"}}>· {fmtVal(o.totalValue)}</span><span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>PI</span><span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#475569"}}>{o.id}</span><span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>PI Date</span><span style={{fontFamily:MN,fontSize:11,color:"#475569"}}>{o.piDate}</span></div><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["#","Code","Model","Backing","Colour","Width","Length","Qty","Rate","Value"].map(h=><th key={h} style={{padding:"8px 14px",...S.section,fontSize:9,background:"#f1f5f9",borderBottom:"1px solid #e2e8f0",textAlign:["Qty","Rate","Value"].includes(h)?"right":"left"}}>{h}</th>)}</tr></thead><tbody>{o.lines.map((l,i)=><tr key={l.no||i} style={{background:i%2?"#fafafa":"#fff"}}><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,color:"#94a3b8"}}>{i+1}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,fontWeight:600,color:"#64748b"}}>{l.partyCode||"—"}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,fontWeight:600}}>{l.model}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,color:"#64748b"}}>{l.backing}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12}}>{l.colour}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN}}>{l.width}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN,color:"#94a3b8"}}>{l.length}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:14,fontFamily:MN,fontWeight:700,textAlign:"right"}}>{l.qty}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN,textAlign:"right",color:"#64748b"}}>{l.actualRate||"—"}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,fontFamily:MN,fontWeight:600,textAlign:"right"}}>{fmtVal(l.value||0)}</td></tr>)}</tbody></table></td></tr>);
   const rtdRows=[];
   if(readyToDispatch.length>0){
-    const pushOrders=(ords,off=0)=>{ords.forEach((o,oi)=>{const ep=exp===o.id;const ri=off+oi;const dy=daysSince(o.approvalDate);const dC=dy>7?"#dc2626":dy>3?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);const isOD=dy>7;
-      rtdRows.push(<tr className="hv-row" key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#ecfdf5":isOD?(ri%2?"#fef8f8":"#fff8f7"):(ri%2?"#f9fefb":"#fff"),borderLeft:ep?"3px solid #059669":isOD?"3px solid #fca5a5":"3px solid transparent"}}><td style={{padding:"10px 14px",borderBottom:"1px solid "+(isOD?"#fee2e2":"#ecfdf5"),fontFamily:MN,fontSize:10,color:isOD?"#94a3b8":"#059669"}}>{ep?"▾":"▸"}</td><td style={{padding:"10px 14px",borderBottom:"1px solid "+(isOD?"#fee2e2":"#ecfdf5"),fontFamily:MN,fontSize:11,whiteSpace:"nowrap",color:"#64748b"}}>{o.approvalDate}</td><td style={{padding:"10px 14px",borderBottom:"1px solid "+(isOD?"#fee2e2":"#ecfdf5")}}><span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:dC,background:dC+"12",padding:"2px 8px",borderRadius:12}}>{dy}d</span></td><td style={{padding:"10px 14px",borderBottom:"1px solid "+(isOD?"#fee2e2":"#ecfdf5"),fontWeight:700,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.party}</td><td style={{padding:"10px 14px",borderBottom:"1px solid "+(isOD?"#fee2e2":"#ecfdf5")}}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div></td><td style={{padding:"10px 14px",borderBottom:"1px solid "+(isOD?"#fee2e2":"#ecfdf5"),fontFamily:MN,fontSize:13,fontWeight:700,textAlign:"right"}}>{cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0)}</td><td style={{padding:"10px 14px",borderBottom:"1px solid "+(isOD?"#fee2e2":"#ecfdf5")}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:POC_COLORS[o.salesPOC]||"#64748b",background:(POC_COLORS[o.salesPOC]||"#64748b")+"15",padding:"2px 8px",borderRadius:12}}>{o.salesPOC}</span></td><td style={{padding:"10px 14px",borderBottom:"1px solid "+(isOD?"#fee2e2":"#ecfdf5"),fontFamily:MN,fontSize:12,fontWeight:700,textAlign:"right",color:isOD?"#0f172a":"#059669"}}>{fmtVal(o.totalValue)}</td><td style={{padding:"10px 14px",borderBottom:"1px solid "+(isOD?"#fee2e2":"#ecfdf5")}}>{ps?<span style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:20,background:ps.bg,color:ps.color}}>{ps.label}</span>:<span style={{fontFamily:MN,fontSize:10,color:"#cbd5e1"}}>—</span>}</td></tr>);
+    const pushOrders=(ords,off=0)=>{ords.forEach((o,oi)=>{const ep=exp===o.id;const ri=off+oi;const dy=daysSince(o.approvalDate);const dC=dy>7?"#DC2626":dy>3?"#D97706":"#16A34A";const ps=payStatus(!!o.approvalDate);const isOD=dy>7;
+      rtdRows.push(<tr className="hv-row" key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:"#fff",borderLeft:ep?"3px solid #16A34A":"3px solid transparent"}}><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB",fontFamily:MN,fontSize:10,color:isOD?"#94a3b8":"#059669"}}>{ep?"▾":"▸"}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB",fontFamily:MN,fontSize:11,whiteSpace:"nowrap",color:"#64748b"}}>{o.approvalDate}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB"}}><span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:dC,background:dC+"12",padding:"2px 8px",borderRadius:12}}>{dy}d</span></td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB",fontWeight:700,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.party}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB"}}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div></td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB",fontFamily:MN,fontSize:13,fontWeight:700,textAlign:"right"}}>{cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0)}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:POC_COLORS[o.salesPOC]||"#64748b",background:(POC_COLORS[o.salesPOC]||"#64748b")+"15",padding:"2px 8px",borderRadius:12}}>{o.salesPOC}</span></td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB",fontFamily:MN,fontSize:12,fontWeight:700,textAlign:"right",color:isOD?"#0f172a":"#059669"}}>{fmtVal(o.totalValue)}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB"}}>{ps?<span style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:20,background:ps.bg,color:ps.color}}>{ps.label}</span>:<span style={{fontFamily:MN,fontSize:10,color:"#cbd5e1"}}>—</span>}</td></tr>);
       if(ep)rtdRows.push(rtdDetailTbl(o));
     });};
-    if(rtdOverdue.length>0)rtdRows.push(<tr key="rtd_od_h"><td colSpan={9} style={{padding:"8px 14px 8px 20px",background:"#fef8f8",borderBottom:"1px solid #fee2e2",borderLeft:"3px solid #dc2626"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:700,color:"#dc2626"}}>Overdue · {rtdOverdue.length} order{rtdOverdue.length!==1?"s":""} · {fmtVal(rtdOverdue.reduce((s,o)=>s+o.totalValue,0))}</span></td></tr>);
+    if(rtdOverdue.length>0)rtdRows.push(<tr key="rtd_od_h"><td colSpan={9} style={{padding:"8px 14px 8px 20px",background:"#F8FAFC",borderBottom:"1px solid #E5E7EB",borderLeft:"3px solid #DC2626"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#DC2626"}}>Overdue · {rtdOverdue.length} order{rtdOverdue.length!==1?"s":""} · {fmtVal(rtdOverdue.reduce((s,o)=>s+o.totalValue,0))}</span></td></tr>);
     pushOrders(rtdOverdue);
-    if(rtdOnTime.length>0&&rtdOverdue.length>0)rtdRows.push(<tr key="rtd_ot_h"><td colSpan={9} style={{padding:"8px 14px 8px 20px",background:"#f9fefb",borderBottom:"1px solid #ecfdf5",borderLeft:"3px solid #059669"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:700,color:"#059669"}}>On Time · {rtdOnTime.length} order{rtdOnTime.length!==1?"s":""}</span></td></tr>);
+    if(rtdOnTime.length>0&&rtdOverdue.length>0)rtdRows.push(<tr key="rtd_ot_h"><td colSpan={9} style={{padding:"8px 14px 8px 20px",background:"#F8FAFC",borderBottom:"1px solid #E5E7EB",borderLeft:"3px solid #16A34A"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#16A34A"}}>On Time · {rtdOnTime.length} order{rtdOnTime.length!==1?"s":""}</span></td></tr>);
     pushOrders(rtdOnTime,rtdOverdue.length);
   }
   const catCounts=useMemo(()=>{const c={};ORDERS.filter(o=>(!poc||o.salesPOC===poc)&&!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)).forEach(o=>o.categories.forEach(cc=>c[cc]=(c[cc]||0)+1));return c;},[poc,ORDERS]);
@@ -1282,10 +1282,10 @@ export default function Dashboard(){
   const allTabs=[{id:"pending",l:"Orders",n:filtered.length},{id:"party",l:"Parties",n:pFilt.length},{id:"stock",l:"Stock",n:""},{id:"dispatch",l:"Dispatch",n:""},{id:"analytics",l:"Analytics",n:""},{id:"calls",l:"Calls",n:Object.keys(REORDER).length}];
   const tabs=allTabs.filter(t=>allowedTabs.includes(t.id));
 
-  return <div style={{fontFamily:SN,background:"#f8fafc",minHeight:"100vh",fontSize:13,color:"#1e293b"}}>
+  return <div style={{fontFamily:SN,background:"#F8FAFC",minHeight:"100vh",fontSize:13,color:"#0F172A"}}>
     
     {/* Fonts loaded in layout.js */}
-    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}.hv-row{transition:background 0.25s,box-shadow 0.25s}.hv-row:hover{background:#f8fafc!important;box-shadow:0 1px 4px rgba(0,0,0,0.03)}.hv-card{transition:background 0.25s,box-shadow 0.25s,border-color 0.25s}.hv-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.06);border-color:#d1d5db}.hv-pill{transition:background 0.2s,border-color 0.2s,transform 0.2s}.hv-pill:hover{background:#f1f5f9!important;border-color:#cbd5e1!important;transform:translateY(-1px)}.hv-btn{transition:background 0.2s,opacity 0.2s}.hv-btn:hover{opacity:0.85}.hv-insight{transition:box-shadow 0.25s,background 0.25s}.hv-insight:hover{box-shadow:0 3px 12px rgba(0,0,0,0.05)}.hv-insight-s{transition:box-shadow 0.25s,background 0.25s,opacity 0.25s}.hv-insight-s:hover{box-shadow:0 2px 8px rgba(0,0,0,0.04);background:#fafbfc!important}select{transition:border-color 0.2s}select:hover{border-color:#cbd5e1}`}</style>
+    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}.hv-row{transition:background 0.2s}.hv-row:hover{background:#F8FAFC!important}.hv-card{transition:box-shadow 0.2s,border-color 0.2s}.hv-card:hover{box-shadow:0 1px 4px rgba(0,0,0,0.04);border-color:#d1d5db}.hv-pill{transition:background 0.2s,border-color 0.2s}.hv-pill:hover{background:#E5E7EB!important}.hv-btn{transition:background 0.2s,opacity 0.2s}.hv-btn:hover{opacity:0.85}.hv-insight{transition:box-shadow 0.2s}.hv-insight:hover{box-shadow:0 2px 8px rgba(0,0,0,0.04)}.hv-insight-s{transition:background 0.2s}.hv-insight-s:hover{background:#F1F5F9!important}select{transition:border-color 0.2s}select:hover{border-color:#cbd5e1}`}</style>
 
     {/* Header */}
     <div style={{background:"#0f172a",color:"#fff",padding:mob?"0 16px":"0 28px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:200,borderBottom:"1px solid #1e293b"}}>
@@ -1334,30 +1334,30 @@ export default function Dashboard(){
         {/* Stacked Insights */}
         {(()=>{const allInsights=buildInsight(baseOrders,baseRtd,basePend,baseOverdue,baseLines,cat);
           const toneStyles={
-            urgent:{accent:"#991b1b",bg:"#fefbfb",label:"Critical"},
-            warning:{accent:"#9a3412",bg:"#fffdf9",label:"Attention"},
-            positive:{accent:"#065f46",bg:"#f8fefb",label:"Opportunity"},
-            neutral:{accent:"#1e40af",bg:"#fafbff",label:"Context"}
+            urgent:{accent:"#DC2626",label:"Critical"},
+            warning:{accent:"#D97706",label:"Attention"},
+            positive:{accent:"#16A34A",label:"Opportunity"},
+            neutral:{accent:"#2563EB",label:"Context"}
           };
           const primary=allInsights[0];const secondary=allInsights.slice(1,3);
           const isCritical=primary.tone==="urgent"||primary.tone==="warning";
           const pts=toneStyles[primary.tone]||toneStyles.neutral;
           return <div style={{marginBottom:44}}>
-            {/* Primary Insight — section feel, not card */}
-            <div className="hv-insight" style={{background:pts.bg,borderRadius:16,borderLeft:"3px solid "+pts.accent,padding:mob?"30px 24px":"40px 44px",marginBottom:secondary.length>0?20:0}}>
-              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.14em",textTransform:"uppercase",color:pts.accent,opacity:0.45,marginBottom:22}}>{pts.label}</div>
-              <div style={{fontSize:mob?19:22,fontWeight:600,color:"#0f172a",lineHeight:1.35,letterSpacing:"-0.01em",marginBottom:12}}>{primary.headline}</div>
-              <div style={{fontSize:mob?13:14,color:"#78716c",lineHeight:1.65,maxWidth:580,marginBottom:primary.cta?26:0}}>{primary.body}</div>
-              {primary.cta&&<button className="hv-btn" onClick={()=>setActionOpen(o=>!o)} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?pts.accent:"#fff",background:actionOpen?"transparent":pts.accent,border:actionOpen?"1px solid "+pts.accent+"20":"none",borderRadius:6,padding:"8px 20px",cursor:"pointer",letterSpacing:"0.01em"}}>{actionOpen?"Close":primary.cta}</button>}
+            {/* Primary Insight */}
+            <div className="hv-insight" style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",borderLeft:"3px solid "+pts.accent,padding:mob?"28px 24px":"36px 40px",marginBottom:secondary.length>0?20:0}}>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.14em",textTransform:"uppercase",color:pts.accent,marginBottom:20}}>{pts.label}</div>
+              <div style={{fontSize:mob?19:22,fontWeight:600,color:"#0F172A",lineHeight:1.35,letterSpacing:"-0.01em",marginBottom:12}}>{primary.headline}</div>
+              <div style={{fontSize:mob?13:14,color:"#475569",lineHeight:1.65,maxWidth:580,marginBottom:primary.cta?26:0}}>{primary.body}</div>
+              {primary.cta&&<button className="hv-btn" onClick={()=>setActionOpen(o=>!o)} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?pts.accent:"#fff",background:actionOpen?"transparent":pts.accent,border:actionOpen?"1px solid "+pts.accent:"none",borderRadius:6,padding:"8px 20px",cursor:"pointer",boxShadow:actionOpen?"none":"0 1px 3px rgba(0,0,0,0.1)"}}>{actionOpen?"Close":primary.cta}</button>}
             </div>
-            {/* Secondary Insights — supporting context */}
+            {/* Secondary Insights */}
             {secondary.length>0&&<div>
-              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.14em",textTransform:"uppercase",color:"#d4d4d8",marginBottom:12,paddingLeft:2}}>Context</div>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.14em",textTransform:"uppercase",color:"#94A3B8",marginBottom:12,paddingLeft:2}}>Context</div>
               <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat("+Math.min(secondary.length,2)+",1fr)",gap:12}}>
               {secondary.map((ins,si)=>{const sts=toneStyles[ins.tone]||toneStyles.neutral;
-                return <div key={si} className="hv-insight-s" style={{background:isCritical?"#fafafa":"#fff",borderRadius:10,borderLeft:"2px solid "+sts.accent+"30",padding:mob?"18px 18px":"22px 26px",opacity:isCritical?0.8:1}}>
-                  <div style={{fontSize:mob?13:14,fontWeight:600,color:"#27272a",lineHeight:1.4,marginBottom:6}}>{ins.headline}</div>
-                  <div style={{fontSize:12,color:"#a1a1aa",lineHeight:1.55}}>{ins.body}</div>
+                return <div key={si} className="hv-insight-s" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",borderLeft:"2px solid "+sts.accent,padding:mob?"18px 18px":"20px 24px"}}>
+                  <div style={{fontSize:mob?13:14,fontWeight:600,color:"#0F172A",lineHeight:1.4,marginBottom:6}}>{ins.headline}</div>
+                  <div style={{fontSize:12,color:"#475569",lineHeight:1.55}}>{ins.body}</div>
                 </div>;
               })}
               </div>
@@ -1370,23 +1370,23 @@ export default function Dashboard(){
           const primary=allInsights[0];
           if(!actionOpen||!primary.orders||primary.orders.length===0)return null;
           const visibleOrders=primary.orders;
-          return <div style={{borderRadius:12,border:"1px solid #f0f1f3",marginBottom:32,overflow:"hidden"}}>
-            <div style={{padding:"14px 24px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#6b7280"}}>Priority Orders</span>
-              <span style={{fontFamily:MN,fontSize:10,color:"#c0c7d1"}}>{visibleOrders.length}</span>
+          return <div style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",marginBottom:32,overflow:"hidden"}}>
+            <div style={{padding:"14px 24px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Priority Orders</span>
+              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{visibleOrders.length}</span>
             </div>
             {visibleOrders.map((o,oi)=>{
               const issueText=typeof primary.issue==="function"?primary.issue(o):"";
-              return <div key={o.id} className="hv-row" style={{padding:mob?"12px 16px":"13px 24px",borderBottom:oi<visibleOrders.length-1?"1px solid #fafafa":"none",display:"flex",alignItems:"center",gap:16}}>
+              return <div key={o.id} className="hv-row" style={{padding:mob?"12px 16px":"13px 24px",borderBottom:oi<visibleOrders.length-1?"1px solid #E5E7EB":"none",display:"flex",alignItems:"center",gap:16}}>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
-                    <span style={{fontSize:13,fontWeight:600,color:"#18181b"}}>{o.party}</span>
-                    <span style={{fontFamily:MN,fontSize:10,color:"#d4d4d8"}}>#{o.id}</span>
+                    <span style={{fontSize:13,fontWeight:600,color:"#0F172A"}}>{o.party}</span>
+                    <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>#{o.id}</span>
                   </div>
                   <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-                    <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#18181b"}}>{fmtVal(o.totalValue)}</span>
-                    <span style={{fontFamily:MN,fontSize:10,color:"#a1a1aa"}}>{o.totalQty} qty</span>
-                    {issueText&&<span style={{fontFamily:MN,fontSize:10,fontWeight:500,color:"#78716c",background:"#f5f5f4",padding:"2px 8px",borderRadius:4}}>{issueText}</span>}
+                    <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0F172A"}}>{fmtVal(o.totalValue)}</span>
+                    <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{o.totalQty} qty</span>
+                    {issueText&&<span style={{fontFamily:MN,fontSize:10,fontWeight:500,color:"#475569"}}>{issueText}</span>}
                   </div>
                 </div>
               </div>;
@@ -1395,12 +1395,12 @@ export default function Dashboard(){
         })()}
 
         {/* Supporting Metrics */}
-        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"1fr repeat(3,minmax(0,0.7fr))",gap:mob?12:16,marginBottom:32}}>
-          {[["Pipeline",fmtVal(baseOrders.reduce((s,o)=>s+o.totalValue,0)),baseOrders.length+" orders","#18181b",true],["Ready",baseRtd.length,fmtVal(baseRtd.reduce((s,o)=>s+o.totalValue,0)),"#059669",false],["Pending",basePend.length,fmtVal(basePend.reduce((s,o)=>s+o.totalValue,0)),"#ea580c",false],["Overdue",baseOverdue.length,baseOverdue.length>0?fmtVal(baseOverdue.reduce((s,o)=>s+o.totalValue,0)):"None","#dc2626",false]].map(([label,value,sub,color,isPrimary])=>
-            <div key={label} className="hv-card" style={{background:"#fff",borderRadius:12,border:isPrimary?"1px solid #e4e4e7":"1px solid #f4f4f5",padding:isPrimary?mob?"18px 18px":"20px 24px":"14px 16px",cursor:"default"}}>
-              <div style={{fontFamily:MN,fontSize:isPrimary?10:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:isPrimary?"#71717a":"#c0c7d1",marginBottom:isPrimary?8:4}}>{label}</div>
-              <div style={{fontFamily:MN,fontSize:isPrimary?28:17,fontWeight:isPrimary?700:600,color:label==="Overdue"&&baseOverdue.length===0?"#d4d4d8":color,lineHeight:1,marginBottom:isPrimary?6:3}}>{value}</div>
-              <div style={{fontFamily:MN,fontSize:isPrimary?12:10,color:isPrimary?"#a1a1aa":"#d4d4d8"}}>{sub}</div>
+        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:mob?12:14,marginBottom:32}}>
+          {[["Pipeline",fmtVal(baseOrders.reduce((s,o)=>s+o.totalValue,0)),baseOrders.length+" orders","#0F172A"],["Ready",baseRtd.length,fmtVal(baseRtd.reduce((s,o)=>s+o.totalValue,0)),"#16A34A"],["Pending",basePend.length,fmtVal(basePend.reduce((s,o)=>s+o.totalValue,0)),"#D97706"],["Overdue",baseOverdue.length,baseOverdue.length>0?fmtVal(baseOverdue.reduce((s,o)=>s+o.totalValue,0)):"None","#DC2626"]].map(([label,value,sub,color])=>
+            <div key={label} className="hv-card" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px",cursor:"default"}}>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>{label}</div>
+              <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:label==="Overdue"&&baseOverdue.length===0?"#94A3B8":color,lineHeight:1,marginBottom:4}}>{value}</div>
+              <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{sub}</div>
             </div>
           )}
         </div>
@@ -1452,8 +1452,8 @@ export default function Dashboard(){
         </div>}
 
         {/* Search & Filters */}
-        <div style={{borderRadius:12,padding:mob?"16px 0":"0",marginBottom:28}}>
-          <div style={{display:"flex",alignItems:"center",gap:mob?8:14,flexWrap:"wrap",marginBottom:16}}>
+        <div style={{marginBottom:28}}>
+          <div style={{display:"flex",alignItems:"center",gap:mob?8:12,flexWrap:"wrap",marginBottom:14}}>
             <div style={{position:"relative",flex:1,minWidth:mob?140:220,maxWidth:320}}>
               <input value={srch} onChange={e=>{setSrch(e.target.value);setPg(1);setShowAllRtd(false);setShowAllPend(false);}} placeholder="Search by party name, model, or colour..." style={{...S.input,width:"100%",paddingRight:srch?60:14}}/>
               {srch&&<span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontFamily:MN,fontSize:10,fontWeight:600,color:"#2563eb",background:"#eff6ff",padding:"2px 6px",borderRadius:4}}>{filtered.length} found</span>}
@@ -1463,13 +1463,13 @@ export default function Dashboard(){
             {newOrderIds.size>0&&!showNewOnly&&<button onClick={()=>{setShowNewOnly(true);setShowAllRtd(false);setShowAllPend(false);}} style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#2563eb",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:6,padding:"5px 12px",cursor:"pointer",whiteSpace:"nowrap",animation:"pulse 2s ease-in-out infinite"}}>+{newOrderIds.size} new</button>}
             {(srch||cat!=="all"||poc||showNewOnly)&&<button onClick={()=>{setSrch("");setCat("all");setPoc("");setShowNewOnly(false);setNewOrderIds(new Set());setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8",background:"none",border:"1px solid #e2e8f0",borderRadius:6,padding:"5px 12px",cursor:"pointer",whiteSpace:"nowrap"}}>Clear all</button>}
           </div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {[["all","All orders",filtered.length,null],...Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>[c,(CC[c]||CC.Other).l,n,(CC[c]||CC.Other).c])].map(([val,lbl,n,dotC])=>{
               const isActive=cat===val;
-              return <div key={val} className={!isActive?"hv-pill":""} onClick={()=>{setCat(val);setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{padding:"6px 14px",borderRadius:20,border:isActive?"1px solid #2563eb":"1px solid #f0f0f0",background:isActive?"#eff6ff":"transparent",color:isActive?"#2563eb":"#71717a",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:isActive?600:400,display:"flex",alignItems:"center",gap:5}}>
-                {val!=="all"&&<Dot c={isActive?"#2563eb":(dotC||"#d4d4d8")} s={4}/>}
+              return <div key={val} className={!isActive?"hv-pill":""} onClick={()=>{setCat(val);setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{padding:"6px 14px",borderRadius:6,border:isActive?"1px solid #2563EB":"1px solid #E5E7EB",background:isActive?"#EFF6FF":"#F1F5F9",color:isActive?"#2563EB":"#334155",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:isActive?600:500,display:"flex",alignItems:"center",gap:5}}>
+                {val!=="all"&&<Dot c={isActive?"#2563EB":(dotC||"#94A3B8")} s={4}/>}
                 {lbl}
-                <span style={{fontFamily:MN,fontSize:10,color:isActive?"#2563eb":"#d4d4d8"}}>{n}</span>
+                <span style={{fontFamily:MN,fontSize:10,color:isActive?"#2563EB":"#94A3B8"}}>{n}</span>
               </div>;
             })}
           </div>
@@ -1477,18 +1477,18 @@ export default function Dashboard(){
 
         {mob?<div style={{display:"flex",flexDirection:"column",gap:24}}>
           {!pendingApproval.length&&!readyToDispatch.length&&<div style={{...S.card,padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</div>}
-          {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"2px solid #05966940"}}>
-            <div style={{padding:"14px 16px",background:"#fafdfb",borderBottom:"1px solid #f0f5f1",display:"flex",alignItems:"center",gap:10}}>
+          {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #16A34A"}}>
+            <div style={{padding:"14px 16px",background:"#fff",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:10}}>
               <div style={{flex:1}}>
-                <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#27272a"}}>Ready to Dispatch <span style={{color:"#a1a1aa",fontWeight:500}}>({readyToDispatch.length}) · {fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</span></div>
+                <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Ready to Dispatch <span style={{color:"#94A3B8",fontWeight:500}}>({readyToDispatch.length}) · {fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</span></div>
               </div>
             </div>
-            {(showAllRtd?rtdSorted:rtdSorted.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const dy=daysSince(o.approvalDate);const isOD=dy>7;const dC=isOD?"#991b1b":dy>3?"#9a3412":"#065f46";
-              return <div key={o.id} style={{borderBottom:"1px solid #f5f5f4"}}>
-                <div className="hv-row" onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#f0fdf4":isOD?"#fefbfb":isNewOrder(o)?"#f8faff":"#fff",borderLeft:ep?"2px solid #059669":isOD?"2px solid #fca5a540":isNewOrder(o)?"2px solid #93c5fd40":"2px solid transparent"}}>
+            {(showAllRtd?rtdSorted:rtdSorted.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const dy=daysSince(o.approvalDate);const isOD=dy>7;
+              return <div key={o.id} style={{borderBottom:"1px solid #E5E7EB"}}>
+                <div className="hv-row" onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:"#fff",borderLeft:ep?"3px solid #16A34A":"3px solid transparent"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                    <span style={{fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:6}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:600,color:"#1e40af",background:"#eff6ff",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
-                    <span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:dC,background:dC+"10",padding:"2px 7px",borderRadius:4}}>{dy}d</span>
+                    <span style={{fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:6,color:"#0F172A"}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
+                    <span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:isOD?"#DC2626":dy>3?"#D97706":"#16A34A"}}>{dy}d</span>
                   </div>
                   <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:4}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div>
                   <div style={{display:"flex",gap:10,fontSize:10,fontFamily:MN,color:"#64748b",flexWrap:"wrap"}}>
@@ -1525,18 +1525,18 @@ export default function Dashboard(){
               <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8"}}>Show less</span>
             </div>}
           </div>}
-          {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"2px solid #ea580c40"}}>
-            <div style={{padding:"14px 16px",background:"#fffefb",borderBottom:"1px solid #f5f2ec",display:"flex",alignItems:"center",gap:10}}>
+          {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #D97706"}}>
+            <div style={{padding:"14px 16px",background:"#fff",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:10}}>
               <div style={{flex:1}}>
-                <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#27272a"}}>Pending Approval <span style={{color:"#a1a1aa",fontWeight:500}}>({pendingApproval.length}) · {fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</span></div>
+                <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Pending Approval <span style={{color:"#94A3B8",fontWeight:500}}>({pendingApproval.length}) · {fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</span></div>
               </div>
             </div>
-            {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const isStale=days>30;const dc=isStale?"#991b1b":days>14?"#9a3412":"#065f46";const ps=payStatus(!!o.approvalDate);
-              return <div key={o.id} style={{borderBottom:"1px solid #f5f5f4"}}>
-                <div className="hv-row" onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#fffbeb":isStale?"#fefbfb":isNewOrder(o)?"#f8faff":"#fff",borderLeft:ep?"2px solid #d97706":isStale?"2px solid #fca5a540":isNewOrder(o)?"2px solid #93c5fd40":"2px solid transparent"}}>
+            {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const ps=payStatus(!!o.approvalDate);
+              return <div key={o.id} style={{borderBottom:"1px solid #E5E7EB"}}>
+                <div className="hv-row" onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:"#fff",borderLeft:ep?"3px solid #D97706":"3px solid transparent"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                    <span style={{fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:6}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:600,color:"#1e40af",background:"#eff6ff",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
-                    <span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:dc,background:dc+"10",padding:"2px 7px",borderRadius:4}}>{days}d</span>
+                    <span style={{fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:6,color:"#0F172A"}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
+                    <span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:days>30?"#DC2626":days>14?"#D97706":"#16A34A"}}>{days}d</span>
                   </div>
                   <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:4}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div>
                   <div style={{display:"flex",gap:10,fontSize:10,fontFamily:MN,color:"#64748b",flexWrap:"wrap",alignItems:"center"}}>
@@ -1577,15 +1577,15 @@ export default function Dashboard(){
         </div>:
         <div style={{display:"flex",flexDirection:"column",gap:32}}>
           {!pendingApproval.length&&!readyToDispatch.length&&<div style={{...S.card,padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</div>}
-          {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"2px solid #05966940"}}>
-            <div style={{padding:"14px 22px",background:"#fafdfb",borderBottom:"1px solid #f0f5f1",display:"flex",alignItems:"center",gap:12}}>
-              <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#27272a"}}>Ready to Dispatch <span style={{color:"#a1a1aa",fontWeight:500}}>({readyToDispatch.length}) · {fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</span></div>
+          {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #16A34A"}}>
+            <div style={{padding:"14px 22px",background:"#fff",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Ready to Dispatch <span style={{color:"#94A3B8",fontWeight:500}}>({readyToDispatch.length}) · {fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</span></div>
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
-                <th style={{width:22,background:"#fafafa",borderBottom:"1px solid #f0f0f0"}}/>
+                <th style={{width:22,background:"#F8FAFC",borderBottom:"1px solid #E5E7EB"}}/>
                 {[["Date ↕",null],["Days",null],["Party",null],["Categories",null],["Qty",null],["POC",null],["Value",null],["Status",null]].map(([h])=>
-                  <th key={h} style={{background:"#fafafa",color:"#a1a1aa",fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",padding:"10px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left",borderBottom:"1px solid #f0f0f0"}}>{h}</th>
+                  <th key={h} style={{background:"#F8FAFC",color:"#94A3B8",fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",padding:"10px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left",borderBottom:"1px solid #E5E7EB"}}>{h}</th>
                 )}
               </tr></thead>
               <tbody>{showAllRtd?rtdRows:rtdRows.slice(0,10)}</tbody>
@@ -1597,25 +1597,25 @@ export default function Dashboard(){
               <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8"}}>Show less</span>
             </div>}
           </div>}
-          {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"2px solid #ea580c40"}}>
-            <div style={{padding:"14px 22px",background:"#fffefb",borderBottom:"1px solid #f5f2ec",display:"flex",alignItems:"center",gap:12}}>
-              <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#27272a"}}>Pending Approval <span style={{color:"#a1a1aa",fontWeight:500}}>({pendingApproval.length}) · {fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</span></div>
+          {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #D97706"}}>
+            <div style={{padding:"14px 22px",background:"#fff",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Pending Approval <span style={{color:"#94A3B8",fontWeight:500}}>({pendingApproval.length}) · {fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</span></div>
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
-                <th style={{width:22,background:"#fafafa",borderBottom:"1px solid #f0f0f0"}}/>
+                <th style={{width:22,background:"#F8FAFC",borderBottom:"1px solid #E5E7EB"}}/>
                 {[["Date ↕",null],["Days",null],["Party",null],["Categories",null],["Qty",null],["POC",null],["Value",null],["Status",null]].map(([h])=>
-                  <th key={h} style={{background:"#fafafa",color:"#a1a1aa",fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",padding:"10px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left",borderBottom:"1px solid #f0f0f0"}}>{h}</th>
+                  <th key={h} style={{background:"#F8FAFC",color:"#94A3B8",fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",padding:"10px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left",borderBottom:"1px solid #E5E7EB"}}>{h}</th>
                 )}
               </tr></thead>
               <tbody>
-              {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const isStale=days>30;const dc=isStale?"#991b1b":days>14?"#9a3412":"#065f46";const ps=payStatus(!!o.approvalDate);
+              {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#DC2626":days>14?"#D97706":"#16A34A";const ps=payStatus(!!o.approvalDate);
                 return[
-                  <tr className="hv-row" key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#fffbeb":isStale?"#fefbfb":"#fff",borderLeft:ep?"2px solid #d97706":isStale?"2px solid #fca5a540":"2px solid transparent"}}>
+                  <tr className="hv-row" key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:"#fff",borderLeft:ep?"3px solid #D97706":"3px solid transparent"}}>
                     <td style={{padding:"13px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:11,whiteSpace:"nowrap"}}>{o.piDate}</td>
-                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f5f5f4"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:dc,background:dc+"08",padding:"2px 7px",borderRadius:4}}>{days}d</span></td>
-                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f5f5f4",fontWeight:600,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.party}</td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:dc}}>{days}d</span></td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB",fontWeight:600,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.party}</td>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div></td>
                     
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:13,fontWeight:700,textAlign:"right"}}>{cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0)}</td>
