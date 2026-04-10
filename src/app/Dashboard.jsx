@@ -1250,7 +1250,7 @@ export default function Dashboard(){
   return <div style={{fontFamily:SN,background:"#f8fafc",minHeight:"100vh",fontSize:13,color:"#1e293b"}}>
     
     {/* Fonts loaded in layout.js */}
-    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}.hv-row{transition:background 0.25s,box-shadow 0.25s}.hv-row:hover{background:#f8fafc!important;box-shadow:0 1px 4px rgba(0,0,0,0.03)}.hv-card{transition:background 0.25s,box-shadow 0.25s,border-color 0.25s}.hv-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.06);border-color:#d1d5db}.hv-pill{transition:background 0.2s,border-color 0.2s,transform 0.2s}.hv-pill:hover{background:#f1f5f9!important;border-color:#cbd5e1!important;transform:translateY(-1px)}.hv-btn{transition:background 0.2s,opacity 0.2s}.hv-btn:hover{opacity:0.85}select{transition:border-color 0.2s}select:hover{border-color:#cbd5e1}`}</style>
+    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}.hv-row{transition:background 0.25s,box-shadow 0.25s}.hv-row:hover{background:#f8fafc!important;box-shadow:0 1px 4px rgba(0,0,0,0.03)}.hv-card{transition:background 0.25s,box-shadow 0.25s,border-color 0.25s}.hv-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.06);border-color:#d1d5db}.hv-pill{transition:background 0.2s,border-color 0.2s,transform 0.2s}.hv-pill:hover{background:#f1f5f9!important;border-color:#cbd5e1!important;transform:translateY(-1px)}.hv-btn{transition:background 0.2s,opacity 0.2s}.hv-btn:hover{opacity:0.85}.hv-insight{transition:box-shadow 0.25s,background 0.25s}.hv-insight:hover{box-shadow:0 3px 12px rgba(0,0,0,0.05)}.hv-insight-s{transition:box-shadow 0.25s,background 0.25s,opacity 0.25s}.hv-insight-s:hover{box-shadow:0 2px 8px rgba(0,0,0,0.04);background:#fafbfc!important}select{transition:border-color 0.2s}select:hover{border-color:#cbd5e1}`}</style>
 
     {/* Header */}
     <div style={{background:"#0f172a",color:"#fff",padding:mob?"0 16px":"0 28px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:200,borderBottom:"1px solid #1e293b"}}>
@@ -1296,56 +1296,52 @@ export default function Dashboard(){
 
       {/* ═══ PENDING ═══ */}
       {tab==="pending"&&<div>
-        {/* Orders Insight — scrollable */}
+        {/* Stacked Insights */}
         {(()=>{const allInsights=buildInsight(baseOrders,baseRtd,basePend,baseOverdue,baseLines,cat);
-          insCount.current=allInsights.length;
-          const ci=Math.min(insIdx,allInsights.length-1);
-          const insight=allInsights[ci];
           const toneStyles={
             urgent:{accent:"#dc2626",bg:"#fef8f8",border:"#f5e1e1",label:"Critical",labelBg:"#dc262610",labelColor:"#dc2626"},
             warning:{accent:"#ea580c",bg:"#fffaf6",border:"#f5e6d8",label:"Needs Attention",labelBg:"#ea580c10",labelColor:"#ea580c"},
             positive:{accent:"#059669",bg:"#f6fdf9",border:"#d8f0e3",label:"On Track",labelBg:"#05966910",labelColor:"#059669"},
             neutral:{accent:"#2563eb",bg:"#f8faff",border:"#dfe6f5",label:"Info",labelBg:"#2563eb10",labelColor:"#2563eb"}
           };
-          const ts=toneStyles[insight.tone]||toneStyles.neutral;
-          const hasPrev=ci>0,hasNext=ci<allInsights.length-1;
-          const navBtn=(dir,enabled,onClick)=><button onClick={onClick} disabled={!enabled} style={{width:30,height:30,borderRadius:6,border:"1px solid "+(enabled?"#e2e8f0":"transparent"),background:enabled?"#fff":"transparent",color:enabled?"#475569":"#d1d5db",cursor:enabled?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontFamily:MN,fontWeight:600,transition:"all 0.15s"}}>{dir}</button>;
-          return <div onMouseEnter={pauseCarousel} onMouseLeave={resumeCarousel} style={{background:ts.bg,borderRadius:14,border:"1px solid "+ts.border,borderLeft:"3px solid "+ts.accent,padding:mob?"24px 22px":"28px 32px",marginBottom:28,display:"flex",flexDirection:"column",height:mob?210:220,boxSizing:"border-box",transition:"border-color 0.3s, background 0.3s"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexShrink:0}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontFamily:MN,fontSize:10,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:ts.labelColor,background:ts.labelBg,padding:"3px 10px",borderRadius:4}}>{ts.label}</span>
+          const primary=allInsights[0];const secondary=allInsights.slice(1,3);
+          const pts=toneStyles[primary.tone]||toneStyles.neutral;
+          return <div style={{marginBottom:28}}>
+            {/* Primary Insight */}
+            <div className="hv-insight" style={{background:pts.bg,borderRadius:14,border:"1px solid "+pts.border,borderLeft:"3px solid "+pts.accent,padding:mob?"24px 22px":"28px 32px",marginBottom:secondary.length>0?12:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+                <span style={{fontFamily:MN,fontSize:10,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:pts.labelColor,background:pts.labelBg,padding:"3px 10px",borderRadius:4}}>{pts.label}</span>
                 <span style={{fontFamily:MN,fontSize:11,fontWeight:500,color:"#c0c7d1"}}>Orders Insight</span>
               </div>
-              {allInsights.length>1&&<div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontFamily:MN,fontSize:11,color:"#c0c7d1"}}>{ci+1} of {allInsights.length}</span>
-                {navBtn("←",hasPrev,()=>{setInsIdx(i=>Math.max(0,i-1));setInsPaused(true);setTimeout(()=>setInsPaused(false),12000);})}
-                {navBtn("→",hasNext,()=>{setInsIdx(i=>Math.min(allInsights.length-1,i+1));setInsPaused(true);setTimeout(()=>setInsPaused(false),12000);})}
-              </div>}
+              <div style={{fontSize:mob?18:22,fontWeight:700,color:"#0f172a",lineHeight:1.3,letterSpacing:"-0.015em",marginBottom:10}}>{primary.headline}</div>
+              <div style={{fontSize:mob?13:15,color:"#64748b",lineHeight:1.7,maxWidth:720,marginBottom:primary.cta?18:0}}>{primary.body}</div>
+              {primary.cta&&<button className="hv-btn" onClick={()=>setActionOpen(o=>!o)} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?pts.accent:"#fff",background:actionOpen?"transparent":pts.accent,border:actionOpen?"1px solid "+pts.accent+"30":"1px solid "+pts.accent,borderRadius:6,padding:"6px 14px",cursor:"pointer"}}>{actionOpen?"Close":primary.cta}</button>}
             </div>
-            <div style={{fontSize:mob?18:22,fontWeight:700,color:"#0f172a",lineHeight:1.3,letterSpacing:"-0.015em",marginBottom:8,flexShrink:0}}>{insight.headline}</div>
-            <div style={{fontSize:mob?13:14,color:"#64748b",lineHeight:1.6,maxWidth:700,flex:1,overflow:"hidden"}}>{insight.body}</div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,paddingTop:12}}>
-              {insight.cta?<button className="hv-btn" onClick={()=>setActionOpen(o=>!o)} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?ts.accent:"#fff",background:actionOpen?"transparent":ts.accent,border:actionOpen?"1px solid "+ts.accent+"30":"1px solid "+ts.accent,borderRadius:6,padding:"6px 14px",cursor:"pointer",transition:"all 0.15s"}}>{actionOpen?"Close":insight.cta}</button>:<span/>}
-              {allInsights.length>1&&<div style={{display:"flex",gap:5}}>
-                {allInsights.map((_,i)=><span key={i} onClick={()=>{setInsIdx(i);setActionOpen(false);setInsPaused(true);setTimeout(()=>setInsPaused(false),12000);}} style={{width:i===ci?22:6,height:6,borderRadius:3,background:i===ci?ts.accent:"#e2e8f0",cursor:"pointer",transition:"all 0.2s"}}/>)}
-              </div>}
-            </div>
+            {/* Secondary Insights */}
+            {secondary.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat("+Math.min(secondary.length,2)+",1fr)",gap:10}}>
+              {secondary.map((ins,si)=>{const sts=toneStyles[ins.tone]||toneStyles.neutral;
+                return <div key={si} className="hv-insight-s" style={{background:"#fff",borderRadius:10,border:"1px solid #e8eaed",borderLeft:"2px solid "+sts.accent,padding:mob?"14px 16px":"16px 20px"}}>
+                  <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:sts.labelColor,marginBottom:6}}>{sts.label}</div>
+                  <div style={{fontSize:mob?13:14,fontWeight:600,color:"#0f172a",lineHeight:1.4,marginBottom:4}}>{ins.headline}</div>
+                  <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.5}}>{ins.body}</div>
+                </div>;
+              })}
+            </div>}
           </div>;
         })()}
 
         {/* Priority Orders — Action Flow */}
         {(()=>{const allInsights=buildInsight(baseOrders,baseRtd,basePend,baseOverdue,baseLines,cat);
-          const ci=Math.min(insIdx,allInsights.length-1);
-          const insight=allInsights[ci];
-          if(!actionOpen||!insight.orders||insight.orders.length===0)return null;
-          const visibleOrders=insight.orders;
+          const primary=allInsights[0];
+          if(!actionOpen||!primary.orders||primary.orders.length===0)return null;
+          const visibleOrders=primary.orders;
           return <div style={{background:"#fff",borderRadius:14,border:"1px solid #e2e8f0",marginBottom:28,overflow:"hidden"}}>
             <div style={{padding:"14px 20px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontFamily:MN,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#475569"}}>Priority Orders</span>
               <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{visibleOrders.length}</span>
             </div>
             {visibleOrders.map((o,oi)=>{
-              const issueText=typeof insight.issue==="function"?insight.issue(o):"";
+              const issueText=typeof primary.issue==="function"?primary.issue(o):"";
               return <div key={o.id} className="hv-row" style={{padding:mob?"12px 16px":"12px 20px",borderBottom:oi<visibleOrders.length-1?"1px solid #f8fafc":"none",display:"flex",alignItems:"center",gap:16}}>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
