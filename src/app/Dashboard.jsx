@@ -1477,19 +1477,18 @@ export default function Dashboard(){
 
         {mob?<div style={{display:"flex",flexDirection:"column",gap:24}}>
           {!pendingApproval.length&&!readyToDispatch.length&&<div style={{...S.card,padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</div>}
-          {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #059669"}}>
-            <div style={{padding:"14px 16px",background:"#f9fefb",borderBottom:"1px solid #ecfdf5",display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:7,height:7,borderRadius:"50%",background:"#059669",flexShrink:0}}/>
+          {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"2px solid #05966940"}}>
+            <div style={{padding:"14px 16px",background:"#fafdfb",borderBottom:"1px solid #f0f5f1",display:"flex",alignItems:"center",gap:10}}>
               <div style={{flex:1}}>
-                <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>Ready to Dispatch ({readyToDispatch.length}) · {fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</div>
+                <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#27272a"}}>Ready to Dispatch <span style={{color:"#a1a1aa",fontWeight:500}}>({readyToDispatch.length}) · {fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</span></div>
               </div>
             </div>
-            {(showAllRtd?rtdSorted:rtdSorted.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const dy=daysSince(o.approvalDate);const dC=dy>7?"#dc2626":dy>3?"#ea580c":"#059669";
-              return <div key={o.id} style={{borderBottom:"1px solid #f1f5f9"}}>
-                <div className="hv-row" onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#ecfdf5":isNewOrder(o)?"#f0f9ff":oi%2?"#f0fdf4":"#fff",borderLeft:ep?"3px solid #059669":isNewOrder(o)?"3px solid #2563eb":"3px solid transparent"}}>
+            {(showAllRtd?rtdSorted:rtdSorted.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const dy=daysSince(o.approvalDate);const isOD=dy>7;const dC=isOD?"#991b1b":dy>3?"#9a3412":"#065f46";
+              return <div key={o.id} style={{borderBottom:"1px solid #f5f5f4"}}>
+                <div className="hv-row" onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#f0fdf4":isOD?"#fefbfb":isNewOrder(o)?"#f8faff":"#fff",borderLeft:ep?"2px solid #059669":isOD?"2px solid #fca5a540":isNewOrder(o)?"2px solid #93c5fd40":"2px solid transparent"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                    <span style={{fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:6}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:700,color:"#2563eb",background:"#eff6ff",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
-                    <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:dC,background:dC+"15",padding:"2px 7px",borderRadius:10}}>{dy}d</span>
+                    <span style={{fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:6}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:600,color:"#1e40af",background:"#eff6ff",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
+                    <span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:dC,background:dC+"10",padding:"2px 7px",borderRadius:4}}>{dy}d</span>
                   </div>
                   <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:4}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div>
                   <div style={{display:"flex",gap:10,fontSize:10,fontFamily:MN,color:"#64748b",flexWrap:"wrap"}}>
@@ -1526,19 +1525,18 @@ export default function Dashboard(){
               <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8"}}>Show less</span>
             </div>}
           </div>}
-          {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #ea580c"}}>
-            <div style={{padding:"14px 16px",background:"#fffdf7",borderBottom:"1px solid #fef9ee",display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:7,height:7,borderRadius:"50%",background:"#ea580c",flexShrink:0}}/>
+          {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"2px solid #ea580c40"}}>
+            <div style={{padding:"14px 16px",background:"#fffefb",borderBottom:"1px solid #f5f2ec",display:"flex",alignItems:"center",gap:10}}>
               <div style={{flex:1}}>
-                <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>Pending Approval ({pendingApproval.length}) · {fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</div>
+                <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#27272a"}}>Pending Approval <span style={{color:"#a1a1aa",fontWeight:500}}>({pendingApproval.length}) · {fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</span></div>
               </div>
             </div>
-            {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
-              return <div key={o.id} style={{borderBottom:"1px solid #f1f5f9"}}>
-                <div className="hv-row" onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#fffbeb":isNewOrder(o)?"#f0f9ff":oi%2?"#f8fafc":"#fff",borderLeft:ep?"3px solid #d97706":isNewOrder(o)?"3px solid #2563eb":"3px solid transparent"}}>
+            {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const isStale=days>30;const dc=isStale?"#991b1b":days>14?"#9a3412":"#065f46";const ps=payStatus(!!o.approvalDate);
+              return <div key={o.id} style={{borderBottom:"1px solid #f5f5f4"}}>
+                <div className="hv-row" onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#fffbeb":isStale?"#fefbfb":isNewOrder(o)?"#f8faff":"#fff",borderLeft:ep?"2px solid #d97706":isStale?"2px solid #fca5a540":isNewOrder(o)?"2px solid #93c5fd40":"2px solid transparent"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                    <span style={{fontWeight:700,fontSize:13,display:"flex",alignItems:"center",gap:6}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:700,color:"#2563eb",background:"#eff6ff",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
-                    <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:dc,background:dc+"15",padding:"2px 7px",borderRadius:10}}>{days}d</span>
+                    <span style={{fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:6}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:600,color:"#1e40af",background:"#eff6ff",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
+                    <span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:dc,background:dc+"10",padding:"2px 7px",borderRadius:4}}>{days}d</span>
                   </div>
                   <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:4}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div>
                   <div style={{display:"flex",gap:10,fontSize:10,fontFamily:MN,color:"#64748b",flexWrap:"wrap",alignItems:"center"}}>
@@ -1579,16 +1577,15 @@ export default function Dashboard(){
         </div>:
         <div style={{display:"flex",flexDirection:"column",gap:32}}>
           {!pendingApproval.length&&!readyToDispatch.length&&<div style={{...S.card,padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</div>}
-          {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #059669"}}>
-            <div style={{padding:"14px 20px",background:"#f9fefb",borderBottom:"1px solid #ecfdf5",display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:7,height:7,borderRadius:"50%",background:"#059669",flexShrink:0}}/>
-              <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>Ready to Dispatch ({readyToDispatch.length}) · {fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</div>
+          {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"2px solid #05966940"}}>
+            <div style={{padding:"14px 22px",background:"#fafdfb",borderBottom:"1px solid #f0f5f1",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#27272a"}}>Ready to Dispatch <span style={{color:"#a1a1aa",fontWeight:500}}>({readyToDispatch.length}) · {fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</span></div>
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
-                <th style={{width:22,background:"#f8fafc",borderBottom:"1px solid #e2e8f0"}}/>
+                <th style={{width:22,background:"#fafafa",borderBottom:"1px solid #f0f0f0"}}/>
                 {[["Date ↕",null],["Days",null],["Party",null],["Categories",null],["Qty",null],["POC",null],["Value",null],["Status",null]].map(([h])=>
-                  <th key={h} style={{background:"#f8fafc",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"10px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left",borderBottom:"1px solid #e2e8f0"}}>{h}</th>
+                  <th key={h} style={{background:"#fafafa",color:"#a1a1aa",fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",padding:"10px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left",borderBottom:"1px solid #f0f0f0"}}>{h}</th>
                 )}
               </tr></thead>
               <tbody>{showAllRtd?rtdRows:rtdRows.slice(0,10)}</tbody>
@@ -1600,26 +1597,25 @@ export default function Dashboard(){
               <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8"}}>Show less</span>
             </div>}
           </div>}
-          {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #ea580c"}}>
-            <div style={{padding:"14px 20px",background:"#fffdf7",borderBottom:"1px solid #fef9ee",display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:7,height:7,borderRadius:"50%",background:"#ea580c",flexShrink:0}}/>
-              <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0f172a"}}>Pending Approval ({pendingApproval.length}) · {fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</div>
+          {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"2px solid #ea580c40"}}>
+            <div style={{padding:"14px 22px",background:"#fffefb",borderBottom:"1px solid #f5f2ec",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#27272a"}}>Pending Approval <span style={{color:"#a1a1aa",fontWeight:500}}>({pendingApproval.length}) · {fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</span></div>
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
-                <th style={{width:22,background:"#f8fafc",borderBottom:"1px solid #e2e8f0"}}/>
+                <th style={{width:22,background:"#fafafa",borderBottom:"1px solid #f0f0f0"}}/>
                 {[["Date ↕",null],["Days",null],["Party",null],["Categories",null],["Qty",null],["POC",null],["Value",null],["Status",null]].map(([h])=>
-                  <th key={h} style={{background:"#f8fafc",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"10px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left",borderBottom:"1px solid #e2e8f0"}}>{h}</th>
+                  <th key={h} style={{background:"#fafafa",color:"#a1a1aa",fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",padding:"10px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left",borderBottom:"1px solid #f0f0f0"}}>{h}</th>
                 )}
               </tr></thead>
               <tbody>
-              {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
+              {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const isStale=days>30;const dc=isStale?"#991b1b":days>14?"#9a3412":"#065f46";const ps=payStatus(!!o.approvalDate);
                 return[
-                  <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#fffbeb":oi%2?"#f8fafc":"#fff",borderLeft:ep?"3px solid #d97706":"3px solid transparent",transition:"background 0.15s"}}>
+                  <tr className="hv-row" key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#fffbeb":isStale?"#fefbfb":"#fff",borderLeft:ep?"2px solid #d97706":isStale?"2px solid #fca5a540":"2px solid transparent"}}>
                     <td style={{padding:"13px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:11,whiteSpace:"nowrap"}}>{o.piDate}</td>
-                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}><span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:dc,background:dc+"12",padding:"2px 8px",borderRadius:12}}>{days}d</span></td>
-                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontWeight:600,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.party}</td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f5f5f4"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:dc,background:dc+"08",padding:"2px 7px",borderRadius:4}}>{days}d</span></td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f5f5f4",fontWeight:600,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.party}</td>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div></td>
                     
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:13,fontWeight:700,textAlign:"right"}}>{cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0)}</td>
