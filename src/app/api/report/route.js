@@ -13,16 +13,24 @@ const DAILY_LIMIT = 10;
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // --- Google Sheets auth ---
-async function getSheets() {
+let _auth = null;
+
+async function getAuth() {
+  if (_auth) return _auth;
   const raw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   if (!raw) throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY not set');
   let key;
   try { key = JSON.parse(raw); } catch { key = JSON.parse(Buffer.from(raw, 'base64').toString('utf8')); }
   if (key.private_key) key.private_key = key.private_key.replace(/\\n/g, '\n');
-  const auth = new google.auth.GoogleAuth({
+  _auth = new google.auth.GoogleAuth({
     credentials: key,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    scopes: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'],
   });
+  return _auth;
+}
+
+async function getSheets() {
+  const auth = await getAuth();
   return google.sheets({ version: 'v4', auth });
 }
 
@@ -55,6 +63,17 @@ async function getUsageSheetId(sheets) {
     },
   });
   _usageSheetId = create.data.spreadsheetId;
+
+  // Share with owner so it appears in their Google Drive
+  try {
+    const auth = await getAuth();
+    const drive = google.drive({ version: 'v3', auth });
+    await drive.permissions.create({
+      fileId: _usageSheetId,
+      requestBody: { type: 'user', role: 'writer', emailAddress: 'abhiarora.ag@gmail.com' },
+      sendNotificationEmail: false,
+    });
+  } catch {}
 
   // Add headers
   await sheets.spreadsheets.values.append({
