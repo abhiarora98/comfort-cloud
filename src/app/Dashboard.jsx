@@ -1462,12 +1462,15 @@ export default function Dashboard(){
             {newOrderIds.size>0&&!showNewOnly&&<button onClick={()=>{setShowNewOnly(true);setShowAllRtd(false);setShowAllPend(false);}} style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#2563eb",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:6,padding:"5px 12px",cursor:"pointer",whiteSpace:"nowrap",animation:"pulse 2s ease-in-out infinite"}}>+{newOrderIds.size} new</button>}
             {(srch||cat!=="all"||poc||showNewOnly)&&<button onClick={()=>{setSrch("");setCat("all");setPoc("");setShowNewOnly(false);setNewOrderIds(new Set());setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8",background:"none",border:"1px solid #e2e8f0",borderRadius:6,padding:"5px 12px",cursor:"pointer",whiteSpace:"nowrap"}}>Clear all</button>}
           </div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            {[["all","All",filtered.length],...Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>[c,(CC[c]||CC.Other).l,n])].map(([val,lbl,n])=>
-              <div key={val} className={cat!==val?"hv-pill":""} onClick={()=>{setCat(val);setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{padding:"5px 12px",borderRadius:6,border:cat===val?"1px solid #2563eb":"1px solid #f1f5f9",background:cat===val?"#eff6ff":"#f8fafc",color:cat===val?"#2563eb":"#475569",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:5}}>
-                {val!=="all"&&<Dot c={cat===val?"#2563eb":(CC[val]||CC.Other).c} s={5}/>}{lbl}<span style={{opacity:0.5,marginLeft:1}}>{n}</span>
-              </div>
-            )}
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {[["all","All orders",filtered.length,null],...Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>[c,(CC[c]||CC.Other).l,n,(CC[c]||CC.Other).c])].map(([val,lbl,n,dotC],idx)=>{
+              const isActive=cat===val;const isTop=idx===1&&cat==="all";
+              return <div key={val} className={!isActive?"hv-pill":""} onClick={()=>{setCat(val);setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{padding:"6px 14px",borderRadius:8,border:isActive?"1px solid #2563eb":isTop?"1px solid #cbd5e1":"1px solid #f0f1f3",background:isActive?"#eff6ff":"#fff",color:isActive?"#2563eb":"#475569",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:isActive?700:500,display:"flex",alignItems:"center",gap:6}}>
+                {val!=="all"&&<Dot c={isActive?"#2563eb":(dotC||"#94a3b8")} s={5}/>}
+                {lbl}
+                <span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:isActive?"#2563eb":"#94a3b8",marginLeft:1}}>{n}</span>
+              </div>;
+            })}
           </div>
         </div>
 
