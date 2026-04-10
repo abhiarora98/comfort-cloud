@@ -1181,11 +1181,13 @@ function groupOrders(rawOrders){
 
 export default function Dashboard(){
   const w=useW();const mob=w<768;
+  const {user}=useUser();const {signOut}=useClerk();
   const[tab,setTab]=useState("pending");const[menuOpen,setMenuOpen]=useState(false);
   const[cat,setCat]=useState("all");const[srch,setSrch]=useState("");const[srt,setSrt]=useState("da");const[poc,setPoc]=useState("");
   const[pg,setPg]=useState(1);const[exp,setExp]=useState(null);const[expParties,setExpParties]=useState({});
   const[selP,setSelP]=useState(null);const[pcf,setPcf]=useState("all");const[psrch,setPsrch]=useState("");
   const[showHist,setShowHist]=useState(false);const[payF,setPayF]=useState("all");const[mpv,setMpv]=useState(false);const[showCats,setShowCats]=useState(false);const[insIdx,setInsIdx]=useState(0);const[actionOpen,setActionOpen]=useState(false);const[doneIds,setDoneIds]=useState(new Set());const[showAllRtd,setShowAllRtd]=useState(false);const[showAllPend,setShowAllPend]=useState(false);const[insPaused,setInsPaused]=useState(false);const insCount=useRef(1);
+  const[reportOpen,setReportOpen]=useState(false);const[reportQ,setReportQ]=useState("");const[reportLoading,setReportLoading]=useState(false);const[reportResult,setReportResult]=useState(null);const[reportRemaining,setReportRemaining]=useState(10);const[reportError,setReportError]=useState("");
   const[liveOrders,setLiveOrders]=useState(null);
   const[lastUpdated,setLastUpdated]=useState(null);
   const[fetchStatus,setFetchStatus]=useState("idle");
@@ -1231,6 +1233,8 @@ export default function Dashboard(){
   const resumeCarousel=useCallback(()=>setInsPaused(false),[]);
 
   const isNewOrder=useCallback((o)=>newOrderIds.has(o.party+"||"+o.piDate),[newOrderIds]);
+
+  // (report functions defined after base data below)
   const filtered=useMemo(()=>{
     let r=ORDERS.filter(o=>{
       if(o.lineCount>0&&o.dispatchedCount>=o.lineCount)return false;
@@ -1256,6 +1260,30 @@ export default function Dashboard(){
   const baseOverdue=useMemo(()=>baseRtd.filter(o=>daysSince(o.approvalDate)>7),[baseRtd]);
   const baseLines=useMemo(()=>baseOrders.flatMap(o=>o.lines),[baseOrders]);
 
+  // Report generation
+  const generateReport=useCallback(async(q)=>{
+    if(!q.trim()||reportLoading)return;
+    setReportLoading(true);setReportError("");setReportResult(null);
+    try{
+      const res=await fetch("/api/report",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q.trim(),user:user?.emailAddresses?.[0]?.emailAddress||user?.firstName||"anonymous"})});
+      const data=await res.json();
+      if(!res.ok){setReportError(data.message||"Failed to generate report");setReportRemaining(data.remaining??reportRemaining);return;}
+      setReportResult(data.report);setReportRemaining(data.remaining??reportRemaining);setReportQ("");
+    }catch(e){setReportError("Something went wrong. Try again.");}
+    finally{setReportLoading(false);}
+  },[reportLoading,user,reportRemaining]);
+
+  const reportSuggestions=useMemo(()=>{
+    const s=[];
+    if(baseOverdue.length>0)s.push("Overdue orders breakdown");
+    if(basePend.length>baseRtd.length)s.push("What's blocking approvals?");
+    if(baseRtd.length>=5)s.push("What's ready to ship today?");
+    s.push("Top 5 parties by pending value");
+    s.push("Category demand breakdown");
+    s.push("Sales POC performance comparison");
+    return s.slice(0,4);
+  },[baseOverdue,basePend,baseRtd]);
+
   const readyToDispatch=filtered.filter(o=>o.approvalDate&&o.dispatchedCount<o.lineCount);const pendingApproval=filtered.filter(o=>!o.approvalDate);const page=filtered.slice((pg-1)*PG,pg*PG);const pages=Math.max(1,Math.ceil(pendingApproval.length/PG));
   const rtdSorted=(()=>{const r=[...readyToDispatch];if(srt==="dd")r.sort((a,b)=>pd(b.approvalDate)-pd(a.approvalDate));else if(srt==="pa")r.sort((a,b)=>a.party.localeCompare(b.party));else if(srt==="qd"){const cq=o=>cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0);r.sort((a,b)=>cq(b)-cq(a));}else if(srt==="vd")r.sort((a,b)=>b.totalValue-a.totalValue);else r.sort((a,b)=>pd(a.approvalDate)-pd(b.approvalDate));return r;})();const rtdOverdue=rtdSorted.filter(o=>daysSince(o.approvalDate)>7);const rtdOnTime=rtdSorted.filter(o=>daysSince(o.approvalDate)<=7);const rtdDetailTbl=(o)=>(<tr key={o.id+"x"}><td colSpan={9} style={{padding:0,borderBottom:"1px solid #86efac"}}><div style={{background:"#f8fafc",padding:"8px 16px 4px 36px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}><span style={{...S.section,fontSize:10}}>{o.lineCount} line items</span><span style={{fontFamily:MN,fontSize:11,color:"#64748b"}}>· {fmtVal(o.totalValue)}</span><span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>PI</span><span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#475569"}}>{o.id}</span><span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>PI Date</span><span style={{fontFamily:MN,fontSize:11,color:"#475569"}}>{o.piDate}</span></div><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["#","Code","Model","Backing","Colour","Width","Length","Qty","Rate","Value"].map(h=><th key={h} style={{padding:"8px 14px",...S.section,fontSize:9,background:"#f1f5f9",borderBottom:"1px solid #e2e8f0",textAlign:["Qty","Rate","Value"].includes(h)?"right":"left"}}>{h}</th>)}</tr></thead><tbody>{o.lines.map((l,i)=><tr key={l.no||i} style={{background:i%2?"#fafafa":"#fff"}}><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,color:"#94a3b8"}}>{i+1}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,fontWeight:600,color:"#64748b"}}>{l.partyCode||"—"}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,fontWeight:600}}>{l.model}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,color:"#64748b"}}>{l.backing}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12}}>{l.colour}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN}}>{l.width}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN,color:"#94a3b8"}}>{l.length}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:14,fontFamily:MN,fontWeight:700,textAlign:"right"}}>{l.qty}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN,textAlign:"right",color:"#64748b"}}>{l.actualRate||"—"}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,fontFamily:MN,fontWeight:600,textAlign:"right"}}>{fmtVal(l.value||0)}</td></tr>)}</tbody></table></td></tr>);
   const rtdRows=[];
@@ -1275,7 +1303,6 @@ export default function Dashboard(){
   const pFilt=PARTIES.filter(p=>!psrch||p.name.toLowerCase().includes(psrch.toLowerCase()));
   const sPObj=selP?PARTIES.find(p=>p.name===selP):null;
 
-  const {user}=useUser();const {signOut}=useClerk();
   const role=user?.publicMetadata?.role||"sales";
   const ROLE_TABS={admin:["pending","party","stock","dispatch","analytics","calls"],management:["pending","party","analytics"],ops:["pending","stock","dispatch"],sales:["pending","party"]};
   const allowedTabs=ROLE_TABS[role]||ROLE_TABS["sales"];
@@ -1285,7 +1312,7 @@ export default function Dashboard(){
   return <div style={{fontFamily:SN,background:"#F8FAFC",minHeight:"100vh",fontSize:13,color:"#0F172A"}}>
     
     {/* Fonts loaded in layout.js */}
-    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}.hv-row{transition:background 0.2s}.hv-row:hover{background:#F8FAFC!important}.hv-card{transition:box-shadow 0.2s,border-color 0.2s}.hv-card:hover{box-shadow:0 1px 4px rgba(0,0,0,0.04);border-color:#d1d5db}.hv-pill{transition:background 0.2s,border-color 0.2s}.hv-pill:hover{background:#E5E7EB!important}.hv-btn{transition:background 0.2s,opacity 0.2s}.hv-btn:hover{opacity:0.85}.hv-insight{transition:box-shadow 0.2s}.hv-insight:hover{box-shadow:0 2px 8px rgba(0,0,0,0.04)}.hv-insight-s{transition:background 0.2s}.hv-insight-s:hover{background:#F1F5F9!important}select{transition:border-color 0.2s}select:hover{border-color:#cbd5e1}`}</style>
+    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}.hv-row{transition:background 0.2s}.hv-row:hover{background:#F8FAFC!important}.hv-card{transition:box-shadow 0.2s,border-color 0.2s}.hv-card:hover{box-shadow:0 1px 4px rgba(0,0,0,0.04);border-color:#d1d5db}.hv-pill{transition:background 0.2s,border-color 0.2s}.hv-pill:hover{background:#E5E7EB!important}.hv-btn{transition:background 0.2s,opacity 0.2s}.hv-btn:hover{opacity:0.85}.hv-insight{transition:box-shadow 0.2s}.hv-insight:hover{box-shadow:0 2px 8px rgba(0,0,0,0.04)}.hv-insight-s{transition:background 0.2s}.hv-insight-s:hover{background:#F1F5F9!important}select{transition:border-color 0.2s}select:hover{border-color:#cbd5e1}`}</style>
 
     {/* Header */}
     <div style={{background:"#0f172a",color:"#fff",padding:mob?"0 16px":"0 28px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:200,borderBottom:"1px solid #1e293b"}}>
@@ -1294,6 +1321,7 @@ export default function Dashboard(){
         <div><div style={{fontFamily:MN,fontSize:16,fontWeight:700,letterSpacing:"0.12em",wordSpacing:"-0.08em",textTransform:"uppercase"}}>Comfort Cloud</div>{!mob&&<div style={{fontSize:10,opacity:0.4,fontFamily:MN,marginTop:-1,letterSpacing:"0.06em"}}>Dashboard</div>}</div>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>{setReportOpen(o=>!o);setReportResult(null);setReportError("");}} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"6px 12px",borderRadius:6,cursor:"pointer",fontFamily:MN,fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:13}}>📊</span>{!mob&&"Report"}</button>
         <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",padding:"6px 14px",borderRadius:8,fontSize:11,fontFamily:MN}}>
           <span style={{width:6,height:6,borderRadius:"50%",background:fetchStatus==="ok"?"#4ade80":fetchStatus==="loading"?"#fbbf24":"#94a3b8"}}/>
           {!mob&&<>{filtered.length} orders · {fmtVal(filtered.reduce((s,o)=>s+o.totalValue,0))}</>}
@@ -1708,5 +1736,69 @@ export default function Dashboard(){
       {tab==="analytics"&&<AnalyticsTab mob={mob}/>}
       {tab==="calls"&&<CallSchedule mob={mob}/>}
     </div>
+
+    {/* Report Panel */}
+    {reportOpen&&<div style={{position:"fixed",top:0,right:0,bottom:0,width:mob?"100%":480,background:"#fff",borderLeft:mob?"none":"1px solid #E5E7EB",zIndex:500,display:"flex",flexDirection:"column",boxShadow:"-4px 0 24px rgba(0,0,0,0.06)"}}>
+      {/* Header */}
+      <div style={{padding:"16px 24px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+        <div>
+          <div style={{fontFamily:MN,fontSize:14,fontWeight:600,color:"#0F172A"}}>Generate Report</div>
+          <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:2}}>{reportRemaining} reports left today</div>
+        </div>
+        <button onClick={()=>setReportOpen(false)} style={{background:"none",border:"none",color:"#94A3B8",fontSize:20,cursor:"pointer",padding:"4px 8px"}}>×</button>
+      </div>
+
+      {/* Content */}
+      <div style={{flex:1,overflowY:"auto",padding:"24px"}}>
+        {/* Input */}
+        {!reportResult&&!reportLoading&&<div>
+          <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94A3B8",marginBottom:12}}>What do you want to analyze?</div>
+          <div style={{position:"relative",marginBottom:20}}>
+            <input value={reportQ} onChange={e=>setReportQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")generateReport(reportQ);}} placeholder='e.g. "Compare AR vs VS performance"' style={{...S.input,width:"100%",padding:"12px 16px",fontSize:14,borderRadius:10,border:"1px solid #E5E7EB"}}/>
+          </div>
+          <button onClick={()=>generateReport(reportQ)} disabled={!reportQ.trim()} style={{width:"100%",padding:"12px",background:reportQ.trim()?"#0F172A":"#E5E7EB",color:reportQ.trim()?"#fff":"#94A3B8",border:"none",borderRadius:8,fontFamily:MN,fontSize:12,fontWeight:600,cursor:reportQ.trim()?"pointer":"default",marginBottom:28}}>Generate Report</button>
+
+          <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#94A3B8",marginBottom:12}}>Quick Reports</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {reportSuggestions.map((s,i)=>
+              <div key={i} className="hv-row" onClick={()=>generateReport(s)} style={{padding:"12px 16px",background:"#F8FAFC",borderRadius:8,border:"1px solid #E5E7EB",cursor:"pointer",fontFamily:MN,fontSize:12,color:"#475569",fontWeight:500}}>{s}</div>
+            )}
+          </div>
+
+          {reportError&&<div style={{marginTop:16,padding:"12px 16px",background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:8,fontFamily:MN,fontSize:12,color:"#DC2626"}}>{reportError}</div>}
+        </div>}
+
+        {/* Loading */}
+        {reportLoading&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 20px",textAlign:"center"}}>
+          <div style={{width:40,height:40,border:"3px solid #E5E7EB",borderTop:"3px solid #0F172A",borderRadius:"50%",animation:"spin 1s linear infinite",marginBottom:20}}/>
+          <div style={{fontFamily:MN,fontSize:13,fontWeight:600,color:"#0F172A",marginBottom:4}}>Analyzing your data...</div>
+          <div style={{fontFamily:MN,fontSize:11,color:"#94A3B8"}}>This takes 2-3 seconds</div>
+        </div>}
+
+        {/* Report Result */}
+        {reportResult&&<div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
+            <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#16A34A"}}>Report Ready</span>
+            <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{new Date(reportResult.generatedAt).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</span>
+          </div>
+
+          <div style={{background:"#F8FAFC",borderRadius:10,border:"1px solid #E5E7EB",padding:"24px",marginBottom:20}}>
+            <div style={{fontSize:16,fontWeight:600,color:"#0F172A",marginBottom:12,lineHeight:1.3}}>{reportResult.title}</div>
+            <div style={{fontSize:13,color:"#475569",lineHeight:1.7,whiteSpace:"pre-wrap"}}>{reportResult.body}</div>
+          </div>
+
+          {reportResult.cost&&<div style={{display:"flex",gap:16,fontFamily:MN,fontSize:10,color:"#94A3B8",marginBottom:20}}>
+            <span>Tokens: {reportResult.tokens.input+reportResult.tokens.output}</span>
+            <span>Cost: ₹{reportResult.cost.inr}</span>
+          </div>}
+
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={()=>{setReportResult(null);setReportError("");}} style={{flex:1,padding:"10px",background:"#0F172A",color:"#fff",border:"none",borderRadius:8,fontFamily:MN,fontSize:12,fontWeight:600,cursor:"pointer"}}>New Report</button>
+            <button onClick={()=>setReportOpen(false)} style={{flex:1,padding:"10px",background:"#F8FAFC",color:"#475569",border:"1px solid #E5E7EB",borderRadius:8,fontFamily:MN,fontSize:12,fontWeight:600,cursor:"pointer"}}>Close</button>
+          </div>
+        </div>}
+      </div>
+    </div>}
+    {reportOpen&&!mob&&<div onClick={()=>setReportOpen(false)} style={{position:"fixed",top:0,left:0,right:480,bottom:0,background:"rgba(0,0,0,0.1)",zIndex:499}}/>}
   </div>;
 }
