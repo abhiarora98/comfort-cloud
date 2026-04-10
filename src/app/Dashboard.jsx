@@ -1155,7 +1155,7 @@ function AnalyticsTab({mob}){
 /* ═══════════════ MAIN APP ═══════════════ */
 /* ═══════ LIVE DATA FETCH ═══════ */
 const SHEET_URL="https://docs.google.com/spreadsheets/d/1CQS5w9VLTjHcZ9Gzw3P6wGgZ0K6YDKuL1Ux42LQeRSQ/gviz/tq?tqx=out:csv&sheet=APP_DATA";
-const REFRESH_MS=15*60*1000;
+const REFRESH_MS=3*60*1000;
 function parseCSV(csv){
   var lines=csv.trim().split("\n");if(lines.length<2)return[];
   var orders=[];
@@ -1191,6 +1191,7 @@ export default function Dashboard(){
   const[liveOrders,setLiveOrders]=useState(null);
   const[lastUpdated,setLastUpdated]=useState(null);
   const[fetchStatus,setFetchStatus]=useState("idle");
+  const[agoText,setAgoText]=useState("");const[dataVer,setDataVer]=useState(0);
   const[newOrderIds,setNewOrderIds]=useState(new Set());
   const[showNewOnly,setShowNewOnly]=useState(false);
   const prevOrderIds=useRef(null);
@@ -1210,13 +1211,27 @@ export default function Dashboard(){
           if(added.size>0)setNewOrderIds(added);
         }
         prevOrderIds.current=currentIds;
-        setLiveOrders(grouped);setLastUpdated(new Date());setFetchStatus("ok");
+        setLiveOrders(grouped);setLastUpdated(new Date());setFetchStatus("ok");setDataVer(v=>v+1);
       }).catch(function(){setFetchStatus(liveOrders?"error_cached":"error");});
     };
     doFetch();
     var iv=setInterval(doFetch,REFRESH_MS);
     return function(){clearInterval(iv);};
   },[]);
+
+  // Live "updated X ago" ticker
+  useEffect(()=>{
+    const tick=()=>{
+      if(!lastUpdated){setAgoText("");return;}
+      const sec=Math.floor((Date.now()-lastUpdated.getTime())/1000);
+      if(sec<10)setAgoText("just now");
+      else if(sec<60)setAgoText(sec+"s ago");
+      else{const m=Math.floor(sec/60);setAgoText(m+"m ago");}
+    };
+    tick();
+    const iv=setInterval(tick,10000);
+    return()=>clearInterval(iv);
+  },[lastUpdated]);
 
   const ORDERS=(liveOrders||RAW).filter(o=>{const p=(o.party||"").trim().toLowerCase();return p&&p!=="test";});
   const PARTIES=useMemo(()=>{const ob={};ORDERS.forEach(o=>{if(!ob[o.party])ob[o.party]=[];ob[o.party].push(o);});
@@ -1332,7 +1347,7 @@ export default function Dashboard(){
   return <div style={{fontFamily:SN,background:"#F8FAFC",minHeight:"100vh",fontSize:13,color:"#0F172A"}}>
     
     {/* Fonts loaded in layout.js */}
-    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}.hv-row{transition:background 0.2s}.hv-row:hover{background:#F8FAFC!important}.hv-card{transition:box-shadow 0.2s,border-color 0.2s}.hv-card:hover{box-shadow:0 1px 4px rgba(0,0,0,0.04);border-color:#d1d5db}.hv-pill{transition:background 0.2s,border-color 0.2s}.hv-pill:hover{background:#E5E7EB!important}.hv-btn{transition:background 0.2s,opacity 0.2s}.hv-btn:hover{opacity:0.85}.hv-insight{transition:box-shadow 0.2s}.hv-insight:hover{box-shadow:0 2px 8px rgba(0,0,0,0.04)}.hv-insight-s{transition:background 0.2s}.hv-insight-s:hover{background:#F1F5F9!important}select{transition:border-color 0.2s}select:hover{border-color:#cbd5e1}`}</style>
+    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes flash{0%{background:#E0F2FE}100%{background:#fff}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}.hv-row{transition:background 0.2s}.hv-row:hover{background:#F8FAFC!important}.hv-card{transition:box-shadow 0.2s,border-color 0.2s}.hv-card:hover{box-shadow:0 1px 4px rgba(0,0,0,0.04);border-color:#d1d5db}.hv-pill{transition:background 0.2s,border-color 0.2s}.hv-pill:hover{background:#E5E7EB!important}.hv-btn{transition:background 0.2s,opacity 0.2s}.hv-btn:hover{opacity:0.85}.hv-insight{transition:box-shadow 0.2s}.hv-insight:hover{box-shadow:0 2px 8px rgba(0,0,0,0.04)}.hv-insight-s{transition:background 0.2s}.hv-insight-s:hover{background:#F1F5F9!important}select{transition:border-color 0.2s}select:hover{border-color:#cbd5e1}`}</style>
 
     {/* Header */}
     <div style={{background:"#0f172a",color:"#fff",padding:mob?"0 16px":"0 28px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:200,borderBottom:"1px solid #1e293b"}}>
@@ -1343,10 +1358,10 @@ export default function Dashboard(){
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <button onClick={()=>{setReportOpen(o=>!o);if(!reportOpen){setReportResult(null);setReportError("");setChatMsgs([]);setChatInput("");}}} style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"6px 12px",borderRadius:6,cursor:"pointer",fontFamily:MN,fontSize:11,fontWeight:600,display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:13}}>✦</span>{!mob&&"Talk to Neo"}</button>
         <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",padding:"6px 14px",borderRadius:8,fontSize:11,fontFamily:MN}}>
-          <span style={{width:6,height:6,borderRadius:"50%",background:fetchStatus==="ok"?"#4ade80":fetchStatus==="loading"?"#fbbf24":"#94a3b8"}}/>
-          {!mob&&<>{filtered.length} orders · {fmtVal(filtered.reduce((s,o)=>s+o.totalValue,0))}</>}
-          {fetchStatus==="ok"&&lastUpdated&&<span style={{opacity:0.6,marginLeft:4}}>{mob?`Live ${lastUpdated.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}`:` · Live ${lastUpdated.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}`}</span>}
-          {fetchStatus==="loading"&&<span style={{opacity:0.6,marginLeft:4}}>Fetching…</span>}
+          <span style={{width:6,height:6,borderRadius:"50%",background:fetchStatus==="ok"?"#4ade80":fetchStatus==="loading"?"#fbbf24":"#94a3b8",boxShadow:fetchStatus==="ok"?"0 0 6px #4ade8060":"none"}}/>
+          {!mob&&<>{baseOrders.length} orders · {fmtVal(baseOrders.reduce((s,o)=>s+o.totalValue,0))}</>}
+          {fetchStatus==="ok"&&agoText&&<span style={{opacity:0.5,marginLeft:2}}> · {agoText}</span>}
+          {fetchStatus==="loading"&&<span style={{opacity:0.6,marginLeft:4}}>Syncing…</span>}
           {fetchStatus==="error"&&<span style={{opacity:0.6,marginLeft:4}}>Offline</span>}
         </div>
         {user&&<div style={{position:"relative"}}>
@@ -1445,9 +1460,9 @@ export default function Dashboard(){
         {/* Supporting Metrics */}
         <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:mob?12:14,marginBottom:32}}>
           {[["Pipeline",fmtVal(baseOrders.reduce((s,o)=>s+o.totalValue,0)),baseOrders.length+" orders","#0F172A"],["Ready",baseRtd.length,fmtVal(baseRtd.reduce((s,o)=>s+o.totalValue,0)),"#16A34A"],["Pending",basePend.length,fmtVal(basePend.reduce((s,o)=>s+o.totalValue,0)),"#D97706"],["Overdue",baseOverdue.length,baseOverdue.length>0?fmtVal(baseOverdue.reduce((s,o)=>s+o.totalValue,0)):"None","#DC2626"]].map(([label,value,sub,color])=>
-            <div key={label} className="hv-card" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px",cursor:"default"}}>
+            <div key={label+dataVer} className="hv-card" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px",cursor:"default",animation:dataVer>1?"flash 1.5s ease":"none"}}>
               <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>{label}</div>
-              <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:label==="Overdue"&&baseOverdue.length===0?"#94A3B8":color,lineHeight:1,marginBottom:4}}>{value}</div>
+              <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:label==="Overdue"&&baseOverdue.length===0?"#94A3B8":color,lineHeight:1,marginBottom:4,transition:"color 0.5s"}}>{value}</div>
               <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{sub}</div>
             </div>
           )}
