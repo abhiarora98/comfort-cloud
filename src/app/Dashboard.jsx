@@ -1457,40 +1457,40 @@ export default function Dashboard(){
 
       {/* ═══ PENDING ═══ */}
       {tab==="pending"&&<div>
-        {/* Activity Feed — Hero */}
-        <div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:20,overflow:"hidden"}}>
-          <div style={{padding:"14px 24px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{width:7,height:7,borderRadius:"50%",background:"#16A34A",boxShadow:"0 0 6px #16A34A60"}}/>
-              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Today's Activity</span>
-              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</span>
+        {/* Activity Feed — Premium Glass */}
+        <div style={{background:"linear-gradient(135deg,#0c1222 0%,#162036 50%,#0f1a2e 100%)",borderRadius:16,marginBottom:24,overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,0.12)",border:"1px solid rgba(255,255,255,0.06)"}}>
+          <div style={{padding:mob?"16px 18px":"18px 28px",borderBottom:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between",backdropFilter:"blur(12px)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{width:7,height:7,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 10px #4ade8060",animation:"pulse 3s ease-in-out infinite"}}/>
+              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.12em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)"}}>Live</span>
+              <span style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.25)"}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short"})}</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{activityFeed.length} events</span>
-              {agoText&&<span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>· {agoText}</span>}
+              <span style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.25)"}}>{activityFeed.length} events</span>
+              {agoText&&<span style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.2)"}}>· {agoText}</span>}
             </div>
           </div>
-          <div style={{maxHeight:mob?240:220,overflowY:"auto"}}>
-            {activityFeed.length===0?<div style={{padding:"24px",textAlign:"center",fontFamily:MN,fontSize:12,color:"#94A3B8"}}>Waiting for first sync...</div>:
+          <div style={{maxHeight:mob?260:240,overflowY:"auto"}}>
+            {activityFeed.length===0?<div style={{padding:"32px",textAlign:"center",fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.3)"}}>Waiting for first sync...</div>:
             activityFeed.map((a,i)=>{
-              const colors={new_order:"#2563EB",approved:"#16A34A",dispatched:"#16A34A",overdue:"#DC2626",value_up:"#16A34A",value_down:"#DC2626",summary:"#475569",ready:"#16A34A",pending:"#D97706",poc_summary:"#475569"};
-              const c=a.poc?POC_COLORS[a.poc]||"#475569":colors[a.type]||"#475569";
+              const colors={new_order:"#60a5fa",approved:"#4ade80",dispatched:"#4ade80",overdue:"#f87171",value_up:"#4ade80",value_down:"#f87171",summary:"rgba(255,255,255,0.6)",ready:"#4ade80",pending:"#fbbf24",poc_summary:"rgba(255,255,255,0.5)"};
+              const c=a.poc?(POC_COLORS[a.poc]||"#94a3b8"):colors[a.type]||"rgba(255,255,255,0.5)";
               const hasDetail=!!a.detail;const isExp=feedExp===i;
               return <div key={i}>
-                <div className="hv-row" onClick={()=>hasDetail&&setFeedExp(isExp?null:i)} style={{padding:mob?"10px 16px":"10px 24px",borderBottom:(!isExp&&i<activityFeed.length-1)?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12,cursor:hasDetail?"pointer":"default"}}>
-                  <span style={{width:22,height:22,borderRadius:6,background:c+"10",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:c,fontFamily:MN,fontWeight:700,flexShrink:0}}>{a.icon}</span>
-                  <span style={{flex:1,fontSize:13,color:"#0F172A",lineHeight:1.4}}>{a.text}</span>
-                  <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8",flexShrink:0}}>{a.time}</span>
+                <div onClick={()=>hasDetail&&setFeedExp(isExp?null:i)} style={{padding:mob?"11px 18px":"11px 28px",borderBottom:(!isExp&&i<activityFeed.length-1)?"1px solid rgba(255,255,255,0.04)":"none",display:"flex",alignItems:"center",gap:12,cursor:hasDetail?"pointer":"default",transition:"background 0.2s",background:"transparent"}} onMouseEnter={e=>{if(hasDetail)e.currentTarget.style.background="rgba(255,255,255,0.03)";}} onMouseLeave={e=>{e.currentTarget.style.background="transparent";}}>
+                  <span style={{width:22,height:22,borderRadius:8,background:c+"18",border:"1px solid "+c+"20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:c,fontFamily:MN,fontWeight:700,flexShrink:0}}>{a.icon}</span>
+                  <span style={{flex:1,fontSize:13,color:"rgba(255,255,255,0.85)",lineHeight:1.4,fontWeight:a.type==="summary"?600:400}}>{a.text}</span>
+                  <span style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.2)",flexShrink:0}}>{a.time}</span>
                 </div>
-                {isExp&&a.detail&&<div style={{padding:mob?"8px 16px 12px 50px":"8px 24px 12px 58px",borderBottom:"1px solid #F1F5F9",background:"#F8FAFC"}}>
+                {isExp&&a.detail&&<div style={{padding:mob?"8px 18px 12px 52px":"8px 28px 12px 68px",borderBottom:"1px solid rgba(255,255,255,0.04)",background:"rgba(255,255,255,0.02)"}}>
                   <div style={{display:"flex",gap:mob?8:16,flexWrap:"wrap",fontFamily:MN,fontSize:11}}>
-                    <span style={{color:"#94A3B8"}}>#{a.detail.id}</span>
-                    <span style={{fontWeight:700,color:"#0F172A"}}>{fmtVal(a.detail.value)}</span>
-                    <span style={{color:"#475569"}}>{a.detail.qty} qty</span>
-                    {a.detail.poc&&<span style={{fontWeight:600,color:POC_COLORS[a.detail.poc]||"#475569"}}>{a.detail.poc}</span>}
-                    {a.detail.cats&&a.detail.cats.map(function(ct){return <span key={ct} style={{color:"#94A3B8"}}>{(CC[ct]||CC.Other).l||ct}</span>;})}
-                    {a.detail.piDate&&<span style={{color:"#94A3B8"}}>PI: {a.detail.piDate}</span>}
-                    {a.detail.approvalDate&&<span style={{color:"#16A34A"}}>Approved: {a.detail.approvalDate}</span>}
+                    <span style={{color:"rgba(255,255,255,0.3)"}}>#{a.detail.id}</span>
+                    <span style={{fontWeight:700,color:"#fff"}}>{fmtVal(a.detail.value)}</span>
+                    <span style={{color:"rgba(255,255,255,0.5)"}}>{a.detail.qty} qty</span>
+                    {a.detail.poc&&<span style={{fontWeight:600,color:POC_COLORS[a.detail.poc]||"rgba(255,255,255,0.5)"}}>{a.detail.poc}</span>}
+                    {a.detail.cats&&a.detail.cats.map(function(ct){return <span key={ct} style={{color:"rgba(255,255,255,0.3)"}}>{(CC[ct]||CC.Other).l||ct}</span>;})}
+                    {a.detail.piDate&&<span style={{color:"rgba(255,255,255,0.25)"}}>PI: {a.detail.piDate}</span>}
+                    {a.detail.approvalDate&&<span style={{color:"#4ade80"}}>Approved: {a.detail.approvalDate}</span>}
                   </div>
                 </div>}
               </div>;
