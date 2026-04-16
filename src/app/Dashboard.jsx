@@ -1468,9 +1468,9 @@ export default function Dashboard(){
               const c=a.poc?(POC_COLORS[a.poc]||"#94a3b8"):colors[a.type]||"rgba(255,255,255,0.5)";
               const hasDetail=!!a.detail;const isExp=feedExp===i;
               return <div key={i}>
-                <div className={hasDetail?"hv-dark":""} onClick={()=>hasDetail&&setFeedExp(isExp?null:i)} style={{padding:mob?"11px 18px":"11px 28px",borderBottom:(!isExp&&i<activityFeed.length-1)?"1px solid rgba(255,255,255,0.04)":"none",display:"flex",alignItems:"center",gap:12,cursor:hasDetail?"pointer":"default"}}>
-                  <span style={{width:22,height:22,borderRadius:8,background:c+"18",border:"1px solid "+c+"20",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:c,fontFamily:MN,fontWeight:700,flexShrink:0}}>{a.icon}</span>
-                  <span style={{flex:1,fontSize:13,color:"rgba(255,255,255,0.85)",lineHeight:1.4,fontWeight:a.type==="summary"?600:400}}>{a.text}</span>
+                <div className={hasDetail?"hv-dark":""} onClick={()=>hasDetail&&setFeedExp(isExp?null:i)} style={{padding:mob?"11px 18px":"11px 28px",borderBottom:(!isExp&&i<activityFeed.length-1)?"1px solid rgba(255,255,255,0.04)":"none",display:"flex",alignItems:"center",gap:12,cursor:hasDetail?"pointer":"default",background:isExp?"rgba(255,255,255,0.06)":"transparent"}}>
+                  <span style={{width:22,height:22,borderRadius:8,background:isExp?c+"30":c+"18",border:"1px solid "+(isExp?c+"40":c+"20"),display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:isExp?"#fff":c,fontFamily:MN,fontWeight:700,flexShrink:0}}>{a.icon}</span>
+                  <span style={{flex:1,fontSize:13,color:isExp?"#fff":"rgba(255,255,255,0.85)",lineHeight:1.4,fontWeight:isExp?600:a.type==="summary"?600:400}}>{a.text}</span>
                   <span style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.2)",flexShrink:0}}>{a.time}</span>
                 </div>
                 {isExp&&a.detail&&<div style={{padding:mob?"8px 18px 12px 52px":"8px 28px 12px 68px",borderBottom:"1px solid rgba(255,255,255,0.04)",background:"rgba(255,255,255,0.02)"}}>
