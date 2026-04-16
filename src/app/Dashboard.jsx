@@ -1225,6 +1225,8 @@ export default function Dashboard(){
         var pendA=active.filter(function(o){return!o.approvalDate;});
         var odA=rtdA.filter(function(o){return daysSince(o.approvalDate)>7;});
         var totalValA=active.reduce(function(s,o){return s+o.totalValue;},0);
+        var todayStr=now.getDate()+"/"+(now.getMonth()+1<10?"0":"")+(now.getMonth()+1)+"/"+now.getFullYear();
+        var todayAlt=(now.getDate()<10?"0":"")+now.getDate()+"/"+(now.getMonth()+1<10?"0":"")+(now.getMonth()+1)+"/"+now.getFullYear();
         function isToday(d){var s=(d||"").trim();return s===todayStr||s===todayAlt;}
 
         var liveDiffs=[];
