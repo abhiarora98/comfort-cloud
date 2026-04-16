@@ -1228,69 +1228,51 @@ export default function Dashboard(){
         }
         prevOrderIds.current=currentIds;
 
-        // Build activity feed by comparing with previous snapshot
+        // --- Activity feed: full day scan + live diffs ---
         var now=new Date();
         var ts=now.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
         var dateStr=now.toISOString().split("T")[0];
+        var rtdA=active.filter(function(o){return o.approvalDate&&o.dispatchedCount<o.lineCount;});
+        var pendA=active.filter(function(o){return!o.approvalDate;});
+        var odA=rtdA.filter(function(o){return daysSince(o.approvalDate)>7;});
+        var totalValA=active.reduce(function(s,o){return s+o.totalValue;},0);
+        function isToday(d){var s=(d||"").trim();return s===todayStr||s===todayAlt;}
+
+        var liveDiffs=[];
         if(prevSnap.current){
-          var ps=prevSnap.current;var newActs=[];
-          var prevIds=new Set(ps.orders.map(function(o){return o.id;}));
-          active.forEach(function(o){if(!prevIds.has(o.id)){newActs.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+",detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate}});}});
-          var prevPendIds=new Set(ps.orders.filter(function(o){return!o.approvalDate;}).map(function(o){return o.id;}));
-          active.forEach(function(o){if(o.approvalDate&&prevPendIds.has(o.id)){newActs.push({type:"approved",text:o.party+" approved — "+fmtVal(o.totalValue)+" ready to ship",time:ts,date:dateStr,icon:"✓",detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate,approvalDate:o.approvalDate}});}});
-          var curIds=new Set(active.map(function(o){return o.id;}));
-          ps.orders.forEach(function(o){if(!curIds.has(o.id)){newActs.push({type:"dispatched",text:o.party+" dispatched — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"→",detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories}});}});
-          var prevOD=ps.orders.filter(function(o){return o.approvalDate&&daysSince(o.approvalDate)>7;}).length;
-          var curOD=active.filter(function(o){return o.approvalDate&&daysSince(o.approvalDate)>7;}).length;
-          if(curOD>prevOD){newActs.push({type:"overdue",text:(curOD-prevOD)+" more order"+(curOD-prevOD>1?"s":"")+" now overdue",time:ts,date:dateStr,icon:"!"});}
-          var prevVal=ps.orders.reduce(function(s,o){return s+o.totalValue;},0);
-          var curVal=active.reduce(function(s,o){return s+o.totalValue;},0);
-          var diff=curVal-prevVal;
-          if(Math.abs(diff)>10000){newActs.push({type:diff>0?"value_up":"value_down",text:"Pipeline "+(diff>0?"up":"down")+" "+fmtVal(Math.abs(diff))+" to "+fmtVal(curVal),time:ts,date:dateStr,icon:diff>0?"↑":"↓"});}
-          if(newActs.length>0)setActivityFeed(function(f){var updated=newActs.concat(f).slice(0,50);try{localStorage.setItem("cc_activity",JSON.stringify(updated));}catch{}return updated;});
-        } else {
-          // First load — seed with today's incoming orders + summary
-          if(activityFeed.length===0){
-            var rtd=active.filter(function(o){return o.approvalDate&&o.dispatchedCount<o.lineCount;});
-            var pend=active.filter(function(o){return!o.approvalDate;});
-            var od=rtd.filter(function(o){return daysSince(o.approvalDate)>7;});
-            var totalVal=active.reduce(function(s,o){return s+o.totalValue;},0);
-            var seed=[];
-
-            // Today's individual orders — approved today (moved to RTD today)
-            var todayStr=now.getDate()+"/"+(now.getMonth()+1<10?"0":"")+(now.getMonth()+1)+"/"+now.getFullYear();
-            var todayAlt=(now.getDate()<10?"0":"")+now.getDate()+"/"+(now.getMonth()+1<10?"0":"")+(now.getMonth()+1)+"/"+now.getFullYear();
-            rtd.forEach(function(o){
-              var ad=(o.approvalDate||"").trim();
-              if(ad===todayStr||ad===todayAlt){
-                seed.push({type:"approved",text:o.party+" approved today — "+fmtVal(o.totalValue)+" ready to ship",time:ts,date:dateStr,icon:"✓",detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate,approvalDate:o.approvalDate}});
-              }
-            });
-            pend.forEach(function(o){
-              var pd2=(o.piDate||"").trim();
-              if(pd2===todayStr||pd2===todayAlt){
-                seed.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+",detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate}});
-              }
-            });
-            rtd.forEach(function(o){
-              var pd2=(o.piDate||"").trim();
-              if(pd2===todayStr||pd2===todayAlt){
-                seed.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+",detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate,approvalDate:o.approvalDate}});
-              }
-            });
-
-            // Summary — broken down by POC
-            seed.push({type:"summary",text:active.length+" active orders worth "+fmtVal(totalVal),time:ts,date:dateStr,icon:"◆"});
-            var pocSum={};active.forEach(function(o){var p=o.salesPOC||"?";if(!pocSum[p])pocSum[p]={count:0,value:0,rtd:0,pend:0};pocSum[p].count++;pocSum[p].value+=o.totalValue;if(o.approvalDate)pocSum[p].rtd++;else pocSum[p].pend++;});
-            Object.entries(pocSum).sort(function(a,b){return b[1].value-a[1].value;}).forEach(function(e){
-              var p=e[0],s=e[1];
-              seed.push({type:"poc_summary",text:p+" — "+s.count+" orders · "+fmtVal(s.value)+" · "+s.rtd+" ready, "+s.pend+" pending",time:ts,date:dateStr,icon:"●",poc:p});
-            });
-            if(od.length>0)seed.push({type:"overdue",text:od.length+" orders overdue for shipping",time:ts,date:dateStr,icon:"!"});
-            setActivityFeed(seed);
-            try{localStorage.setItem("cc_activity",JSON.stringify(seed));}catch{}
-          }
+          var ps=prevSnap.current;
+          var prevIds2=new Set(ps.orders.map(function(o){return o.id;}));
+          active.forEach(function(o){if(!prevIds2.has(o.id))liveDiffs.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+",live:true,oid:o.id,detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate}});});
+          var prevPendIds2=new Set(ps.orders.filter(function(o){return!o.approvalDate;}).map(function(o){return o.id;}));
+          active.forEach(function(o){if(o.approvalDate&&prevPendIds2.has(o.id))liveDiffs.push({type:"approved",text:o.party+" approved — "+fmtVal(o.totalValue)+" ready to ship",time:ts,date:dateStr,icon:"✓",live:true,oid:o.id,detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate,approvalDate:o.approvalDate}});});
+          var curIds2=new Set(active.map(function(o){return o.id;}));
+          ps.orders.forEach(function(o){if(!curIds2.has(o.id))liveDiffs.push({type:"dispatched",text:o.party+" dispatched — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"→",live:true,oid:o.id,detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories}});});
+          var prevOD2=ps.orders.filter(function(o){return o.approvalDate&&daysSince(o.approvalDate)>7;}).length;
+          if(odA.length>prevOD2)liveDiffs.push({type:"overdue",text:(odA.length-prevOD2)+" more order"+(odA.length-prevOD2>1?"s":"")+" now overdue",time:ts,date:dateStr,icon:"!",live:true});
+          var prevVal2=ps.orders.reduce(function(s,o){return s+o.totalValue;},0);
+          var diffV=totalValA-prevVal2;
+          if(Math.abs(diffV)>10000)liveDiffs.push({type:diffV>0?"value_up":"value_down",text:"Pipeline "+(diffV>0?"up":"down")+" "+fmtVal(Math.abs(diffV))+" to "+fmtVal(totalValA),time:ts,date:dateStr,icon:diffV>0?"↑":"↓",live:true});
         }
+
+        // Full day scan + merge
+        setActivityFeed(function(existing){
+          var knownOids=new Set(existing.filter(function(a){return a.oid;}).map(function(a){return a.oid+"|"+a.type;}));
+          liveDiffs.forEach(function(d){if(d.oid)knownOids.add(d.oid+"|"+d.type);});
+          var dayItems=[];
+          rtdA.forEach(function(o){if(!knownOids.has(o.id+"|approved")&&isToday(o.approvalDate)){knownOids.add(o.id+"|approved");dayItems.push({type:"approved",text:o.party+" approved — "+fmtVal(o.totalValue)+" ready to ship",time:"—",date:dateStr,icon:"✓",oid:o.id,detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate,approvalDate:o.approvalDate}});}});
+          active.forEach(function(o){if(!knownOids.has(o.id+"|new_order")&&isToday(o.piDate)){knownOids.add(o.id+"|new_order");dayItems.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:"—",date:dateStr,icon:"+",oid:o.id,detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate,approvalDate:o.approvalDate||""}});}});
+
+          var pocSum={};active.forEach(function(o){var p=o.salesPOC||"?";if(!pocSum[p])pocSum[p]={count:0,value:0,rtd:0,pend:0};pocSum[p].count++;pocSum[p].value+=o.totalValue;if(o.approvalDate)pocSum[p].rtd++;else pocSum[p].pend++;});
+          var summaryItems=[{type:"summary",text:active.length+" active orders · "+fmtVal(totalValA),time:ts,date:dateStr,icon:"◆"}];
+          Object.entries(pocSum).sort(function(a,b){return b[1].value-a[1].value;}).forEach(function(e){summaryItems.push({type:"poc_summary",text:e[0]+" — "+e[1].count+" orders · "+fmtVal(e[1].value)+" · "+e[1].rtd+" ready, "+e[1].pend+" pending",time:ts,date:dateStr,icon:"●",poc:e[0]});});
+          if(odA.length>0)summaryItems.push({type:"overdue",text:odA.length+" orders overdue for shipping",time:ts,date:dateStr,icon:"!"});
+
+          var events=existing.filter(function(a){return a.type!=="summary"&&a.type!=="poc_summary"&&!(a.type==="overdue"&&!a.live);});
+          var merged=liveDiffs.concat(events,dayItems,summaryItems).slice(0,60);
+          try{localStorage.setItem("cc_activity",JSON.stringify(merged));}catch{}
+          return merged;
+        });
+
         prevSnap.current={orders:active};
         setLiveOrders(grouped);setLastUpdated(new Date());setFetchStatus("ok");setDataVer(v=>v+1);
       }).catch(function(){setFetchStatus(liveOrders?"error_cached":"error");});
