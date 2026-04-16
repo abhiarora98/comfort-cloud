@@ -1249,13 +1249,39 @@ export default function Dashboard(){
           if(Math.abs(diff)>10000){newActs.push({type:diff>0?"value_up":"value_down",text:"Pipeline "+(diff>0?"up":"down")+" "+fmtVal(Math.abs(diff))+" to "+fmtVal(curVal),time:ts,date:dateStr,icon:diff>0?"↑":"↓"});}
           if(newActs.length>0)setActivityFeed(function(f){var updated=newActs.concat(f).slice(0,50);try{localStorage.setItem("cc_activity",JSON.stringify(updated));}catch{}return updated;});
         } else {
-          // First load — only seed if localStorage was empty
+          // First load — seed with today's incoming orders + summary
           if(activityFeed.length===0){
             var rtd=active.filter(function(o){return o.approvalDate&&o.dispatchedCount<o.lineCount;});
             var pend=active.filter(function(o){return!o.approvalDate;});
             var od=rtd.filter(function(o){return daysSince(o.approvalDate)>7;});
             var totalVal=active.reduce(function(s,o){return s+o.totalValue;},0);
             var seed=[];
+
+            // Today's individual orders — approved today (moved to RTD today)
+            var todayStr=now.getDate()+"/"+(now.getMonth()+1<10?"0":"")+(now.getMonth()+1)+"/"+now.getFullYear();
+            var todayAlt=(now.getDate()<10?"0":"")+now.getDate()+"/"+(now.getMonth()+1<10?"0":"")+(now.getMonth()+1)+"/"+now.getFullYear();
+            rtd.forEach(function(o){
+              var ad=(o.approvalDate||"").trim();
+              if(ad===todayStr||ad===todayAlt){
+                seed.push({type:"approved",text:o.party+" approved today — "+fmtVal(o.totalValue)+" ready to ship",time:ts,date:dateStr,icon:"✓"});
+              }
+            });
+            // Today's individual orders — new orders placed today (PI date is today)
+            pend.forEach(function(o){
+              var pd2=(o.piDate||"").trim();
+              if(pd2===todayStr||pd2===todayAlt){
+                seed.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+"});
+              }
+            });
+            // Also check RTD for orders placed today
+            rtd.forEach(function(o){
+              var pd2=(o.piDate||"").trim();
+              if(pd2===todayStr||pd2===todayAlt){
+                seed.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+"});
+              }
+            });
+
+            // Summary at the bottom
             seed.push({type:"summary",text:active.length+" active orders worth "+fmtVal(totalVal),time:ts,date:dateStr,icon:"◆"});
             if(rtd.length>0)seed.push({type:"ready",text:rtd.length+" orders ready to dispatch — "+fmtVal(rtd.reduce(function(s,o){return s+o.totalValue;},0)),time:ts,date:dateStr,icon:"✓"});
             if(pend.length>0)seed.push({type:"pending",text:pend.length+" orders awaiting approval",time:ts,date:dateStr,icon:"◷"});
