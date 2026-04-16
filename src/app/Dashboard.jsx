@@ -1196,18 +1196,6 @@ export default function Dashboard(){
   const[showNewOnly,setShowNewOnly]=useState(false);
   const[activityFeed,setActivityFeed]=useState([]);
   const[insightOpen,setInsightOpen]=useState(false);const[feedExp,setFeedExp]=useState(null);
-  // Load activity from localStorage after mount
-  useEffect(()=>{
-    try{
-      const stored=localStorage.getItem("cc_activity");
-      if(!stored)return;
-      const parsed=JSON.parse(stored);
-      const today=new Date().toISOString().split("T")[0];
-      const filtered=parsed.filter(a=>a.date===today);
-      if(filtered.length>0)setActivityFeed(filtered);
-      if(filtered.length!==parsed.length)localStorage.setItem("cc_activity",JSON.stringify(filtered));
-    }catch{}
-  },[]);
   const prevOrderIds=useRef(null);
   const prevSnap=useRef(null);
 
@@ -1228,7 +1216,8 @@ export default function Dashboard(){
         }
         prevOrderIds.current=currentIds;
 
-        // --- Activity feed: full day scan + live diffs ---
+        // --- Activity feed ---
+        try{
         var now=new Date();
         var ts=now.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
         var dateStr=now.toISOString().split("T")[0];
@@ -1269,11 +1258,11 @@ export default function Dashboard(){
 
           var events=existing.filter(function(a){return a.type!=="summary"&&a.type!=="poc_summary"&&!(a.type==="overdue"&&!a.live);});
           var merged=liveDiffs.concat(events,dayItems,summaryItems).slice(0,60);
-          try{localStorage.setItem("cc_activity",JSON.stringify(merged));}catch{}
           return merged;
         });
 
         prevSnap.current={orders:active};
+        }catch(e){console.error("Activity feed error:",e);}
         setLiveOrders(grouped);setLastUpdated(new Date());setFetchStatus("ok");setDataVer(v=>v+1);
       }).catch(function(){setFetchStatus(liveOrders?"error_cached":"error");});
     };
