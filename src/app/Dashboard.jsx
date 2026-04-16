@@ -1207,7 +1207,7 @@ export default function Dashboard(){
       return filtered;
     }catch{return[];}
   });
-  const[insightOpen,setInsightOpen]=useState(false);
+  const[insightOpen,setInsightOpen]=useState(false);const[feedExp,setFeedExp]=useState(null);
   const prevOrderIds=useRef(null);
   const prevSnap=useRef(null);
 
@@ -1235,11 +1235,11 @@ export default function Dashboard(){
         if(prevSnap.current){
           var ps=prevSnap.current;var newActs=[];
           var prevIds=new Set(ps.orders.map(function(o){return o.id;}));
-          active.forEach(function(o){if(!prevIds.has(o.id)){newActs.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+"});}});
+          active.forEach(function(o){if(!prevIds.has(o.id)){newActs.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+",detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate}});}});
           var prevPendIds=new Set(ps.orders.filter(function(o){return!o.approvalDate;}).map(function(o){return o.id;}));
-          active.forEach(function(o){if(o.approvalDate&&prevPendIds.has(o.id)){newActs.push({type:"approved",text:o.party+" approved — "+fmtVal(o.totalValue)+" ready to ship",time:ts,date:dateStr,icon:"✓"});}});
+          active.forEach(function(o){if(o.approvalDate&&prevPendIds.has(o.id)){newActs.push({type:"approved",text:o.party+" approved — "+fmtVal(o.totalValue)+" ready to ship",time:ts,date:dateStr,icon:"✓",detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate,approvalDate:o.approvalDate}});}});
           var curIds=new Set(active.map(function(o){return o.id;}));
-          ps.orders.forEach(function(o){if(!curIds.has(o.id)){newActs.push({type:"dispatched",text:o.party+" dispatched — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"→"});}});
+          ps.orders.forEach(function(o){if(!curIds.has(o.id)){newActs.push({type:"dispatched",text:o.party+" dispatched — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"→",detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories}});}});
           var prevOD=ps.orders.filter(function(o){return o.approvalDate&&daysSince(o.approvalDate)>7;}).length;
           var curOD=active.filter(function(o){return o.approvalDate&&daysSince(o.approvalDate)>7;}).length;
           if(curOD>prevOD){newActs.push({type:"overdue",text:(curOD-prevOD)+" more order"+(curOD-prevOD>1?"s":"")+" now overdue",time:ts,date:dateStr,icon:"!"});}
@@ -1263,28 +1263,29 @@ export default function Dashboard(){
             rtd.forEach(function(o){
               var ad=(o.approvalDate||"").trim();
               if(ad===todayStr||ad===todayAlt){
-                seed.push({type:"approved",text:o.party+" approved today — "+fmtVal(o.totalValue)+" ready to ship",time:ts,date:dateStr,icon:"✓"});
+                seed.push({type:"approved",text:o.party+" approved today — "+fmtVal(o.totalValue)+" ready to ship",time:ts,date:dateStr,icon:"✓",detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate,approvalDate:o.approvalDate}});
               }
             });
-            // Today's individual orders — new orders placed today (PI date is today)
             pend.forEach(function(o){
               var pd2=(o.piDate||"").trim();
               if(pd2===todayStr||pd2===todayAlt){
-                seed.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+"});
+                seed.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+",detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate}});
               }
             });
-            // Also check RTD for orders placed today
             rtd.forEach(function(o){
               var pd2=(o.piDate||"").trim();
               if(pd2===todayStr||pd2===todayAlt){
-                seed.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+"});
+                seed.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+",detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate,approvalDate:o.approvalDate}});
               }
             });
 
-            // Summary at the bottom
+            // Summary — broken down by POC
             seed.push({type:"summary",text:active.length+" active orders worth "+fmtVal(totalVal),time:ts,date:dateStr,icon:"◆"});
-            if(rtd.length>0)seed.push({type:"ready",text:rtd.length+" orders ready to dispatch — "+fmtVal(rtd.reduce(function(s,o){return s+o.totalValue;},0)),time:ts,date:dateStr,icon:"✓"});
-            if(pend.length>0)seed.push({type:"pending",text:pend.length+" orders awaiting approval",time:ts,date:dateStr,icon:"◷"});
+            var pocSum={};active.forEach(function(o){var p=o.salesPOC||"?";if(!pocSum[p])pocSum[p]={count:0,value:0,rtd:0,pend:0};pocSum[p].count++;pocSum[p].value+=o.totalValue;if(o.approvalDate)pocSum[p].rtd++;else pocSum[p].pend++;});
+            Object.entries(pocSum).sort(function(a,b){return b[1].value-a[1].value;}).forEach(function(e){
+              var p=e[0],s=e[1];
+              seed.push({type:"poc_summary",text:p+" — "+s.count+" orders · "+fmtVal(s.value)+" · "+s.rtd+" ready, "+s.pend+" pending",time:ts,date:dateStr,icon:"●",poc:p});
+            });
             if(od.length>0)seed.push({type:"overdue",text:od.length+" orders overdue for shipping",time:ts,date:dateStr,icon:"!"});
             setActivityFeed(seed);
             try{localStorage.setItem("cc_activity",JSON.stringify(seed));}catch{}
@@ -1490,12 +1491,26 @@ export default function Dashboard(){
           <div style={{maxHeight:mob?240:220,overflowY:"auto"}}>
             {activityFeed.length===0?<div style={{padding:"24px",textAlign:"center",fontFamily:MN,fontSize:12,color:"#94A3B8"}}>Waiting for first sync...</div>:
             activityFeed.map((a,i)=>{
-              const colors={new_order:"#2563EB",approved:"#16A34A",dispatched:"#16A34A",overdue:"#DC2626",value_up:"#16A34A",value_down:"#DC2626",summary:"#475569",ready:"#16A34A",pending:"#D97706"};
-              const c=colors[a.type]||"#475569";
-              return <div key={i} className="hv-row" style={{padding:mob?"10px 16px":"10px 24px",borderBottom:i<activityFeed.length-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12}}>
-                <span style={{width:22,height:22,borderRadius:6,background:c+"10",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:c,fontFamily:MN,fontWeight:700,flexShrink:0}}>{a.icon}</span>
-                <span style={{flex:1,fontSize:13,color:"#0F172A",lineHeight:1.4}}>{a.text}</span>
-                <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8",flexShrink:0}}>{a.time}</span>
+              const colors={new_order:"#2563EB",approved:"#16A34A",dispatched:"#16A34A",overdue:"#DC2626",value_up:"#16A34A",value_down:"#DC2626",summary:"#475569",ready:"#16A34A",pending:"#D97706",poc_summary:"#475569"};
+              const c=a.poc?POC_COLORS[a.poc]||"#475569":colors[a.type]||"#475569";
+              const hasDetail=!!a.detail;const isExp=feedExp===i;
+              return <div key={i}>
+                <div className="hv-row" onClick={()=>hasDetail&&setFeedExp(isExp?null:i)} style={{padding:mob?"10px 16px":"10px 24px",borderBottom:(!isExp&&i<activityFeed.length-1)?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12,cursor:hasDetail?"pointer":"default"}}>
+                  <span style={{width:22,height:22,borderRadius:6,background:c+"10",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:c,fontFamily:MN,fontWeight:700,flexShrink:0}}>{a.icon}</span>
+                  <span style={{flex:1,fontSize:13,color:"#0F172A",lineHeight:1.4}}>{a.text}</span>
+                  <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8",flexShrink:0}}>{a.time}</span>
+                </div>
+                {isExp&&a.detail&&<div style={{padding:mob?"8px 16px 12px 50px":"8px 24px 12px 58px",borderBottom:"1px solid #F1F5F9",background:"#F8FAFC"}}>
+                  <div style={{display:"flex",gap:mob?8:16,flexWrap:"wrap",fontFamily:MN,fontSize:11}}>
+                    <span style={{color:"#94A3B8"}}>#{a.detail.id}</span>
+                    <span style={{fontWeight:700,color:"#0F172A"}}>{fmtVal(a.detail.value)}</span>
+                    <span style={{color:"#475569"}}>{a.detail.qty} qty</span>
+                    {a.detail.poc&&<span style={{fontWeight:600,color:POC_COLORS[a.detail.poc]||"#475569"}}>{a.detail.poc}</span>}
+                    {a.detail.cats&&a.detail.cats.map(function(ct){return <span key={ct} style={{color:"#94A3B8"}}>{(CC[ct]||CC.Other).l||ct}</span>;})}
+                    {a.detail.piDate&&<span style={{color:"#94A3B8"}}>PI: {a.detail.piDate}</span>}
+                    {a.detail.approvalDate&&<span style={{color:"#16A34A"}}>Approved: {a.detail.approvalDate}</span>}
+                  </div>
+                </div>}
               </div>;
             })}
           </div>
