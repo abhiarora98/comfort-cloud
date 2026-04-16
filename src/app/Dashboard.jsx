@@ -1194,20 +1194,20 @@ export default function Dashboard(){
   const[agoText,setAgoText]=useState("");const[dataVer,setDataVer]=useState(0);
   const[newOrderIds,setNewOrderIds]=useState(new Set());
   const[showNewOnly,setShowNewOnly]=useState(false);
-  const[activityFeed,setActivityFeed]=useState(()=>{
-    if(typeof window==="undefined")return[];
+  const[activityFeed,setActivityFeed]=useState([]);
+  const[insightOpen,setInsightOpen]=useState(false);const[feedExp,setFeedExp]=useState(null);
+  // Load activity from localStorage after mount
+  useEffect(()=>{
     try{
       const stored=localStorage.getItem("cc_activity");
-      if(!stored)return[];
+      if(!stored)return;
       const parsed=JSON.parse(stored);
       const today=new Date().toISOString().split("T")[0];
-      // Only keep today's items
       const filtered=parsed.filter(a=>a.date===today);
+      if(filtered.length>0)setActivityFeed(filtered);
       if(filtered.length!==parsed.length)localStorage.setItem("cc_activity",JSON.stringify(filtered));
-      return filtered;
-    }catch{return[];}
-  });
-  const[insightOpen,setInsightOpen]=useState(false);const[feedExp,setFeedExp]=useState(null);
+    }catch{}
+  },[]);
   const prevOrderIds=useRef(null);
   const prevSnap=useRef(null);
 
