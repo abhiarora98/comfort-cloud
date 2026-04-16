@@ -1323,7 +1323,7 @@ export default function Dashboard(){
   },[cat,poc,srch,srt,payF,ORDERS,showNewOnly,newOrderIds]);
 
   // Stable orders for insights & metrics — not affected by search
-  const baseOrders=useMemo(()=>ORDERS.filter(o=>!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)),[ORDERS]);
+  const baseOrders=useMemo(()=>ORDERS.filter(o=>!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)&&(!poc||o.salesPOC===poc)),[ORDERS,poc]);
   const baseRtd=useMemo(()=>baseOrders.filter(o=>o.approvalDate&&o.dispatchedCount<o.lineCount),[baseOrders]);
   const basePend=useMemo(()=>baseOrders.filter(o=>!o.approvalDate),[baseOrders]);
   const baseOverdue=useMemo(()=>baseRtd.filter(o=>daysSince(o.approvalDate)>7),[baseRtd]);
