@@ -3,7 +3,11 @@ import { google } from 'googleapis';
 export const maxDuration = 15;
 
 const PROD_SHEET_ID = '1mBIQJPWcbs9EpI1-sptKlOGkRIO04GG0aKBLUHMONQg';
-const SHEET_NAME = 'Sheet1';
+const SECTION_SHEETS = {
+  'Mixing (All)': 'Mixing (Loop)',
+  'Mixing (Glue)': 'Mixing (Glue)',
+  'Mixing (Sheet)': 'Mixing (Sheet)',
+};
 
 const MIXING_ALL = ['PVC','SCRAP','CALCIUM','DOP','CPW','ADIL','EPOXY','STERIC ACID','FINOWAX','TITANIUM','HEAT STB.'];
 const MIXING_GLUE = ['PVC PASTE','DOP','CPW','MTO','DBP','D80'];
@@ -22,28 +26,21 @@ async function getSheets() {
   return google.sheets({ version: 'v4', auth });
 }
 
-async function ensureHeaders(sheets) {
+async function ensureHeaders(sheets, sheetName) {
   try {
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: PROD_SHEET_ID,
-      range: `${SHEET_NAME}!A1:F1`,
+      range: `'${sheetName}'!A1:F1`,
     });
     if (!res.data.values || res.data.values.length === 0) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: PROD_SHEET_ID,
-        range: `${SHEET_NAME}!A1`,
+        range: `'${sheetName}'!A1`,
         valueInputOption: 'RAW',
-        requestBody: { values: [['Date', 'Time', 'Section', 'Material', 'Quantity (kg)', 'Entered By']] },
+        requestBody: { values: [['Date', 'Time', 'Material', 'Quantity (kg)', 'Entered By']] },
       });
     }
-  } catch {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: PROD_SHEET_ID,
-      range: `${SHEET_NAME}!A1`,
-      valueInputOption: 'RAW',
-      requestBody: { values: [['Date', 'Time', 'Section', 'Material', 'Quantity (kg)', 'Entered By']] },
-    });
-  }
+  } catch {}
 }
 
 // POST — save entries
@@ -55,29 +52,39 @@ export async function POST(req) {
     }
 
     const sheets = await getSheets();
-    await ensureHeaders(sheets);
 
     const now = new Date();
     const date = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     const userName = user || 'unknown';
 
-    const rows = entries
-      .filter(e => e.qty > 0)
-      .map(e => [date, time, e.section, e.material, e.qty, userName]);
-
-    if (rows.length === 0) {
+    const valid = entries.filter(e => e.qty > 0);
+    if (valid.length === 0) {
       return Response.json({ error: 'No quantities entered' }, { status: 400 });
     }
 
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: PROD_SHEET_ID,
-      range: `${SHEET_NAME}!A1`,
-      valueInputOption: 'RAW',
-      requestBody: { values: rows },
+    // Group by section → sheet tab
+    const bySheet = {};
+    valid.forEach(e => {
+      const sheetName = SECTION_SHEETS[e.section];
+      if (!sheetName) return;
+      if (!bySheet[sheetName]) bySheet[sheetName] = [];
+      bySheet[sheetName].push([date, time, e.material, e.qty, userName]);
     });
 
-    return Response.json({ ok: true, saved: rows.length });
+    let totalSaved = 0;
+    for (const [sheetName, rows] of Object.entries(bySheet)) {
+      await ensureHeaders(sheets, sheetName);
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: PROD_SHEET_ID,
+        range: `'${sheetName}'!A1`,
+        valueInputOption: 'RAW',
+        requestBody: { values: rows },
+      });
+      totalSaved += rows.length;
+    }
+
+    return Response.json({ ok: true, saved: totalSaved });
   } catch (err) {
     console.error('Production save error:', err);
     return Response.json({ error: err.message }, { status: 500 });
@@ -88,27 +95,31 @@ export async function POST(req) {
 export async function GET() {
   try {
     const sheets = await getSheets();
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: PROD_SHEET_ID,
-      range: `${SHEET_NAME}!A:F`,
-    });
+    const allEntries = [];
 
-    const rows = res.data.values || [];
-    if (rows.length <= 1) {
-      return Response.json({ entries: [], materials: { all: MIXING_ALL, glue: MIXING_GLUE, sheet: MIXING_SHEET } });
+    for (const [section, sheetName] of Object.entries(SECTION_SHEETS)) {
+      try {
+        const res = await sheets.spreadsheets.values.get({
+          spreadsheetId: PROD_SHEET_ID,
+          range: `'${sheetName}'!A:E`,
+        });
+        const rows = res.data.values || [];
+        rows.slice(1).forEach(r => {
+          if (!r[2]) return;
+          allEntries.push({
+            date: r[0] || '',
+            time: r[1] || '',
+            section: section,
+            material: r[2] || '',
+            qty: parseFloat(r[3]) || 0,
+            user: r[4] || '',
+          });
+        });
+      } catch {}
     }
 
-    const entries = rows.slice(1).map(r => ({
-      date: r[0] || '',
-      time: r[1] || '',
-      section: r[2] || '',
-      material: r[3] || '',
-      qty: parseFloat(r[4]) || 0,
-      user: r[5] || '',
-    }));
-
     return Response.json({
-      entries,
+      entries: allEntries,
       materials: { all: MIXING_ALL, glue: MIXING_GLUE, sheet: MIXING_SHEET },
     });
   } catch (err) {
