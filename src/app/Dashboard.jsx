@@ -1234,6 +1234,9 @@ function ProductionTab({mob,user}){
         const q=parseFloat(getQty("sheet",mat));
         if(q>0)ents.push({section:sheetSec.label,material:mat,qty:q,color:sheetColor,line:formLine,product:formProduct});
       });
+      // Sheet colour (grams)
+      const sheetColQty=parseFloat(getQty("sheetcolour",sheetColor));
+      if(sheetColQty>0)ents.push({section:"Mixing (Sheet)",material:"COLOUR",qty:sheetColQty,color:sheetColor,line:formLine,product:formProduct,unit:"gm"});
     }
     if(ents.length===0){setSaving(false);setSaveMsg("No quantities entered");return;}
     try{
@@ -1377,14 +1380,25 @@ function ProductionTab({mob,user}){
                   {PROD_COLORS.map(c=><option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              {sheetColor?<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
-                {sheetSec.materials.map(mat=>
-                  <div key={mat} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",padding:"8px 14px"}}>
-                    <span style={{flex:1,fontSize:12,fontWeight:500,color:"#475569"}}>{mat}</span>
-                    <input type="number" min="0" step="0.1" value={getQty("sheet",mat)} onChange={e=>setQty("sheet",mat,e.target.value)} placeholder="kg" style={{width:80,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+              {sheetColor?<>
+                <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
+                  {sheetSec.materials.map(mat=>
+                    <div key={mat} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",padding:"8px 14px"}}>
+                      <span style={{flex:1,fontSize:12,fontWeight:500,color:"#475569"}}>{mat}</span>
+                      <input type="number" min="0" step="0.1" value={getQty("sheet",mat)} onChange={e=>setQty("sheet",mat,e.target.value)} placeholder="kg" style={{width:80,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+                    </div>
+                  )}
+                </div>
+                <div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,border:"1px solid "+(parseFloat(getQty("sheetcolour",sheetColor))>0?"#7C3AED40":"#E5E7EB"),padding:"10px 14px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Colour</span>
+                      <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{sheetColor}</span>
+                    </div>
+                    <input type="number" min="0" step="1" value={getQty("sheetcolour",sheetColor)} onChange={e=>setQty("sheetcolour",sheetColor,e.target.value)} placeholder="gm" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
                   </div>
-                )}
-              </div>:<div style={{padding:"16px",textAlign:"center",color:"#92400E",fontSize:12}}>Select a sheet colour above</div>}
+                </div>
+              </>:<div style={{padding:"16px",textAlign:"center",color:"#92400E",fontSize:12}}>Select a sheet colour above</div>}
             </div>}
           </div>
         </>;
