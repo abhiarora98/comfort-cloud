@@ -1158,6 +1158,8 @@ const MIXING_GLUE=["PVC PASTE","DOP","CPW","MTO","DBP","D80"];
 const MIXING_SHEET=["SCRAP","CALCIUM","DOP","STERIC ACID","CPW"];
 const MIX_SECTIONS=[{id:"all",label:"Mixing (Loop)",materials:MIXING_ALL},{id:"glue",label:"Mixing (Glue)",materials:MIXING_GLUE},{id:"sheet",label:"Mixing (Sheet)",materials:MIXING_SHEET}];
 const PROD_COLORS=["P.GREEN","RED","BLUE","GREY","BROWN","MAROON","BEIGE","BLACK","BEIGE-BROWN","LIGHT GREY-BLACK","DARK GREY-BLACK","GREEN-BLACK","RED-BLACK","BLUE-BLACK","GREEN-BLUE","RED-BLUE","TAN-BLACK","WHITE-BLACK","GREEN-YELLOW"];
+const PROD_LINES=["LINE - 1","LINE - 2","LINE - 3"];
+const PROD_PRODUCTS=["LOOP","S-MAT","TURF"];
 
 function ProductionTab({mob,user}){
   const[entries,setEntries]=useState([]);const[loading,setLoading]=useState(true);
@@ -1165,6 +1167,8 @@ function ProductionTab({mob,user}){
   const[expanded,setExpanded]=useState("all");const[formData,setFormData]=useState({});
   const[period,setPeriod]=useState("today");const[saveMsg,setSaveMsg]=useState("");
   const[formColor,setFormColor]=useState("");const[colorFilter,setColorFilter]=useState("all");
+  const[formLine,setFormLine]=useState("");const[formProduct,setFormProduct]=useState("");
+  const[lineFilter,setLineFilter]=useState("all");const[productFilter,setProductFilter]=useState("all");
 
   // Fetch entries
   useEffect(()=>{
@@ -1176,11 +1180,13 @@ function ProductionTab({mob,user}){
     const now=new Date();const todayStr=now.toLocaleDateString("en-IN",{day:"2-digit",month:"2-digit",year:"numeric"});
     let r=entries;
     if(colorFilter!=="all")r=r.filter(e=>e.color===colorFilter);
+    if(lineFilter!=="all")r=r.filter(e=>e.line===lineFilter);
+    if(productFilter!=="all")r=r.filter(e=>e.product===productFilter);
     if(period==="today")return r.filter(e=>e.date===todayStr);
     if(period==="7d"){const d7=new Date(now-7*86400000);return r.filter(e=>{try{const p=e.date.split("/");const d=new Date(+p[2],+p[1]-1,+p[0]);return d>=d7;}catch{return false;}});}
     if(period==="30d"){const d30=new Date(now-30*86400000);return r.filter(e=>{try{const p=e.date.split("/");const d=new Date(+p[2],+p[1]-1,+p[0]);return d>=d30;}catch{return false;}});}
     return r;
-  },[entries,period,colorFilter]);
+  },[entries,period,colorFilter,lineFilter,productFilter]);
 
   // Consumption totals by material
   const consumption=useMemo(()=>{
@@ -1205,20 +1211,22 @@ function ProductionTab({mob,user}){
 
   // Save
   const handleSave=async()=>{
+    if(!formLine){setSaveMsg("Please select a line first");return;}
+    if(!formProduct){setSaveMsg("Please select a product first");return;}
     if(!formColor){setSaveMsg("Please select a colour first");return;}
     setSaving(true);setSaveMsg("");
     const ents=[];
     MIX_SECTIONS.forEach(sec=>{
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty(sec.id,mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:formColor});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:formColor,line:formLine,product:formProduct});
       });
     });
     if(ents.length===0){setSaving(false);setSaveMsg("No quantities entered");return;}
     try{
       const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown"})});
       const data=await res.json();
-      if(data.ok){setSaveMsg(data.saved+" entries saved for "+formColor);setFormData({});setFormColor("");
+      if(data.ok){setSaveMsg(data.saved+" entries saved for "+formLine+" · "+formProduct+" · "+formColor);setFormData({});setFormColor("");setFormLine("");setFormProduct("");
         // Refresh
         const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
       }else{setSaveMsg(data.error||"Failed to save");}
@@ -1240,21 +1248,37 @@ function ProductionTab({mob,user}){
     {formOpen&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:24,overflow:"hidden"}}>
       <div style={{padding:"16px 20px",borderBottom:"1px solid #E5E7EB"}}>
         <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Enter today's raw material usage</div>
-        <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:2}}>Select colour, then enter quantities in kg.</div>
+        <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:2}}>Select Line → Product → Colour, then enter quantities in kg.</div>
       </div>
-      <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:formColor?"#F0FDF4":"#FFFBEB"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-          <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formColor?"#16A34A":"#D97706"}}>Colour {formColor?"·":"(required)"}</span>
-          <select value={formColor} onChange={e=>setFormColor(e.target.value)} style={{padding:"8px 12px",border:"1px solid "+(formColor?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formColor?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer",minWidth:200}}>
-            <option value="">Select a colour...</option>
-            {PROD_COLORS.map(c=><option key={c} value={c}>{c}</option>)}
-          </select>
+      <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:(formLine&&formProduct&&formColor)?"#F0FDF4":"#FFFBEB"}}>
+        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:12}}>
+          <div>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formLine?"#16A34A":"#D97706",marginBottom:5}}>Line {formLine?"·":"(required)"}</div>
+            <select value={formLine} onChange={e=>setFormLine(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formLine?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formLine?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
+              <option value="">Select line...</option>
+              {PROD_LINES.map(l=><option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:!formLine?"#D4D4D8":formProduct?"#16A34A":"#D97706",marginBottom:5}}>Product {!formLine?"":formProduct?"·":"(required)"}</div>
+            <select value={formProduct} onChange={e=>setFormProduct(e.target.value)} disabled={!formLine} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(!formLine?"#E5E7EB":formProduct?"#16A34A":"#D97706"),borderRadius:8,background:!formLine?"#F8FAFC":"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:!formLine?"#D4D4D8":formProduct?"#0F172A":"#94A3B8",outline:"none",cursor:!formLine?"not-allowed":"pointer"}}>
+              <option value="">Select product...</option>
+              {PROD_PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:!formProduct?"#D4D4D8":formColor?"#16A34A":"#D97706",marginBottom:5}}>Colour {!formProduct?"":formColor?"·":"(required)"}</div>
+            <select value={formColor} onChange={e=>setFormColor(e.target.value)} disabled={!formProduct} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(!formProduct?"#E5E7EB":formColor?"#16A34A":"#D97706"),borderRadius:8,background:!formProduct?"#F8FAFC":"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:!formProduct?"#D4D4D8":formColor?"#0F172A":"#94A3B8",outline:"none",cursor:!formProduct?"not-allowed":"pointer"}}>
+              <option value="">Select colour...</option>
+              {PROD_COLORS.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
         </div>
       </div>
-      {!formColor&&<div style={{padding:"32px 20px",textAlign:"center",background:"#FFFBEB"}}>
-        <div style={{fontSize:13,color:"#92400E",fontWeight:500}}>Select a colour above to start entering material quantities</div>
+      {!(formLine&&formProduct&&formColor)&&<div style={{padding:"32px 20px",textAlign:"center",background:"#FFFBEB"}}>
+        <div style={{fontSize:13,color:"#92400E",fontWeight:500}}>Complete line, product and colour above to start entering material quantities</div>
       </div>}
-      {formColor&&MIX_SECTIONS.map(sec=>{
+      {formLine&&formProduct&&formColor&&MIX_SECTIONS.map(sec=>{
         const isExp=expanded===sec.id;
         const filledCount=sec.materials.filter(m=>parseFloat(getQty(sec.id,m))>0).length;
         return <div key={sec.id}>
@@ -1287,13 +1311,19 @@ function ProductionTab({mob,user}){
     {/* Consumption Insights */}
     {loading?<div style={{padding:40,textAlign:"center",fontFamily:MN,fontSize:12,color:"#94A3B8"}}>Loading production data...</div>:<div>
 
-      {/* Period + Colour Filter */}
-      <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
+      {/* Period + Line + Product + Colour Filter */}
+      <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
         <div style={{display:"flex",gap:6}}>
           {[["today","Today"],["7d","7 Days"],["30d","30 Days"],["all","All Time"]].map(([v,l])=>
             <div key={v} className={period!==v?"hv-pill":""} onClick={()=>setPeriod(v)} style={{padding:"6px 14px",borderRadius:6,border:period===v?"1px solid #2563EB":"1px solid #E5E7EB",background:period===v?"#EFF6FF":"#F1F5F9",color:period===v?"#2563EB":"#334155",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:period===v?600:500}}>{l}</div>
           )}
         </div>
+        {(()=>{const availLines=[...new Set(entries.map(e=>e.line).filter(Boolean))].sort();
+          return availLines.length>0&&<select value={lineFilter} onChange={e=>setLineFilter(e.target.value)} style={{padding:"6px 12px",border:"1px solid "+(lineFilter!=="all"?"#2563EB":"#E5E7EB"),borderRadius:6,background:lineFilter!=="all"?"#EFF6FF":"#F1F5F9",color:lineFilter!=="all"?"#2563EB":"#334155",fontSize:11,fontFamily:MN,fontWeight:lineFilter!=="all"?600:500,cursor:"pointer",outline:"none"}}><option value="all">All lines</option>{availLines.map(l=><option key={l} value={l}>{l}</option>)}</select>;
+        })()}
+        {(()=>{const availProducts=[...new Set(entries.map(e=>e.product).filter(Boolean))].sort();
+          return availProducts.length>0&&<select value={productFilter} onChange={e=>setProductFilter(e.target.value)} style={{padding:"6px 12px",border:"1px solid "+(productFilter!=="all"?"#2563EB":"#E5E7EB"),borderRadius:6,background:productFilter!=="all"?"#EFF6FF":"#F1F5F9",color:productFilter!=="all"?"#2563EB":"#334155",fontSize:11,fontFamily:MN,fontWeight:productFilter!=="all"?600:500,cursor:"pointer",outline:"none"}}><option value="all">All products</option>{availProducts.map(p=><option key={p} value={p}>{p}</option>)}</select>;
+        })()}
         {(()=>{const availColors=[...new Set(entries.map(e=>e.color).filter(Boolean))].sort();
           return availColors.length>0&&<select value={colorFilter} onChange={e=>setColorFilter(e.target.value)} style={{padding:"6px 12px",border:"1px solid "+(colorFilter!=="all"?"#2563EB":"#E5E7EB"),borderRadius:6,background:colorFilter!=="all"?"#EFF6FF":"#F1F5F9",color:colorFilter!=="all"?"#2563EB":"#334155",fontSize:11,fontFamily:MN,fontWeight:colorFilter!=="all"?600:500,cursor:"pointer",outline:"none"}}><option value="all">All colours</option>{availColors.map(c=><option key={c} value={c}>{c}</option>)}</select>;
         })()}
@@ -1367,11 +1397,13 @@ function ProductionTab({mob,user}){
         </div>
         <div style={{maxHeight:300,overflowY:"auto"}}>
           {filtered.slice(0,30).map((e,i)=>
-            <div key={i} className="hv-row" style={{padding:"10px 20px",borderBottom:i<Math.min(filtered.length,30)-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12,flexWrap:mob?"wrap":"nowrap"}}>
+            <div key={i} className="hv-row" style={{padding:"10px 20px",borderBottom:i<Math.min(filtered.length,30)-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:8,flexWrap:mob?"wrap":"nowrap"}}>
               <span style={{fontFamily:MN,fontSize:11,color:"#94A3B8",minWidth:70}}>{e.date}</span>
               <span style={{fontFamily:MN,fontSize:11,color:"#94A3B8",minWidth:45}}>{e.time}</span>
-              <span style={{fontSize:11,fontWeight:500,color:"#475569",minWidth:90}}>{e.section}</span>
-              {e.color&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"2px 8px",borderRadius:4}}>{e.color}</span>}
+              {e.line&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#7C3AED",background:"#F3E8FF",padding:"2px 6px",borderRadius:4}}>{e.line}</span>}
+              {e.product&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#D97706",background:"#FEF3C7",padding:"2px 6px",borderRadius:4}}>{e.product}</span>}
+              {e.color&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"2px 6px",borderRadius:4}}>{e.color}</span>}
+              <span style={{fontSize:11,fontWeight:500,color:"#475569",minWidth:80}}>{e.section}</span>
               <span style={{fontSize:12,fontWeight:600,color:"#0F172A",flex:1,minWidth:80}}>{e.material}</span>
               <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0F172A"}}>{e.qty} kg</span>
               <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{e.user}</span>
