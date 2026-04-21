@@ -1169,6 +1169,7 @@ function ProductionTab({mob,user}){
   const[formColor,setFormColor]=useState("");const[colorFilter,setColorFilter]=useState("all");
   const[formLine,setFormLine]=useState("");const[formProduct,setFormProduct]=useState("");
   const[lineFilter,setLineFilter]=useState("all");const[productFilter,setProductFilter]=useState("all");
+  const[lots,setLots]=useState(1);
   const[sheetColor,setSheetColor]=useState("");
 
   // Fetch entries
@@ -1217,16 +1218,16 @@ function ProductionTab({mob,user}){
     if(!formColor){setSaveMsg("Please select a colour first");return;}
     setSaving(true);setSaveMsg("");
     const ents=[];
-    // Loop and Glue use the main formColor
+    // Loop and Glue use the main formColor — multiplied by lots
     MIX_SECTIONS.filter(s=>s.id!=="sheet").forEach(sec=>{
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty(sec.id,mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:formColor,line:formLine,product:formProduct});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:formColor,line:formLine,product:formProduct});
       });
     });
-    // Pigment
+    // Pigment — also multiplied by lots
     const pigQty=parseFloat(getQty("pigment",formColor));
-    if(pigQty>0)ents.push({section:"Mixing (Loop)",material:"PIGMENT",qty:pigQty,color:formColor,line:formLine,product:formProduct,unit:"gm"});
+    if(pigQty>0)ents.push({section:"Mixing (Loop)",material:"PIGMENT",qty:pigQty*lots,color:formColor,line:formLine,product:formProduct,unit:"gm"});
     // Sheet uses its own sheetColor
     const sheetSec=MIX_SECTIONS.find(s=>s.id==="sheet");
     if(sheetSec&&sheetColor){
@@ -1242,7 +1243,7 @@ function ProductionTab({mob,user}){
     try{
       const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown"})});
       const data=await res.json();
-      if(data.ok){setSaveMsg(data.saved+" entries saved for "+formLine+" · "+formProduct+" · "+formColor);setFormData({});setFormColor("");setFormLine("");setFormProduct("");setSheetColor("");
+      if(data.ok){setSaveMsg(data.saved+" entries saved for "+formLine+" · "+formProduct+" · "+formColor+(lots>1?" × "+lots+" lots":""));setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setSheetColor("");
         // Refresh
         const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
       }else{setSaveMsg(data.error||"Failed to save");}
@@ -1349,15 +1350,28 @@ function ProductionTab({mob,user}){
           {renderSection(glueSec,null)}
 
           {/* Total after Loop + Glue */}
-          {(loopTotal>0||glueTotal>0)&&<div style={{padding:"12px 20px",background:"#0F172A",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)"}}>Total — Loop + Glue</span>
-            <div style={{display:"flex",gap:16}}>
-              {loopTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Loop: <strong style={{color:"#fff"}}>{loopTotal.toFixed(1)} kg</strong></span>}
-              {pigTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Pigment: <strong style={{color:"#fff"}}>{pigTotal} gm</strong></span>}
-              {glueTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Glue: <strong style={{color:"#fff"}}>{glueTotal.toFixed(1)} kg</strong></span>}
-              <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#4ade80"}}>{(loopTotal+glueTotal).toFixed(1)} kg</span>
+          {(loopTotal>0||glueTotal>0)&&<div style={{padding:"12px 20px",background:"#0F172A",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+            <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)"}}>Total — Loop + Glue{lots>1?" × "+lots+" lots":""}</span>
+            <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+              {loopTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Loop: <strong style={{color:"#fff"}}>{(loopTotal*lots).toFixed(1)} kg</strong></span>}
+              {pigTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Pigment: <strong style={{color:"#fff"}}>{pigTotal*lots} gm</strong></span>}
+              {glueTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Glue: <strong style={{color:"#fff"}}>{(glueTotal*lots).toFixed(1)} kg</strong></span>}
+              <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#4ade80"}}>{((loopTotal+glueTotal)*lots).toFixed(1)} kg</span>
             </div>
           </div>}
+
+          {/* Lots selector */}
+          <div style={{padding:"14px 20px",background:"#F8FAFC",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569"}}>Number of Lots</span>
+              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>Loop + Glue quantities will be multiplied</span>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <button onClick={()=>setLots(l=>Math.max(1,l-1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+              <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#0F172A",minWidth:36,textAlign:"center"}}>{lots}</span>
+              <button onClick={()=>setLots(l=>Math.min(10,l+1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+            </div>
+          </div>
 
           {/* Mixing (Sheet) — separate colour */}
           <div>
