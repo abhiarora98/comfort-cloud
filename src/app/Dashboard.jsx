@@ -1160,7 +1160,6 @@ const MIX_SECTIONS=[{id:"all",label:"Mixing (Loop)",materials:MIXING_ALL},{id:"g
 const PROD_COLORS=["P.GREEN","RED","BLUE","GREY","BROWN","MAROON","BEIGE","BLACK","BEIGE-BROWN","LIGHT GREY-BLACK","DARK GREY-BLACK","GREEN-BLACK","RED-BLACK","BLUE-BLACK","GREEN-BLUE","RED-BLUE","TAN-BLACK","WHITE-BLACK","GREEN-YELLOW"];
 const PROD_LINES=["LINE - 1","LINE - 2","LINE - 3"];
 const PROD_PRODUCTS=["LOOP","S-MAT","TURF"];
-const PIGMENT_COLORS=["P.GREEN","BLACK","BLUE","YELLOW","RED","WHITE","BROWN","GREY","MAROON","BEIGE","TAN","ORANGE"];
 
 function ProductionTab({mob,user}){
   const[entries,setEntries]=useState([]);const[loading,setLoading]=useState(true);
@@ -1223,11 +1222,9 @@ function ProductionTab({mob,user}){
         if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:formColor,line:formLine,product:formProduct});
       });
     });
-    // Add pigment entries under Mixing (Loop) section
-    PIGMENT_COLORS.forEach(pc=>{
-      const q=parseFloat(getQty("pigment",pc));
-      if(q>0)ents.push({section:"Mixing (Loop)",material:"PIGMENT - "+pc,qty:q,color:formColor,line:formLine,product:formProduct,unit:"gm"});
-    });
+    // Add pigment entry (grams) under Mixing (Loop) section
+    const pigQty=parseFloat(getQty("pigment",formColor));
+    if(pigQty>0)ents.push({section:"Mixing (Loop)",material:"PIGMENT",qty:pigQty,color:formColor,line:formLine,product:formProduct,unit:"gm"});
     if(ents.length===0){setSaving(false);setSaveMsg("No quantities entered");return;}
     try{
       const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown"})});
@@ -1306,17 +1303,12 @@ function ProductionTab({mob,user}){
               )}
             </div>
             {sec.id==="all"&&formColor&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Pigment</span>
-                <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>Colours used to make {formColor}</span>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:8}}>
-                {PIGMENT_COLORS.map(pc=>
-                  <div key={pc} style={{display:"flex",alignItems:"center",gap:8,background:"#fff",borderRadius:8,border:"1px solid "+(parseFloat(getQty("pigment",pc))>0?"#7C3AED40":"#E5E7EB"),padding:"8px 12px"}}>
-                    <span style={{flex:1,fontSize:11,fontWeight:500,color:"#475569"}}>{pc}</span>
-                    <input type="number" min="0" step="1" value={getQty("pigment",pc)} onChange={e=>setQty("pigment",pc,e.target.value)} placeholder="gm" style={{width:70,padding:"5px 8px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:11,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
-                  </div>
-                )}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,border:"1px solid "+(parseFloat(getQty("pigment",formColor))>0?"#7C3AED40":"#E5E7EB"),padding:"10px 14px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Pigment</span>
+                  <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{formColor}</span>
+                </div>
+                <input type="number" min="0" step="1" value={getQty("pigment",formColor)} onChange={e=>setQty("pigment",formColor,e.target.value)} placeholder="gm" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
               </div>
             </div>}
           </div>}
