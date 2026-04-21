@@ -1157,12 +1157,14 @@ const MIXING_ALL=["PVC","SCRAP","CALCIUM","DOP","CPW","ADIL","EPOXY","STERIC ACI
 const MIXING_GLUE=["PVC PASTE","DOP","CPW","MTO","DBP","D80"];
 const MIXING_SHEET=["SCRAP","CALCIUM","DOP","STERIC ACID","CPW"];
 const MIX_SECTIONS=[{id:"all",label:"Mixing (Loop)",materials:MIXING_ALL},{id:"glue",label:"Mixing (Glue)",materials:MIXING_GLUE},{id:"sheet",label:"Mixing (Sheet)",materials:MIXING_SHEET}];
+const PROD_COLORS=["P.GREEN","RED","BLUE","GREY","BROWN","MAROON","BEIGE","BLACK","BEIGE-BROWN","LIGHT GREY-BLACK","DARK GREY-BLACK","GREEN-BLACK","RED-BLACK","BLUE-BLACK","GREEN-BLUE","RED-BLUE","TAN-BLACK","WHITE-BLACK","GREEN-YELLOW"];
 
 function ProductionTab({mob,user}){
   const[entries,setEntries]=useState([]);const[loading,setLoading]=useState(true);
   const[formOpen,setFormOpen]=useState(false);const[saving,setSaving]=useState(false);
   const[expanded,setExpanded]=useState("all");const[formData,setFormData]=useState({});
   const[period,setPeriod]=useState("today");const[saveMsg,setSaveMsg]=useState("");
+  const[formColor,setFormColor]=useState("");const[colorFilter,setColorFilter]=useState("all");
 
   // Fetch entries
   useEffect(()=>{
@@ -1172,11 +1174,13 @@ function ProductionTab({mob,user}){
   // Filter entries by period
   const filtered=useMemo(()=>{
     const now=new Date();const todayStr=now.toLocaleDateString("en-IN",{day:"2-digit",month:"2-digit",year:"numeric"});
-    if(period==="today")return entries.filter(e=>e.date===todayStr);
-    if(period==="7d"){const d7=new Date(now-7*86400000);return entries.filter(e=>{try{const p=e.date.split("/");const d=new Date(+p[2],+p[1]-1,+p[0]);return d>=d7;}catch{return false;}});}
-    if(period==="30d"){const d30=new Date(now-30*86400000);return entries.filter(e=>{try{const p=e.date.split("/");const d=new Date(+p[2],+p[1]-1,+p[0]);return d>=d30;}catch{return false;}});}
-    return entries;
-  },[entries,period]);
+    let r=entries;
+    if(colorFilter!=="all")r=r.filter(e=>e.color===colorFilter);
+    if(period==="today")return r.filter(e=>e.date===todayStr);
+    if(period==="7d"){const d7=new Date(now-7*86400000);return r.filter(e=>{try{const p=e.date.split("/");const d=new Date(+p[2],+p[1]-1,+p[0]);return d>=d7;}catch{return false;}});}
+    if(period==="30d"){const d30=new Date(now-30*86400000);return r.filter(e=>{try{const p=e.date.split("/");const d=new Date(+p[2],+p[1]-1,+p[0]);return d>=d30;}catch{return false;}});}
+    return r;
+  },[entries,period,colorFilter]);
 
   // Consumption totals by material
   const consumption=useMemo(()=>{
@@ -1201,19 +1205,20 @@ function ProductionTab({mob,user}){
 
   // Save
   const handleSave=async()=>{
+    if(!formColor){setSaveMsg("Please select a colour first");return;}
     setSaving(true);setSaveMsg("");
     const ents=[];
     MIX_SECTIONS.forEach(sec=>{
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty(sec.id,mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:formColor});
       });
     });
     if(ents.length===0){setSaving(false);setSaveMsg("No quantities entered");return;}
     try{
       const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown"})});
       const data=await res.json();
-      if(data.ok){setSaveMsg(data.saved+" entries saved");setFormData({});
+      if(data.ok){setSaveMsg(data.saved+" entries saved for "+formColor);setFormData({});setFormColor("");
         // Refresh
         const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
       }else{setSaveMsg(data.error||"Failed to save");}
@@ -1235,9 +1240,21 @@ function ProductionTab({mob,user}){
     {formOpen&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:24,overflow:"hidden"}}>
       <div style={{padding:"16px 20px",borderBottom:"1px solid #E5E7EB"}}>
         <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Enter today's raw material usage</div>
-        <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:2}}>Enter quantities in kg. Leave empty to skip.</div>
+        <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:2}}>Select colour, then enter quantities in kg.</div>
       </div>
-      {MIX_SECTIONS.map(sec=>{
+      <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:formColor?"#F0FDF4":"#FFFBEB"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+          <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formColor?"#16A34A":"#D97706"}}>Colour {formColor?"·":"(required)"}</span>
+          <select value={formColor} onChange={e=>setFormColor(e.target.value)} style={{padding:"8px 12px",border:"1px solid "+(formColor?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formColor?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer",minWidth:200}}>
+            <option value="">Select a colour...</option>
+            {PROD_COLORS.map(c=><option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+      </div>
+      {!formColor&&<div style={{padding:"32px 20px",textAlign:"center",background:"#FFFBEB"}}>
+        <div style={{fontSize:13,color:"#92400E",fontWeight:500}}>Select a colour above to start entering material quantities</div>
+      </div>}
+      {formColor&&MIX_SECTIONS.map(sec=>{
         const isExp=expanded===sec.id;
         const filledCount=sec.materials.filter(m=>parseFloat(getQty(sec.id,m))>0).length;
         return <div key={sec.id}>
@@ -1270,11 +1287,16 @@ function ProductionTab({mob,user}){
     {/* Consumption Insights */}
     {loading?<div style={{padding:40,textAlign:"center",fontFamily:MN,fontSize:12,color:"#94A3B8"}}>Loading production data...</div>:<div>
 
-      {/* Period Filter */}
-      <div style={{display:"flex",gap:6,marginBottom:20}}>
-        {[["today","Today"],["7d","7 Days"],["30d","30 Days"],["all","All Time"]].map(([v,l])=>
-          <div key={v} className={period!==v?"hv-pill":""} onClick={()=>setPeriod(v)} style={{padding:"6px 14px",borderRadius:6,border:period===v?"1px solid #2563EB":"1px solid #E5E7EB",background:period===v?"#EFF6FF":"#F1F5F9",color:period===v?"#2563EB":"#334155",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:period===v?600:500}}>{l}</div>
-        )}
+      {/* Period + Colour Filter */}
+      <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{display:"flex",gap:6}}>
+          {[["today","Today"],["7d","7 Days"],["30d","30 Days"],["all","All Time"]].map(([v,l])=>
+            <div key={v} className={period!==v?"hv-pill":""} onClick={()=>setPeriod(v)} style={{padding:"6px 14px",borderRadius:6,border:period===v?"1px solid #2563EB":"1px solid #E5E7EB",background:period===v?"#EFF6FF":"#F1F5F9",color:period===v?"#2563EB":"#334155",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:period===v?600:500}}>{l}</div>
+          )}
+        </div>
+        {(()=>{const availColors=[...new Set(entries.map(e=>e.color).filter(Boolean))].sort();
+          return availColors.length>0&&<select value={colorFilter} onChange={e=>setColorFilter(e.target.value)} style={{padding:"6px 12px",border:"1px solid "+(colorFilter!=="all"?"#2563EB":"#E5E7EB"),borderRadius:6,background:colorFilter!=="all"?"#EFF6FF":"#F1F5F9",color:colorFilter!=="all"?"#2563EB":"#334155",fontSize:11,fontFamily:MN,fontWeight:colorFilter!=="all"?600:500,cursor:"pointer",outline:"none"}}><option value="all">All colours</option>{availColors.map(c=><option key={c} value={c}>{c}</option>)}</select>;
+        })()}
       </div>
 
       {/* Summary Cards */}
@@ -1345,11 +1367,12 @@ function ProductionTab({mob,user}){
         </div>
         <div style={{maxHeight:300,overflowY:"auto"}}>
           {filtered.slice(0,30).map((e,i)=>
-            <div key={i} className="hv-row" style={{padding:"10px 20px",borderBottom:i<Math.min(filtered.length,30)-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12}}>
+            <div key={i} className="hv-row" style={{padding:"10px 20px",borderBottom:i<Math.min(filtered.length,30)-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12,flexWrap:mob?"wrap":"nowrap"}}>
               <span style={{fontFamily:MN,fontSize:11,color:"#94A3B8",minWidth:70}}>{e.date}</span>
               <span style={{fontFamily:MN,fontSize:11,color:"#94A3B8",minWidth:45}}>{e.time}</span>
-              <span style={{fontSize:12,fontWeight:500,color:"#475569",minWidth:100}}>{e.section}</span>
-              <span style={{fontSize:12,fontWeight:600,color:"#0F172A",flex:1}}>{e.material}</span>
+              <span style={{fontSize:11,fontWeight:500,color:"#475569",minWidth:90}}>{e.section}</span>
+              {e.color&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"2px 8px",borderRadius:4}}>{e.color}</span>}
+              <span style={{fontSize:12,fontWeight:600,color:"#0F172A",flex:1,minWidth:80}}>{e.material}</span>
               <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0F172A"}}>{e.qty} kg</span>
               <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{e.user}</span>
             </div>

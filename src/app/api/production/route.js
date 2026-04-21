@@ -37,7 +37,7 @@ async function ensureHeaders(sheets, sheetName) {
         spreadsheetId: PROD_SHEET_ID,
         range: `'${sheetName}'!A1`,
         valueInputOption: 'RAW',
-        requestBody: { values: [['Date', 'Time', 'Material', 'Quantity (kg)', 'Entered By']] },
+        requestBody: { values: [['Date', 'Time', 'Colour', 'Material', 'Quantity (kg)', 'Entered By']] },
       });
     }
   } catch {}
@@ -69,7 +69,7 @@ export async function POST(req) {
       const sheetName = SECTION_SHEETS[e.section];
       if (!sheetName) return;
       if (!bySheet[sheetName]) bySheet[sheetName] = [];
-      bySheet[sheetName].push([date, time, e.material, e.qty, userName]);
+      bySheet[sheetName].push([date, time, e.color || '', e.material, e.qty, userName]);
     });
 
     let totalSaved = 0;
@@ -101,18 +101,25 @@ export async function GET() {
       try {
         const res = await sheets.spreadsheets.values.get({
           spreadsheetId: PROD_SHEET_ID,
-          range: `'${sheetName}'!A:E`,
+          range: `'${sheetName}'!A:F`,
         });
         const rows = res.data.values || [];
         rows.slice(1).forEach(r => {
-          if (!r[2]) return;
+          // Handle both old (5 col) and new (6 col with Colour) format
+          const hasColor = rows[0] && (rows[0][2] || '').toLowerCase().includes('colour');
+          const color = hasColor ? (r[2] || '') : '';
+          const material = hasColor ? (r[3] || '') : (r[2] || '');
+          const qty = hasColor ? parseFloat(r[4]) : parseFloat(r[3]);
+          const user = hasColor ? (r[5] || '') : (r[4] || '');
+          if (!material) return;
           allEntries.push({
             date: r[0] || '',
             time: r[1] || '',
             section: section,
-            material: r[2] || '',
-            qty: parseFloat(r[3]) || 0,
-            user: r[4] || '',
+            color: color,
+            material: material,
+            qty: qty || 0,
+            user: user,
           });
         });
       } catch {}
