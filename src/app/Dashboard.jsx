@@ -1156,7 +1156,7 @@ function AnalyticsTab({mob}){
 const MIXING_ALL=["PVC","SCRAP","CALCIUM","DOP","CPW","ADIL","EPOXY","STERIC ACID","FINOWAX","TITANIUM","HEAT STB."];
 const MIXING_GLUE=["PVC PASTE","DOP","CPW","MTO","DBP","D80"];
 const MIXING_SHEET=["SCRAP","CALCIUM","DOP","STERIC ACID","CPW"];
-const MIX_SECTIONS=[{id:"all",label:"Mixing (All)",materials:MIXING_ALL},{id:"glue",label:"Mixing (Glue)",materials:MIXING_GLUE},{id:"sheet",label:"Mixing (Sheet)",materials:MIXING_SHEET}];
+const MIX_SECTIONS=[{id:"all",label:"Mixing (Loop)",materials:MIXING_ALL},{id:"glue",label:"Mixing (Glue)",materials:MIXING_GLUE},{id:"sheet",label:"Mixing (Sheet)",materials:MIXING_SHEET}];
 
 function ProductionTab({mob,user}){
   const[entries,setEntries]=useState([]);const[loading,setLoading]=useState(true);
