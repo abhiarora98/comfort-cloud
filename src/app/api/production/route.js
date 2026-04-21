@@ -105,39 +105,32 @@ export async function GET() {
         });
         const rows = res.data.values || [];
         if (rows.length === 0) continue;
-        const header = rows[0] || [];
-        const hasLine = (header[2] || '').toLowerCase().includes('line');
-        const hasColorOnly = (header[2] || '').toLowerCase().includes('colour') && !hasLine;
+        const header = (rows[0] || []).map(h => (h || '').toLowerCase().trim());
+        // Find column indices by header name
+        const colMap = {};
+        header.forEach((h, i) => {
+          if (h.includes('date')) colMap.date = i;
+          else if (h.includes('time')) colMap.time = i;
+          else if (h.includes('line')) colMap.line = i;
+          else if (h.includes('product')) colMap.product = i;
+          else if (h.includes('colour') || h.includes('color')) colMap.color = i;
+          else if (h.includes('material')) colMap.material = i;
+          else if (h.includes('quantity') || h.includes('qty')) colMap.qty = i;
+          else if (h.includes('entered') || h.includes('user')) colMap.user = i;
+        });
         rows.slice(1).forEach(r => {
-          let line = '', product = '', color = '', material = '', qty = 0, user = '';
-          if (hasLine) {
-            line = r[2] || '';
-            product = r[3] || '';
-            color = r[4] || '';
-            material = r[5] || '';
-            qty = parseFloat(r[6]) || 0;
-            user = r[7] || '';
-          } else if (hasColorOnly) {
-            color = r[2] || '';
-            material = r[3] || '';
-            qty = parseFloat(r[4]) || 0;
-            user = r[5] || '';
-          } else {
-            material = r[2] || '';
-            qty = parseFloat(r[3]) || 0;
-            user = r[4] || '';
-          }
+          const material = r[colMap.material] || '';
           if (!material) return;
           allEntries.push({
-            date: r[0] || '',
-            time: r[1] || '',
+            date: r[colMap.date] || '',
+            time: r[colMap.time] || '',
             section: section,
-            line: line,
-            product: product,
-            color: color,
+            line: colMap.line != null ? (r[colMap.line] || '') : '',
+            product: colMap.product != null ? (r[colMap.product] || '') : '',
+            color: colMap.color != null ? (r[colMap.color] || '') : '',
             material: material,
-            qty: qty,
-            user: user,
+            qty: parseFloat(r[colMap.qty]) || 0,
+            user: colMap.user != null ? (r[colMap.user] || '') : '',
           });
         });
       } catch {}
