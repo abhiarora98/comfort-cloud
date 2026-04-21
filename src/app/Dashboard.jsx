@@ -1169,6 +1169,7 @@ function ProductionTab({mob,user}){
   const[formColor,setFormColor]=useState("");const[colorFilter,setColorFilter]=useState("all");
   const[formLine,setFormLine]=useState("");const[formProduct,setFormProduct]=useState("");
   const[lineFilter,setLineFilter]=useState("all");const[productFilter,setProductFilter]=useState("all");
+  const[sheetColor,setSheetColor]=useState("");
 
   // Fetch entries
   useEffect(()=>{
@@ -1216,20 +1217,29 @@ function ProductionTab({mob,user}){
     if(!formColor){setSaveMsg("Please select a colour first");return;}
     setSaving(true);setSaveMsg("");
     const ents=[];
-    MIX_SECTIONS.forEach(sec=>{
+    // Loop and Glue use the main formColor
+    MIX_SECTIONS.filter(s=>s.id!=="sheet").forEach(sec=>{
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty(sec.id,mat));
         if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:formColor,line:formLine,product:formProduct});
       });
     });
-    // Add pigment entry (grams) under Mixing (Loop) section
+    // Pigment
     const pigQty=parseFloat(getQty("pigment",formColor));
     if(pigQty>0)ents.push({section:"Mixing (Loop)",material:"PIGMENT",qty:pigQty,color:formColor,line:formLine,product:formProduct,unit:"gm"});
+    // Sheet uses its own sheetColor
+    const sheetSec=MIX_SECTIONS.find(s=>s.id==="sheet");
+    if(sheetSec&&sheetColor){
+      sheetSec.materials.forEach(mat=>{
+        const q=parseFloat(getQty("sheet",mat));
+        if(q>0)ents.push({section:sheetSec.label,material:mat,qty:q,color:sheetColor,line:formLine,product:formProduct});
+      });
+    }
     if(ents.length===0){setSaving(false);setSaveMsg("No quantities entered");return;}
     try{
       const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown"})});
       const data=await res.json();
-      if(data.ok){setSaveMsg(data.saved+" entries saved for "+formLine+" · "+formProduct+" · "+formColor);setFormData({});setFormColor("");setFormLine("");setFormProduct("");
+      if(data.ok){setSaveMsg(data.saved+" entries saved for "+formLine+" · "+formProduct+" · "+formColor);setFormData({});setFormColor("");setFormLine("");setFormProduct("");setSheetColor("");
         // Refresh
         const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
       }else{setSaveMsg(data.error||"Failed to save");}
@@ -1281,39 +1291,104 @@ function ProductionTab({mob,user}){
       {!(formLine&&formProduct&&formColor)&&<div style={{padding:"32px 20px",textAlign:"center",background:"#FFFBEB"}}>
         <div style={{fontSize:13,color:"#92400E",fontWeight:500}}>Complete line, product and colour above to start entering material quantities</div>
       </div>}
-      {formLine&&formProduct&&formColor&&MIX_SECTIONS.map(sec=>{
-        const isExp=expanded===sec.id;
-        const filledCount=sec.materials.filter(m=>parseFloat(getQty(sec.id,m))>0).length;
-        return <div key={sec.id}>
-          <div className="hv-row" onClick={()=>setExpanded(isExp?null:sec.id)} style={{padding:"14px 20px",borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontFamily:MN,fontSize:12,color:"#94A3B8",transition:"transform 0.2s",transform:isExp?"rotate(90deg)":"none"}}>▶</span>
-              <span style={{fontSize:13,fontWeight:600,color:"#0F172A"}}>{sec.label}</span>
-              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{sec.materials.length} materials</span>
-            </div>
-            {filledCount>0&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#16A34A",background:"#F0FDF4",padding:"2px 8px",borderRadius:4}}>{filledCount} filled</span>}
-          </div>
-          {isExp&&<div style={{padding:"8px 20px 16px",background:"#F8FAFC"}}>
-            <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
-              {sec.materials.map(mat=>
-                <div key={mat} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",padding:"8px 14px"}}>
-                  <span style={{flex:1,fontSize:12,fontWeight:500,color:"#475569"}}>{mat}</span>
-                  <input type="number" min="0" step="0.1" value={getQty(sec.id,mat)} onChange={e=>setQty(sec.id,mat,e.target.value)} placeholder="kg" style={{width:80,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
-                </div>
-              )}
-            </div>
-            {sec.id==="all"&&formColor&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,border:"1px solid "+(parseFloat(getQty("pigment",formColor))>0?"#7C3AED40":"#E5E7EB"),padding:"10px 14px"}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Pigment</span>
-                  <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{formColor}</span>
-                </div>
-                <input type="number" min="0" step="1" value={getQty("pigment",formColor)} onChange={e=>setQty("pigment",formColor,e.target.value)} placeholder="gm" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+      {formLine&&formProduct&&formColor&&(()=>{
+        // Compute totals for Loop and Glue
+        const loopSec=MIX_SECTIONS.find(s=>s.id==="all");
+        const glueSec=MIX_SECTIONS.find(s=>s.id==="glue");
+        const sheetSec=MIX_SECTIONS.find(s=>s.id==="sheet");
+        const loopTotal=loopSec?loopSec.materials.reduce((s,m)=>s+(parseFloat(getQty("all",m))||0),0):0;
+        const pigTotal=parseFloat(getQty("pigment",formColor))||0;
+        const glueTotal=glueSec?glueSec.materials.reduce((s,m)=>s+(parseFloat(getQty("glue",m))||0),0):0;
+
+        const renderSection=(sec,extraAfter)=>{
+          const isExp=expanded===sec.id;
+          const filledCount=sec.materials.filter(m=>parseFloat(getQty(sec.id,m))>0).length;
+          const secTotal=sec.materials.reduce((s,m)=>s+(parseFloat(getQty(sec.id,m))||0),0);
+          return <div key={sec.id}>
+            <div className="hv-row" onClick={()=>setExpanded(isExp?null:sec.id)} style={{padding:"14px 20px",borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontFamily:MN,fontSize:12,color:"#94A3B8",transition:"transform 0.2s",transform:isExp?"rotate(90deg)":"none"}}>▶</span>
+                <span style={{fontSize:13,fontWeight:600,color:"#0F172A"}}>{sec.label}</span>
+                <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{sec.materials.length} materials</span>
               </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                {secTotal>0&&<span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#0F172A"}}>{secTotal.toFixed(1)} kg</span>}
+                {filledCount>0&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#16A34A",background:"#F0FDF4",padding:"2px 8px",borderRadius:4}}>{filledCount} filled</span>}
+              </div>
+            </div>
+            {isExp&&<div style={{padding:"8px 20px 16px",background:"#F8FAFC"}}>
+              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
+                {sec.materials.map(mat=>
+                  <div key={mat} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",padding:"8px 14px"}}>
+                    <span style={{flex:1,fontSize:12,fontWeight:500,color:"#475569"}}>{mat}</span>
+                    <input type="number" min="0" step="0.1" value={getQty(sec.id,mat)} onChange={e=>setQty(sec.id,mat,e.target.value)} placeholder="kg" style={{width:80,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+                  </div>
+                )}
+              </div>
+              {extraAfter}
             </div>}
+          </div>;
+        };
+
+        return <>
+          {/* Mixing (Loop) + Pigment */}
+          {renderSection(loopSec,formColor&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,border:"1px solid "+(pigTotal>0?"#7C3AED40":"#E5E7EB"),padding:"10px 14px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Pigment</span>
+                <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{formColor}</span>
+              </div>
+              <input type="number" min="0" step="1" value={getQty("pigment",formColor)} onChange={e=>setQty("pigment",formColor,e.target.value)} placeholder="gm" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+            </div>
+          </div>)}
+
+          {/* Mixing (Glue) */}
+          {renderSection(glueSec,null)}
+
+          {/* Total after Loop + Glue */}
+          {(loopTotal>0||glueTotal>0)&&<div style={{padding:"12px 20px",background:"#0F172A",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)"}}>Total — Loop + Glue</span>
+            <div style={{display:"flex",gap:16}}>
+              {loopTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Loop: <strong style={{color:"#fff"}}>{loopTotal.toFixed(1)} kg</strong></span>}
+              {pigTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Pigment: <strong style={{color:"#fff"}}>{pigTotal} gm</strong></span>}
+              {glueTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Glue: <strong style={{color:"#fff"}}>{glueTotal.toFixed(1)} kg</strong></span>}
+              <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#4ade80"}}>{(loopTotal+glueTotal).toFixed(1)} kg</span>
+            </div>
           </div>}
-        </div>;
-      })}
+
+          {/* Mixing (Sheet) — separate colour */}
+          <div>
+            <div className="hv-row" onClick={()=>setExpanded(expanded==="sheet"?null:"sheet")} style={{padding:"14px 20px",borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontFamily:MN,fontSize:12,color:"#94A3B8",transition:"transform 0.2s",transform:expanded==="sheet"?"rotate(90deg)":"none"}}>▶</span>
+                <span style={{fontSize:13,fontWeight:600,color:"#0F172A"}}>Mixing (Sheet)</span>
+                <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{sheetSec.materials.length} materials</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                {(()=>{const st=sheetSec.materials.reduce((s,m)=>s+(parseFloat(getQty("sheet",m))||0),0);return st>0&&<span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#0F172A"}}>{st.toFixed(1)} kg</span>;})()}
+                {(()=>{const fc=sheetSec.materials.filter(m=>parseFloat(getQty("sheet",m))>0).length;return fc>0&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#16A34A",background:"#F0FDF4",padding:"2px 8px",borderRadius:4}}>{fc} filled</span>;})()}
+              </div>
+            </div>
+            {expanded==="sheet"&&<div style={{padding:"8px 20px 16px",background:"#F8FAFC"}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+                <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:sheetColor?"#16A34A":"#D97706"}}>Sheet Colour {sheetColor?"·":"(select)"}</span>
+                <select value={sheetColor} onChange={e=>setSheetColor(e.target.value)} style={{padding:"6px 10px",border:"1px solid "+(sheetColor?"#16A34A":"#D97706"),borderRadius:6,background:"#fff",fontSize:12,fontFamily:MN,fontWeight:600,color:sheetColor?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
+                  <option value="">Select colour...</option>
+                  {PROD_COLORS.map(c=><option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              {sheetColor?<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
+                {sheetSec.materials.map(mat=>
+                  <div key={mat} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",padding:"8px 14px"}}>
+                    <span style={{flex:1,fontSize:12,fontWeight:500,color:"#475569"}}>{mat}</span>
+                    <input type="number" min="0" step="0.1" value={getQty("sheet",mat)} onChange={e=>setQty("sheet",mat,e.target.value)} placeholder="kg" style={{width:80,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+                  </div>
+                )}
+              </div>:<div style={{padding:"16px",textAlign:"center",color:"#92400E",fontSize:12}}>Select a sheet colour above</div>}
+            </div>}
+          </div>
+        </>;
+      })()}
       <div style={{padding:"14px 20px",borderTop:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div>{saveMsg&&<span style={{fontFamily:MN,fontSize:11,color:saveMsg.includes("saved")?"#16A34A":"#DC2626"}}>{saveMsg}</span>}</div>
         <button onClick={handleSave} disabled={saving} className="hv-btn" style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#fff",background:saving?"#94A3B8":"#0F172A",border:"none",borderRadius:8,padding:"10px 24px",cursor:saving?"default":"pointer"}}>{saving?"Saving...":"Save Entry"}</button>
