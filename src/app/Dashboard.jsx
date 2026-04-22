@@ -1159,6 +1159,7 @@ const MIXING_SHEET=["SCRAP","CALCIUM","DOP","STERIC ACID","CPW"];
 const MIX_SECTIONS=[{id:"all",label:"Mixing",materials:MIXING_ALL},{id:"glue",label:"Mixing (Glue)",materials:MIXING_GLUE},{id:"sheet",label:"Mixing (Sheet)",materials:MIXING_SHEET}];
 const PROD_COLORS=["P.GREEN","RED","BLUE","GREY","BROWN","MAROON","BEIGE","BLACK","BEIGE-BROWN","LIGHT GREY","DARK GREY","GREEN-BLACK","RED-BLACK","BLUE-BLACK","GREEN-BLUE","RED-BLUE","TAN-BLACK","WHITE-BLACK","GREEN-YELLOW"];
 const PROD_LINES=["LINE - 1","LINE - 2","LINE - 3"];
+const GLUE_LINES=["Sheet Mch."];
 const PROD_PRODUCTS=["LOOP","S-MAT","TURF"];
 const PROD_SHIFTS=["Day (8 AM - 8 PM)","Night (8 PM - 8 AM)"];
 function detectShift(){const h=new Date().getHours();return (h>=8&&h<20)?PROD_SHIFTS[0]:PROD_SHIFTS[1];}
@@ -1297,7 +1298,7 @@ function ProductionTab({mob,user,role}){
         <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formSection?"#16A34A":"#D97706",marginBottom:8}}>Section {formSection?"·":"(required)"}</div>
         <div style={{display:"flex",gap:8}}>
           {MIX_SECTIONS.map(sec=>
-            <div key={sec.id} className={formSection!==sec.id?"hv-pill":""} onClick={()=>{setFormSection(sec.id);setFormData({});setFormColor("");setSheetColor("");setLots(1);}} style={{flex:1,padding:"12px",borderRadius:8,border:formSection===sec.id?"2px solid #2563EB":"1px solid #E5E7EB",background:formSection===sec.id?"#EFF6FF":"#F8FAFC",color:formSection===sec.id?"#2563EB":"#475569",fontSize:12,fontFamily:MN,fontWeight:formSection===sec.id?700:500,cursor:"pointer",textAlign:"center"}}>{sec.label}</div>
+            <div key={sec.id} className={formSection!==sec.id?"hv-pill":""} onClick={()=>{setFormSection(sec.id);setFormData({});setFormColor("");setSheetColor("");setLots(1);setFormLine(sec.id==="glue"?"Sheet Mch.":"");setGlueProduced(1);setGlueUsed(1);}} style={{flex:1,padding:"12px",borderRadius:8,border:formSection===sec.id?"2px solid #2563EB":"1px solid #E5E7EB",background:formSection===sec.id?"#EFF6FF":"#F8FAFC",color:formSection===sec.id?"#2563EB":"#475569",fontSize:12,fontFamily:MN,fontWeight:formSection===sec.id?700:500,cursor:"pointer",textAlign:"center"}}>{sec.label}</div>
           )}
         </div>
       </div>
@@ -1309,7 +1310,7 @@ function ProductionTab({mob,user,role}){
             <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formLine?"#16A34A":"#D97706",marginBottom:5}}>Line</div>
             <select value={formLine} onChange={e=>setFormLine(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formLine?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formLine?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
               <option value="">Select...</option>
-              {PROD_LINES.map(l=><option key={l} value={l}>{l}</option>)}
+              {(formSection==="glue"?GLUE_LINES:PROD_LINES).map(l=><option key={l} value={l}>{l}</option>)}
             </select>
           </div>
           <div>
