@@ -1254,12 +1254,12 @@ function ProductionTab({mob,user,role}){
       if(sheetColQty>0)ents.push({section:"Mixing (Sheet)",material:"COLOUR",qty:sheetColQty,color:sheetColor,line:formLine,product:formProduct,shift:formShift});
     }
     if(ents.length===0){setSaving(false);setSaveMsg("No quantities entered");return;}
-    console.log("Saving entries:",JSON.stringify(ents.map(e=>({s:e.section,m:e.material,q:e.qty}))));
+    console.log("Saving entries:",JSON.stringify(ents.map(e=>({s:e.section,m:e.material,q:e.qty}))),"date:",formDate);
     try{
       const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown",date:formDate})});
       const data=await res.json();
       console.log("Save response:",data);
-      if(data.ok){setSaveMsg(data.saved+" entries saved for "+formLine+" · "+formProduct+" · "+formColor+(lots>1?" × "+lots+" lots":""));setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setSheetColor("");setFormShift(detectShift());setFormDate(new Date().toISOString().split("T")[0]);
+      if(data.ok){const wasBackdated=formDate!==new Date().toISOString().split("T")[0];setSaveMsg(data.saved+" entries saved for "+formLine+" · "+formProduct+" · "+formColor+(lots>1?" × "+lots+" lots":"")+(wasBackdated?" ("+formDate+")":""));if(wasBackdated)setPeriod("30d");setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setSheetColor("");setFormShift(detectShift());setFormDate(new Date().toISOString().split("T")[0]);
         // Refresh
         const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
       }else{setSaveMsg(data.error||"Failed to save");}
