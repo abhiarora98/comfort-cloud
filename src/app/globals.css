@@ -23,10 +23,10 @@ body {
 }
 
 input:focus, select:focus {
-  border-color: #d97706 !important;
-  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12);
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
 ::selection {
-  background: #d9770633;
+  background: #2563eb22;
 }

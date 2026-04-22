@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useEffect, Fragment } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, Fragment } from "react";
 import { useUser, useClerk } from "@clerk/nextjs";
 
 const RAW=[{"id":"26278","party":"BITTU COTTAGE","salesPOC":"AR","piDate":"06/02/2026","totalQty":4,"totalValue":19205,"lineCount":3,"categories":["TEFNO"],"lines":[{"no":"26278","partyCode":"QU01241","party":"BITTU COTTAGE","salesPOC":"AR","piDate":"06/02/2026","qty":2,"model":"TEFNO - 900","backing":"S-Mat","colour":"P.Green","width":"2ft","length":"10m","actualRate":"\u20b962.00","value":9603,"category":"TEFNO"},{"no":"26279","partyCode":"QU01241","party":"BITTU COTTAGE","salesPOC":"AR","piDate":"06/02/2026","qty":1,"model":"TEFNO - 900","backing":"S-Mat","colour":"Blue","width":"2ft","length":"10m","actualRate":"\u20b962.00","value":4801,"category":"TEFNO"},{"no":"26280","partyCode":"QU01241","party":"BITTU COTTAGE","salesPOC":"AR","piDate":"06/02/2026","qty":1,"model":"TEFNO - 900","backing":"S-Mat","colour":"Red","width":"2ft","length":"10m","actualRate":"\u20b962.00","value":4801,"category":"TEFNO"}]},{"id":"27108","party":"M/S KARAN ENTERPRISES","salesPOC":"AR","piDate":"13/02/2026","totalQty":15,"totalValue":64125,"lineCount":6,"categories":["Loop Rolls"],"lines":[{"no":"27108","partyCode":"RU0663","party":"M/S KARAN ENTERPRISES","salesPOC":"AR","piDate":"13/02/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Light Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b923.00","value":8550,"category":"Loop Rolls"},{"no":"27109","partyCode":"RU0663","party":"M/S KARAN ENTERPRISES","salesPOC":"AR","piDate":"13/02/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Beige-Brown","width":"4ft","length":"12m","actualRate":"\u20b923.00","value":8550,"category":"Loop Rolls"},{"no":"27110","partyCode":"RU0663","party":"M/S KARAN ENTERPRISES","salesPOC":"AR","piDate":"13/02/2026","qty":4,"model":"NIMBO","backing":"Spike","colour":"Black","width":"4ft","length":"12m","actualRate":"\u20b923.00","value":17100,"category":"Loop Rolls"},{"no":"27111","partyCode":"RU0663","party":"M/S KARAN ENTERPRISES","salesPOC":"AR","piDate":"13/02/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Red","width":"4ft","length":"12m","actualRate":"\u20b923.00","value":8550,"category":"Loop Rolls"},{"no":"27112","partyCode":"RU0663","party":"M/S KARAN ENTERPRISES","salesPOC":"AR","piDate":"13/02/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Brown","width":"4ft","length":"12m","actualRate":"\u20b923.00","value":8550,"category":"Loop Rolls"},{"no":"27113","partyCode":"RU0663","party":"M/S KARAN ENTERPRISES","salesPOC":"AR","piDate":"13/02/2026","qty":3,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"4ft","length":"12m","actualRate":"\u20b923.00","value":12825,"category":"Loop Rolls"}]},{"id":"28115","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"23/02/2026","totalQty":20,"totalValue":44253,"lineCount":8,"categories":["Turf","Loop Rolls"],"lines":[{"no":"28115","partyCode":"FY0651","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"23/02/2026","qty":4,"model":"NIMBO","backing":"Spike","colour":"Green-Blue","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":8922,"category":"Loop Rolls"},{"no":"28116","partyCode":"FY0651","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"23/02/2026","qty":4,"model":"NIMBO","backing":"Spike","colour":"Green-Yellow","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":8922,"category":"Loop Rolls"},{"no":"28117","partyCode":"FY0651","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"23/02/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Green-Black","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":4461,"category":"Loop Rolls"},{"no":"28118","partyCode":"FY0651","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"23/02/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":4461,"category":"Loop Rolls"},{"no":"28119","partyCode":"FY0651","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"23/02/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":4461,"category":"Loop Rolls"},{"no":"28120","partyCode":"FY0651","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"23/02/2026","qty":2,"model":"Kappa Turf","backing":"Turf","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b919.00","value":4342,"category":"Turf"},{"no":"28121","partyCode":"FY0651","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"23/02/2026","qty":2,"model":"Kappa Turf","backing":"Turf","colour":"Red","width":"2ft","length":"15m","actualRate":"\u20b919.00","value":4342,"category":"Turf"},{"no":"28122","partyCode":"FY0651","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"23/02/2026","qty":2,"model":"Kappa Turf","backing":"Turf","colour":"Blue","width":"2ft","length":"15m","actualRate":"\u20b919.00","value":4342,"category":"Turf"}]},{"id":"28357","party":"ARIHANT MARKETING","salesPOC":"AR","piDate":"25/02/2026","totalQty":5,"totalValue":27425,"lineCount":1,"categories":["Wire"],"lines":[{"no":"28357","partyCode":"XN0110","party":"ARIHANT MARKETING","salesPOC":"AR","piDate":"25/02/2026","qty":5,"model":"WIRE","backing":"STRIPE","colour":"Black","width":"4ft","length":"15m","actualRate":"\u20b924.00","value":27425,"category":"Wire"}]},{"id":"28634","party":"MODERN ENTERPRISES","salesPOC":"AR","piDate":"02/03/2026","totalQty":309,"totalValue":31152,"lineCount":7,"categories":["Car Set","Foot Mat"],"lines":[{"no":"28634","partyCode":"EE01349","party":"MODERN ENTERPRISES","salesPOC":"AR","piDate":"02/03/2026","qty":180,"model":"Water Absorbent","backing":"Bathroom Mats","colour":"Mixed","width":"45cm","length":"45cm","actualRate":"\u20b980.00","value":16992,"category":"Foot Mat"},{"no":"28637","partyCode":"EE01349","party":"MODERN ENTERPRISES","salesPOC":"AR","piDate":"02/03/2026","qty":2,"model":"STRATO","backing":"Spike","colour":"Beige-Brown","width":"3pc","length":"3pc","actualRate":"\u20b9600.00","value":1416,"category":"Car Set"},{"no":"28638","partyCode":"EE01349","party":"MODERN ENTERPRISES","salesPOC":"AR","piDate":"02/03/2026","qty":2,"model":"STRATO","backing":"Spike","colour":"Dark Grey-Black","width":"3pc","length":"3pc","actualRate":"\u20b9600.00","value":1416,"category":"Car Set"},{"no":"28639","partyCode":"EE01349","party":"MODERN ENTERPRISES","salesPOC":"AR","piDate":"02/03/2026","qty":2,"model":"STRATO","backing":"Spike","colour":"Light Grey-Black","width":"3pc","length":"3pc","actualRate":"\u20b9600.00","value":1416,"category":"Car Set"},{"no":"28640","partyCode":"EE01349","party":"MODERN ENTERPRISES","salesPOC":"AR","piDate":"02/03/2026","qty":2,"model":"STRATO","backing":"Spike","colour":"Tan-Black","width":"3pc","length":"3pc","actualRate":"\u20b9600.00","value":1416,"category":"Car Set"},{"no":"28641","partyCode":"EE01349","party":"MODERN ENTERPRISES","salesPOC":"AR","piDate":"02/03/2026","qty":1,"model":"STRATO","backing":"Spike","colour":"Beige","width":"3pc","length":"3pc","actualRate":"\u20b9600.00","value":708,"category":"Car Set"},{"no":"29850","partyCode":"EE01349","party":"MODERN ENTERPRISES","salesPOC":"AR","piDate":"02/03/2026","qty":120,"model":"Water Absorbent","backing":"Bathroom Mats","colour":"Mixed","width":"38cm","length":"58cm","actualRate":"\u20b955.00","value":7788,"category":"Foot Mat"}]},{"id":"28758","party":"THE CHENNAI SILKS (THE SCM)","salesPOC":"AA","piDate":"03/03/2026","totalQty":10,"totalValue":2313,"lineCount":1,"categories":["Foot Mat"],"lines":[{"no":"28758","partyCode":"TG0917","party":"THE CHENNAI SILKS (THE SCM)","salesPOC":"AA","piDate":"03/03/2026","qty":10,"model":"WELCOME","backing":"Welcome","colour":"Single Mixed","width":"60cm","length":"90cm","actualRate":"\u20b9196.00","value":2313,"category":"Foot Mat"}]},{"id":"28766","party":"Sita Ram Enterprises","salesPOC":"AA","piDate":"05/03/2026","totalQty":420,"totalValue":36203,"lineCount":9,"categories":["Foot Mat"],"lines":[{"no":"28766","partyCode":"PB01287","party":"Sita Ram Enterprises","salesPOC":"AA","piDate":"05/03/2026","qty":60,"model":"Water Absorbent","backing":"Bathroom Mats","colour":"Mixed","width":"43in","length":"68in","actualRate":"\u20b980.00","value":5664,"category":"Foot Mat"},{"no":"28767","partyCode":"PB01287","party":"Sita Ram Enterprises","salesPOC":"AA","piDate":"05/03/2026","qty":40,"model":"TEFNO - 400","backing":"S-Mat","colour":"Single Mixed","width":"45cm","length":"75cm","actualRate":"\u20b994.00","value":4437,"category":"Foot Mat"},{"no":"28768","partyCode":"PB01287","party":"Sita Ram Enterprises","salesPOC":"AA","piDate":"05/03/2026","qty":40,"model":"ALTO","backing":"Diamond","colour":"Double Mixed","width":"45cm","length":"75cm","actualRate":"\u20b975.00","value":3540,"category":"Foot Mat"},{"no":"28769","partyCode":"PB01287","party":"Sita Ram Enterprises","salesPOC":"AA","piDate":"05/03/2026","qty":40,"model":"Kappa","backing":"Turf","colour":"Single Mixed","width":"18in","length":"30in","actualRate":"\u20b975.00","value":3540,"category":"Foot Mat"},{"no":"28770","partyCode":"PB01287","party":"Sita Ram Enterprises","salesPOC":"AA","piDate":"05/03/2026","qty":40,"model":"WELCOME","backing":"Welcome","colour":"Mixed","width":"45cm","length":"75cm","actualRate":"\u20b998.00","value":4626,"category":"Foot Mat"},{"no":"28771","partyCode":"PB01287","party":"Sita Ram Enterprises","salesPOC":"AA","piDate":"05/03/2026","qty":50,"model":"WELCOME","backing":"Welcome","colour":"Double Mixed","width":"38cm","length":"58cm","actualRate":"\u20b964.00","value":3776,"category":"Foot Mat"},{"no":"28772","partyCode":"PB01287","party":"Sita Ram Enterprises","salesPOC":"AA","piDate":"05/03/2026","qty":50,"model":"TEFNO - 400","backing":"S-Mat","colour":"Single Mixed","width":"16in","length":"24in","actualRate":"\u20b965.00","value":3835,"category":"Foot Mat"},{"no":"28773","partyCode":"PB01287","party":"Sita Ram Enterprises","salesPOC":"AA","piDate":"05/03/2026","qty":50,"model":"ALTO","backing":"Diamond","colour":"Double Mixed","width":"16in","length":"24in","actualRate":"\u20b953.00","value":3127,"category":"Foot Mat"},{"no":"28774","partyCode":"PB01287","party":"Sita Ram Enterprises","salesPOC":"AA","piDate":"05/03/2026","qty":50,"model":"Monograss","backing":"Monograss","colour":"Mixed","width":"14in","length":"24in","actualRate":"\u20b962.00","value":3658,"category":"Foot Mat"}]},{"id":"28818","party":"AGM ENTERPRISES","salesPOC":"AR","piDate":"05/03/2026","totalQty":15,"totalValue":78234,"lineCount":1,"categories":["Wire"],"lines":[{"no":"28818","partyCode":"CK01360","party":"AGM ENTERPRISES","salesPOC":"AR","piDate":"05/03/2026","qty":15,"model":"WIRE","backing":"STRIPE","colour":"Black","width":"1.05mtr","length":"15m","actualRate":"\u20b926.00","value":78234,"category":"Wire"}]},{"id":"28969","party":"GO MECHANIC   (Easy Technology)","salesPOC":"AA","piDate":"06/03/2026","totalQty":650,"totalValue":514893,"lineCount":9,"categories":["Car Set"],"lines":[{"no":"28969","partyCode":"IP0726","party":"GO MECHANIC   (Easy Technology)","salesPOC":"AA","piDate":"06/03/2026","qty":120,"model":"STRATO","backing":"Spike","colour":"Black","width":"5pc","length":"5pc","actualRate":"\u20b9660.00","value":93456,"category":"Car Set"},{"no":"28970","partyCode":"IP0726","party":"GO MECHANIC   (Easy Technology)","salesPOC":"AA","piDate":"06/03/2026","qty":120,"model":"STRATO","backing":"Spike","colour":"Light Grey-Black","width":"5pc","length":"5pc","actualRate":"\u20b9660.00","value":93456,"category":"Car Set"},{"no":"28971","partyCode":"IP0726","party":"GO MECHANIC   (Easy Technology)","salesPOC":"AA","piDate":"06/03/2026","qty":50,"model":"STRATO","backing":"Spike","colour":"Beige-Brown","width":"5pc","length":"5pc","actualRate":"\u20b9660.00","value":38940,"category":"Car Set"},{"no":"28972","partyCode":"IP0726","party":"GO MECHANIC   (Easy Technology)","salesPOC":"AA","piDate":"06/03/2026","qty":50,"model":"STRATO","backing":"Spike","colour":"Beige","width":"5pc","length":"5pc","actualRate":"\u20b9660.00","value":38940,"category":"Car Set"},{"no":"28973","partyCode":"IP0726","party":"GO MECHANIC   (Easy Technology)","salesPOC":"AA","piDate":"06/03/2026","qty":50,"model":"STRATO","backing":"Spike","colour":"Tan-Black","width":"5pc","length":"5pc","actualRate":"\u20b9660.00","value":38940,"category":"Car Set"},{"no":"28974","partyCode":"IP0726","party":"GO MECHANIC   (Easy Technology)","salesPOC":"AA","piDate":"06/03/2026","qty":50,"model":"STRATO","backing":"Spike","colour":"Red-Black","width":"5pc","length":"5pc","actualRate":"\u20b9660.00","value":38940,"category":"Car Set"},{"no":"28975","partyCode":"IP0726","party":"GO MECHANIC   (Easy Technology)","salesPOC":"AA","piDate":"06/03/2026","qty":80,"model":"STRATO","backing":"Spike","colour":"Black","width":"3pc","length":"3pc","actualRate":"\u20b9695.00","value":65608,"category":"Car Set"},{"no":"28976","partyCode":"IP0726","party":"GO MECHANIC   (Easy Technology)","salesPOC":"AA","piDate":"06/03/2026","qty":80,"model":"STRATO","backing":"Spike","colour":"Light Grey-Black","width":"3pc","length":"3pc","actualRate":"\u20b9695.00","value":65608,"category":"Car Set"},{"no":"28977","partyCode":"IP0726","party":"GO MECHANIC   (Easy Technology)","salesPOC":"AA","piDate":"06/03/2026","qty":50,"model":"STRATO","backing":"Spike","colour":"Beige-Brown","width":"3pc","length":"3pc","actualRate":"\u20b9695.00","value":41005,"category":"Car Set"}]},{"id":"29086","party":"SHANKAR GLASS HOUSE","salesPOC":"AR","piDate":"07/03/2026","totalQty":16,"totalValue":35922,"lineCount":6,"categories":["Loop Rolls"],"lines":[{"no":"29086","partyCode":"NC01230","party":"SHANKAR GLASS HOUSE","salesPOC":"AR","piDate":"07/03/2026","qty":3,"model":"ALTO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":6927,"category":"Loop Rolls"},{"no":"29087","partyCode":"NC01230","party":"SHANKAR GLASS HOUSE","salesPOC":"AR","piDate":"07/03/2026","qty":3,"model":"ALTO","backing":"Spike","colour":"Blue","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":6691,"category":"Loop Rolls"},{"no":"29088","partyCode":"NC01230","party":"SHANKAR GLASS HOUSE","salesPOC":"AR","piDate":"07/03/2026","qty":2,"model":"ALTO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":4461,"category":"Loop Rolls"},{"no":"29089","partyCode":"NC01230","party":"SHANKAR GLASS HOUSE","salesPOC":"AR","piDate":"07/03/2026","qty":3,"model":"ALTO","backing":"Spike","colour":"Green-Black","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":6691,"category":"Loop Rolls"},{"no":"29090","partyCode":"NC01230","party":"SHANKAR GLASS HOUSE","salesPOC":"AR","piDate":"07/03/2026","qty":3,"model":"ALTO","backing":"Spike","colour":"Blue-Black","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":6691,"category":"Loop Rolls"},{"no":"29091","partyCode":"NC01230","party":"SHANKAR GLASS HOUSE","salesPOC":"AR","piDate":"07/03/2026","qty":2,"model":"ALTO","backing":"Spike","colour":"Red-Black","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":4461,"category":"Loop Rolls"}]},{"id":"29092","party":"Shree Enterprises and Distributers","salesPOC":"VS","piDate":"07/03/2026","totalQty":120,"totalValue":374810,"lineCount":2,"categories":["Turf"],"lines":[{"no":"29092","partyCode":"UG01562","party":"Shree Enterprises and Distributers","salesPOC":"VS","piDate":"07/03/2026","qty":40,"model":"Kappa Turf","backing":"Turf","colour":"P.Green","width":"4ft","length":"15m","actualRate":"\u20b920.50","value":187405,"category":"Turf"},{"no":"29093","partyCode":"UG01562","party":"Shree Enterprises and Distributers","salesPOC":"VS","piDate":"07/03/2026","qty":80,"model":"Kappa Turf","backing":"Turf","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b920.50","value":187405,"category":"Turf"}]},{"id":"29107","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","totalQty":465,"totalValue":1776023,"lineCount":14,"categories":["TEFNO","Loop Rolls"],"lines":[{"no":"29107","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":60,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"4ft","length":"12m","actualRate":"\u20b924.50","value":273234,"category":"Loop Rolls"},{"no":"29108","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":50,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"4ft","length":"12m","actualRate":"\u20b924.50","value":227695,"category":"Loop Rolls"},{"no":"29109","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":10,"model":"NIMBO","backing":"Spike","colour":"Blue","width":"4ft","length":"12m","actualRate":"\u20b924.50","value":45539,"category":"Loop Rolls"},{"no":"29110","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":10,"model":"NIMBO","backing":"Spike","colour":"Red","width":"4ft","length":"12m","actualRate":"\u20b924.50","value":45539,"category":"Loop Rolls"},{"no":"29111","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":50,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b924.50","value":113848,"category":"Loop Rolls"},{"no":"29112","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":50,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"2ft","length":"12m","actualRate":"\u20b924.50","value":113848,"category":"Loop Rolls"},{"no":"29113","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":10,"model":"NIMBO","backing":"Spike","colour":"Blue","width":"2ft","length":"12m","actualRate":"\u20b924.50","value":22770,"category":"Loop Rolls"},{"no":"29114","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":10,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b924.50","value":22770,"category":"Loop Rolls"},{"no":"29115","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":50,"model":"TEFNO - 400","backing":"S-Mat","colour":"P.Green","width":"4ft","length":"15m","actualRate":"\u20b924.50","value":284619,"category":"TEFNO"},{"no":"29116","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":50,"model":"TEFNO - 400","backing":"S-Mat","colour":"L.Grey","width":"4ft","length":"15m","actualRate":"\u20b924.50","value":284619,"category":"TEFNO"},{"no":"29117","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":5,"model":"TEFNO - 400","backing":"S-Mat","colour":"Red","width":"4ft","length":"15m","actualRate":"\u20b924.50","value":28462,"category":"TEFNO"},{"no":"29118","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":50,"model":"TEFNO - 400","backing":"S-Mat","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b924.50","value":142309,"category":"TEFNO"},{"no":"29119","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":50,"model":"TEFNO - 400","backing":"S-Mat","colour":"L.Grey","width":"2ft","length":"15m","actualRate":"\u20b924.50","value":142309,"category":"TEFNO"},{"no":"29120","partyCode":"","party":"Shivshakti Enterprises","salesPOC":"VS","piDate":"07/03/2026","qty":10,"model":"TEFNO - 400","backing":"S-Mat","colour":"Red","width":"2ft","length":"15m","actualRate":"\u20b924.50","value":28462,"category":"TEFNO"}]},{"id":"29178","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"09/03/2026","totalQty":270,"totalValue":18019,"lineCount":4,"categories":["Foot Mat"],"lines":[{"no":"29178","partyCode":"FY0651","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"09/03/2026","qty":75,"model":"NIMBO","backing":"Diamond","colour":"Single Mixed","width":"30cm","length":"45cm","actualRate":"\u20b942.00","value":3717,"category":"Foot Mat"},{"no":"29179","partyCode":"FY0651","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"09/03/2026","qty":60,"model":"NIMBO","backing":"Diamond","colour":"Single Mixed","width":"38cm","length":"58cm","actualRate":"\u20b967.00","value":4744,"category":"Foot Mat"},{"no":"29180","partyCode":"FY0651","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"09/03/2026","qty":75,"model":"CIRRO","backing":"Spike","colour":"Single Mixed","width":"12in","length":"18in","actualRate":"\u20b948.00","value":4248,"category":"Foot Mat"},{"no":"29181","partyCode":"FY0651","party":"RAJA PLASTIC","salesPOC":"AR","piDate":"09/03/2026","qty":60,"model":"CIRRO","backing":"Spike","colour":"Single Mixed","width":"14in","length":"24in","actualRate":"\u20b975.00","value":5310,"category":"Foot Mat"}]},{"id":"29222","party":"BHAGIRATH MAL PANNA LAL","salesPOC":"AR","piDate":"09/03/2026","totalQty":29,"totalValue":127253,"lineCount":10,"categories":["TEFNO","Loop Rolls","Turf"],"lines":[{"no":"29222","partyCode":"XH0997","party":"BHAGIRATH MAL PANNA LAL","salesPOC":"AR","piDate":"09/03/2026","qty":5,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":12082,"category":"Loop Rolls"},{"no":"29223","partyCode":"XH0997","party":"BHAGIRATH MAL PANNA LAL","salesPOC":"AR","piDate":"09/03/2026","qty":3,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":7249,"category":"Loop Rolls"},{"no":"29224","partyCode":"XH0997","party":"BHAGIRATH MAL PANNA LAL","salesPOC":"AR","piDate":"09/03/2026","qty":3,"model":"NIMBO","backing":"Spike","colour":"Light Grey-Black","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":7249,"category":"Loop Rolls"},{"no":"29225","partyCode":"XH0997","party":"BHAGIRATH MAL PANNA LAL","salesPOC":"AR","piDate":"09/03/2026","qty":4,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":19331,"category":"Loop Rolls"},{"no":"29226","partyCode":"XH0997","party":"BHAGIRATH MAL PANNA LAL","salesPOC":"AR","piDate":"09/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Red","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":9665,"category":"Loop Rolls"},{"no":"29227","partyCode":"XH0997","party":"BHAGIRATH MAL PANNA LAL","salesPOC":"AR","piDate":"09/03/2026","qty":3,"model":"TEFNO - 600","backing":"S-Mat","colour":"Dark-Grey","width":"2ft","length":"15m","actualRate":"\u20b930.00","value":10455,"category":"TEFNO"},{"no":"29228","partyCode":"XH0997","party":"BHAGIRATH MAL PANNA LAL","salesPOC":"AR","piDate":"09/03/2026","qty":3,"model":"TEFNO - 600","backing":"S-Mat","colour":"Dark-Grey","width":"4ft","length":"15m","actualRate":"\u20b930.00","value":20911,"category":"TEFNO"},{"no":"29229","partyCode":"XH0997","party":"BHAGIRATH MAL PANNA LAL","salesPOC":"AR","piDate":"09/03/2026","qty":2,"model":"TEFNO - 900","backing":"S-Mat","colour":"Grey","width":"2ft","length":"10m","actualRate":"\u20b960.00","value":9293,"category":"TEFNO"},{"no":"29230","partyCode":"XH0997","party":"BHAGIRATH MAL PANNA LAL","salesPOC":"AR","piDate":"09/03/2026","qty":2,"model":"Heavy Duty","backing":"Diamond","colour":"P.Green","width":"4ft","length":"9mtr","actualRate":"\u20b994.00","value":26219,"category":"Loop Rolls"},{"no":"29231","partyCode":"XH0997","party":"BHAGIRATH MAL PANNA LAL","salesPOC":"AR","piDate":"09/03/2026","qty":2,"model":"Kappa Turf","backing":"Turf","colour":"Blue","width":"2ft","length":"15m","actualRate":"\u20b921.00","value":4799,"category":"Turf"}]},{"id":"29232","party":"H B TRADERS (Big Sale)","salesPOC":"AR","piDate":"09/03/2026","totalQty":42,"totalValue":249568,"lineCount":2,"categories":["Wire"],"lines":[{"no":"29232","partyCode":"MY01494","party":"H B TRADERS (Big Sale)","salesPOC":"AR","piDate":"09/03/2026","qty":40,"model":"WIRE","backing":"WIRE","colour":"Black","width":"4ft","length":"15m","actualRate":"\u20b926.00","value":237684,"category":"Wire"},{"no":"29233","partyCode":"MY01494","party":"H B TRADERS (Big Sale)","salesPOC":"AR","piDate":"09/03/2026","qty":2,"model":"WIRE","backing":"WIRE","colour":"Beige-Brown","width":"4ft","length":"15m","actualRate":"\u20b926.00","value":11884,"category":"Wire"}]},{"id":"29277","party":"LIMRA TRADERS","salesPOC":"AR","piDate":"10/03/2026","totalQty":10,"totalValue":52540,"lineCount":4,"categories":["TEFNO","Loop Rolls"],"lines":[{"no":"29277","partyCode":"VZ01168","party":"LIMRA TRADERS","salesPOC":"AR","piDate":"10/03/2026","qty":4,"model":"NIMBO","backing":"Spike","colour":"Blue","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":19331,"category":"Loop Rolls"},{"no":"29278","partyCode":"VZ01168","party":"LIMRA TRADERS","salesPOC":"AR","piDate":"10/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Red","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":9665,"category":"Loop Rolls"},{"no":"29279","partyCode":"VZ01168","party":"LIMRA TRADERS","salesPOC":"AR","piDate":"10/03/2026","qty":2,"model":"TEFNO - 400","backing":"S-Mat","colour":"P.Green","width":"4ft","length":"15m","actualRate":"\u20b926.00","value":12082,"category":"TEFNO"},{"no":"29280","partyCode":"VZ01168","party":"LIMRA TRADERS","salesPOC":"AR","piDate":"10/03/2026","qty":2,"model":"STRATO","backing":"Spike","colour":"Grey","width":"4ft","length":"10m","actualRate":"\u20b937.00","value":11462,"category":"Loop Rolls"}]},{"id":"29303","party":"TRAVANCORE COCOTUFF P.vt,L.t.D","salesPOC":"SPM","piDate":"10/03/2026","totalQty":4449,"totalValue":338614,"lineCount":3,"categories":["Foot Mat"],"lines":[{"no":"29303","partyCode":"MW01163","party":"TRAVANCORE COCOTUFF P.vt,L.t.D","salesPOC":"SPM","piDate":"10/03/2026","qty":2499,"model":"ALTO","backing":"Spike","colour":"Black","width":"40cm","length":"60cm","actualRate":"\u20b964.50","value":190199,"category":"Foot Mat"},{"no":"29304","partyCode":"MW01163","party":"TRAVANCORE COCOTUFF P.vt,L.t.D","salesPOC":"SPM","piDate":"10/03/2026","qty":1200,"model":"ALTO","backing":"Spike","colour":"Brown","width":"40cm","length":"60cm","actualRate":"\u20b964.50","value":91332,"category":"Foot Mat"},{"no":"29305","partyCode":"MW01163","party":"TRAVANCORE COCOTUFF P.vt,L.t.D","salesPOC":"SPM","piDate":"10/03/2026","qty":750,"model":"ALTO","backing":"Spike","colour":"Grey","width":"40cm","length":"60cm","actualRate":"\u20b964.50","value":57083,"category":"Foot Mat"}]},{"id":"29384","party":"AJAY SAROJ","salesPOC":"AR","piDate":"11/03/2026","totalQty":7,"totalValue":22855,"lineCount":2,"categories":["Turf"],"lines":[{"no":"29384","partyCode":"TX01286","party":"AJAY SAROJ","salesPOC":"AR","piDate":"11/03/2026","qty":1,"model":"Kappa Turf","backing":"Turf","colour":"P.Green","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":5714,"category":"Turf"},{"no":"29385","partyCode":"TX01286","party":"AJAY SAROJ","salesPOC":"AR","piDate":"11/03/2026","qty":6,"model":"Kappa Turf","backing":"Turf","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":17141,"category":"Turf"}]},{"id":"29396","party":"CROWN TRADERS","salesPOC":"AR","piDate":"11/03/2026","totalQty":21,"totalValue":0,"lineCount":1,"categories":["Loop Rolls"],"lines":[{"no":"29396","partyCode":"SE01121","party":"CROWN TRADERS","salesPOC":"AR","piDate":"11/03/2026","qty":21,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"4ft","length":"12m","actualRate":"\u20b926.50","value":0,"category":"Loop Rolls"}]},{"id":"29487","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","totalQty":440,"totalValue":1408366,"lineCount":16,"categories":["Turf","TEFNO","Loop Rolls"],"lines":[{"no":"29487","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":40,"model":"TEFNO - 400","backing":"S-Mat","colour":"Red-Black","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":116171,"category":"TEFNO"},{"no":"29488","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":40,"model":"TEFNO - 400","backing":"S-Mat","colour":"Green-Black","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":116171,"category":"TEFNO"},{"no":"29489","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":40,"model":"TEFNO - 400","backing":"S-Mat","colour":"Grey-Black","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":116171,"category":"TEFNO"},{"no":"29490","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":25,"model":"TEFNO - 400","backing":"S-Mat","colour":"Red","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":72607,"category":"TEFNO"},{"no":"29491","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":10,"model":"TEFNO - 400","backing":"S-Mat","colour":"Red-Black","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":58086,"category":"TEFNO"},{"no":"29492","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":10,"model":"TEFNO - 400","backing":"S-Mat","colour":"Green-Black","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":58086,"category":"TEFNO"},{"no":"29493","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":10,"model":"TEFNO - 400","backing":"S-Mat","colour":"Grey-Black","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":58086,"category":"TEFNO"},{"no":"29494","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":40,"model":"Kappa Turf","backing":"Turf","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":114271,"category":"Turf"},{"no":"29495","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":10,"model":"Kappa Turf","backing":"Turf","colour":"Red","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":28568,"category":"Turf"},{"no":"29496","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":15,"model":"Kappa Turf","backing":"Turf","colour":"P.Green","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":85703,"category":"Turf"},{"no":"29497","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":5,"model":"Kappa Turf","backing":"Turf","colour":"Red","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":28568,"category":"Turf"},{"no":"29498","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":90,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":217472,"category":"Loop Rolls"},{"no":"29499","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":50,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":120818,"category":"Loop Rolls"},{"no":"29500","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":20,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":96654,"category":"Loop Rolls"},{"no":"29501","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":10,"model":"NIMBO","backing":"Spike","colour":"Red","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":48327,"category":"Loop Rolls"},{"no":"29533","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"12/03/2026","qty":25,"model":"TEFNO - 400","backing":"S-Mat","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":72607,"category":"TEFNO"}]},{"id":"29513","party":"SANU TRADERS","salesPOC":"AR","piDate":"12/03/2026","totalQty":514,"totalValue":67097,"lineCount":7,"categories":["Turf","Foot Mat","Loop Rolls"],"lines":[{"no":"29513","partyCode":"JJ0630","party":"SANU TRADERS","salesPOC":"AR","piDate":"12/03/2026","qty":300,"model":"NIMBO","backing":"Spike","colour":"Double Mixed","width":"30cm","length":"45cm","actualRate":"\u20b941.00","value":14514,"category":"Foot Mat"},{"no":"29514","partyCode":"JJ0630","party":"SANU TRADERS","salesPOC":"AR","piDate":"12/03/2026","qty":200,"model":"NIMBO","backing":"Spike","colour":"Double Mixed","width":"38cm","length":"58cm","actualRate":"\u20b972.00","value":16992,"category":"Foot Mat"},{"no":"29515","partyCode":"JJ0630","party":"SANU TRADERS","salesPOC":"AR","piDate":"12/03/2026","qty":4,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":9665,"category":"Loop Rolls"},{"no":"29516","partyCode":"JJ0630","party":"SANU TRADERS","salesPOC":"AR","piDate":"12/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Green-Yellow","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29517","partyCode":"JJ0630","party":"SANU TRADERS","salesPOC":"AR","piDate":"12/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Blue","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29518","partyCode":"JJ0630","party":"SANU TRADERS","salesPOC":"AR","piDate":"12/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Beige-Brown","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29519","partyCode":"JJ0630","party":"SANU TRADERS","salesPOC":"AR","piDate":"12/03/2026","qty":4,"model":"Kappa Turf","backing":"Turf","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":11427,"category":"Turf"}]},{"id":"29532","party":"JM JAIN LLP","salesPOC":"VS","piDate":"12/03/2026","totalQty":80,"totalValue":12461,"lineCount":1,"categories":["Foot Mat"],"lines":[{"no":"29532","partyCode":"IG0939","party":"JM JAIN LLP","salesPOC":"VS","piDate":"12/03/2026","qty":80,"model":"NIMBO","backing":"Spike","colour":"Single Mixed","width":"45cm","length":"75cm","actualRate":"\u20b9132.00","value":12461,"category":"Foot Mat"}]},{"id":"29559","party":"SANJAY KUMAR","salesPOC":"AR","piDate":"12/03/2026","totalQty":4,"totalValue":11012,"lineCount":4,"categories":["Turf","TEFNO","Loop Rolls"],"lines":[{"no":"29559","partyCode":"WY01112","party":"SANJAY KUMAR","salesPOC":"AR","piDate":"12/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b927.00","value":2509,"category":"Loop Rolls"},{"no":"29560","partyCode":"WY01112","party":"SANJAY KUMAR","salesPOC":"AR","piDate":"12/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b927.00","value":2509,"category":"Loop Rolls"},{"no":"29561","partyCode":"WY01112","party":"SANJAY KUMAR","salesPOC":"AR","piDate":"12/03/2026","qty":1,"model":"Kappa Turf","backing":"Turf","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":2857,"category":"Turf"},{"no":"29562","partyCode":"WY01112","party":"SANJAY KUMAR","salesPOC":"AR","piDate":"12/03/2026","qty":1,"model":"TEFNO - 400","backing":"S-Mat","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b927.00","value":3137,"category":"TEFNO"}]},{"id":"29566","party":"ACCURATE ACCESSORIES","salesPOC":"SPM","piDate":"12/03/2026","totalQty":115,"totalValue":641264,"lineCount":2,"categories":["Loop Rolls"],"lines":[{"no":"29566","partyCode":"KO056","party":"ACCURATE ACCESSORIES","salesPOC":"SPM","piDate":"12/03/2026","qty":70,"model":"NIMBO","backing":"Spike","colour":"Light Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b930.00","value":390335,"category":"Loop Rolls"},{"no":"29921","partyCode":"KO056","party":"ACCURATE ACCESSORIES","salesPOC":"SPM","piDate":"12/03/2026","qty":45,"model":"NIMBO","backing":"Spike","colour":"Black","width":"4ft","length":"12m","actualRate":"\u20b930.00","value":250929,"category":"Loop Rolls"}]},{"id":"29590","party":"APNA FURNISHING","salesPOC":"VS","piDate":"12/03/2026","totalQty":216,"totalValue":66479,"lineCount":11,"categories":["Foot Mat","TEFNO","Loop Rolls"],"lines":[{"no":"29590","partyCode":"VO01623","party":"APNA FURNISHING","salesPOC":"VS","piDate":"12/03/2026","qty":2,"model":"TEFNO - 400","backing":"S-Mat","colour":"Red","width":"2ft","length":"15m","actualRate":"\u20b926.00","value":6041,"category":"TEFNO"},{"no":"29591","partyCode":"VO01623","party":"APNA FURNISHING","salesPOC":"VS","piDate":"12/03/2026","qty":2,"model":"TEFNO - 400","backing":"S-Mat","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b926.00","value":6041,"category":"TEFNO"},{"no":"29592","partyCode":"VO01623","party":"APNA FURNISHING","salesPOC":"VS","piDate":"12/03/2026","qty":2,"model":"TEFNO - 400","backing":"S-Mat","colour":"Dark-Grey","width":"2ft","length":"15m","actualRate":"\u20b926.00","value":6041,"category":"TEFNO"},{"no":"29593","partyCode":"VO01623","party":"APNA FURNISHING","salesPOC":"VS","piDate":"12/03/2026","qty":1,"model":"TEFNO - 400","backing":"S-Mat","colour":"Red","width":"4ft","length":"15m","actualRate":"\u20b926.00","value":6041,"category":"TEFNO"},{"no":"29594","partyCode":"VO01623","party":"APNA FURNISHING","salesPOC":"VS","piDate":"12/03/2026","qty":1,"model":"TEFNO - 400","backing":"S-Mat","colour":"P.Green","width":"4ft","length":"15m","actualRate":"\u20b926.00","value":6041,"category":"TEFNO"},{"no":"29595","partyCode":"VO01623","party":"APNA FURNISHING","salesPOC":"VS","piDate":"12/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b928.00","value":5204,"category":"Loop Rolls"},{"no":"29596","partyCode":"VO01623","party":"APNA FURNISHING","salesPOC":"VS","piDate":"12/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b928.00","value":5204,"category":"Loop Rolls"},{"no":"29597","partyCode":"VO01623","party":"APNA FURNISHING","salesPOC":"VS","piDate":"12/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"2ft","length":"12m","actualRate":"\u20b928.00","value":5204,"category":"Loop Rolls"},{"no":"29598","partyCode":"VO01623","party":"APNA FURNISHING","salesPOC":"VS","piDate":"12/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Blue","width":"2ft","length":"12m","actualRate":"\u20b928.00","value":5204,"category":"Loop Rolls"},{"no":"29599","partyCode":"VO01623","party":"APNA FURNISHING","salesPOC":"VS","piDate":"12/03/2026","qty":100,"model":"NIMBO","backing":"Diamond","colour":"Mixed","width":"15in","length":"24in","actualRate":"\u20b968.00","value":8024,"category":"Foot Mat"},{"no":"29600","partyCode":"VO01623","party":"APNA FURNISHING","salesPOC":"VS","piDate":"12/03/2026","qty":100,"model":"ALTO","backing":"Spike","colour":"Mixed","width":"15in","length":"24in","actualRate":"\u20b963.00","value":7434,"category":"Foot Mat"}]},{"id":"29601","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"12/03/2026","totalQty":60,"totalValue":137125,"lineCount":3,"categories":["Turf"],"lines":[{"no":"29601","partyCode":"CW01278","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"12/03/2026","qty":38,"model":"Kappa Turf","backing":"Turf","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b920.00","value":86846,"category":"Turf"},{"no":"29602","partyCode":"CW01278","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"12/03/2026","qty":12,"model":"Kappa Turf","backing":"Turf","colour":"Red","width":"2ft","length":"15m","actualRate":"\u20b920.00","value":27425,"category":"Turf"},{"no":"29603","partyCode":"CW01278","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"12/03/2026","qty":10,"model":"Kappa Turf","backing":"Turf","colour":"Blue","width":"2ft","length":"15m","actualRate":"\u20b920.00","value":22854,"category":"Turf"}]},{"id":"29676","party":"SHRI LAXMI MUDRA MART","salesPOC":"AR","piDate":"12/03/2026","totalQty":18,"totalValue":40148,"lineCount":6,"categories":["Turf","Loop Rolls"],"lines":[{"no":"29676","partyCode":"RV01635","party":"SHRI LAXMI MUDRA MART","salesPOC":"AR","piDate":"12/03/2026","qty":6,"model":"NIMBO","backing":"Spike","colour":"White-Black","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":13619,"category":"Loop Rolls"},{"no":"29677","partyCode":"RV01635","party":"SHRI LAXMI MUDRA MART","salesPOC":"AR","piDate":"12/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":4461,"category":"Loop Rolls"},{"no":"29678","partyCode":"RV01635","party":"SHRI LAXMI MUDRA MART","salesPOC":"AR","piDate":"12/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Red-Black","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":4461,"category":"Loop Rolls"},{"no":"29679","partyCode":"RV01635","party":"SHRI LAXMI MUDRA MART","salesPOC":"AR","piDate":"12/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Green-Black","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":4461,"category":"Loop Rolls"},{"no":"29680","partyCode":"RV01635","party":"SHRI LAXMI MUDRA MART","salesPOC":"AR","piDate":"12/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":4461,"category":"Loop Rolls"},{"no":"29681","partyCode":"RV01635","party":"SHRI LAXMI MUDRA MART","salesPOC":"AR","piDate":"12/03/2026","qty":4,"model":"Kappa Turf","backing":"Turf","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b919.00","value":8685,"category":"Turf"}]},{"id":"29682","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","totalQty":322,"totalValue":84211,"lineCount":17,"categories":["Car Set","Foot Mat","TEFNO","Loop Rolls"],"lines":[{"no":"29682","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":50,"model":"NIMBO","backing":"Spike","colour":"Double Mixed","width":"38cm","length":"58cm","actualRate":"\u20b978.00","value":4602,"category":"Foot Mat"},{"no":"29683","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":50,"model":"NIMBO","backing":"Spike","colour":"Double Mixed","width":"45cm","length":"75cm","actualRate":"\u20b9120.00","value":7080,"category":"Foot Mat"},{"no":"29684","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":50,"model":"TEFNO - 400","backing":"Spike","colour":"Single Mixed","width":"45cm","length":"75cm","actualRate":"\u20b999.00","value":5841,"category":"Foot Mat"},{"no":"29685","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":50,"model":"TEFNO - 400","backing":"Spike","colour":"Single Mixed","width":"60cm","length":"90cm","actualRate":"\u20b9157.00","value":9263,"category":"Foot Mat"},{"no":"29686","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":1,"model":"TEFNO - 400","backing":"S-Mat","colour":"L.Grey","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":5809,"category":"TEFNO"},{"no":"29687","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":1,"model":"TEFNO - 400","backing":"S-Mat","colour":"Dark-Grey","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":5809,"category":"TEFNO"},{"no":"29688","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":2,"model":"TEFNO - 400","backing":"S-Mat","colour":"L.Grey","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":5809,"category":"TEFNO"},{"no":"29689","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":2,"model":"TEFNO - 400","backing":"S-Mat","colour":"Dark-Grey","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":5809,"category":"TEFNO"},{"no":"29690","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Beige-Brown","width":"2ft","length":"12m","actualRate":"\u20b925.00","value":4647,"category":"Loop Rolls"},{"no":"29691","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Dark Grey-Black","width":"2ft","length":"12m","actualRate":"\u20b925.00","value":4647,"category":"Loop Rolls"},{"no":"29692","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Green-Black","width":"2ft","length":"12m","actualRate":"\u20b925.00","value":2323,"category":"Loop Rolls"},{"no":"29693","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"2ft","length":"12m","actualRate":"\u20b925.00","value":2323,"category":"Loop Rolls"},{"no":"29694","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":5,"model":"NIMBO","backing":"Spike","colour":"Dark Grey-Black","width":"5pc","length":"5pc","actualRate":"\u20b9540.00","value":3186,"category":"Car Set"},{"no":"29695","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":5,"model":"NIMBO","backing":"Spike","colour":"Beige-Brown","width":"5pc","length":"5pc","actualRate":"\u20b9540.00","value":3186,"category":"Car Set"},{"no":"29696","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":30,"model":"WIRE","backing":"WIRE","colour":"Black","width":"38cm","length":"58cm","actualRate":"\u20b980.00","value":2832,"category":"Foot Mat"},{"no":"29697","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":30,"model":"WIRE","backing":"WIRE","colour":"Grey-Black","width":"38cm","length":"58cm","actualRate":"\u20b980.00","value":2832,"category":"Foot Mat"},{"no":"29698","partyCode":"WN01501","party":"GODAWARI HOME DECOR","salesPOC":"VS","piDate":"12/03/2026","qty":40,"model":"Printing","backing":"Printing","colour":"Mixed","width":"18in","length":"30in","actualRate":"\u20b9174.00","value":8213,"category":"Foot Mat"}]},{"id":"29605","party":"KARAN GULABCHAND VORA ( Sundar Plastic)","salesPOC":"AR","piDate":"13/03/2026","totalQty":3,"totalValue":12168,"lineCount":3,"categories":["Grass","TEFNO"],"lines":[{"no":"29605","partyCode":"EB01020","party":"KARAN GULABCHAND VORA ( Sundar Plastic)","salesPOC":"AR","piDate":"13/03/2026","qty":1,"model":"TEFNO - 900","backing":"S-Mat","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b964.00","value":5074,"category":"TEFNO"},{"no":"29606","partyCode":"EB01020","party":"KARAN GULABCHAND VORA ( Sundar Plastic)","salesPOC":"AR","piDate":"13/03/2026","qty":1,"model":"TEFNO - 900","backing":"S-Mat","colour":"Grey","width":"2ft","length":"15m","actualRate":"\u20b964.00","value":4956,"category":"TEFNO"},{"no":"29888","partyCode":"EB01020","party":"KARAN GULABCHAND VORA ( Sundar Plastic)","salesPOC":"AR","piDate":"13/03/2026","qty":1,"model":"35mm","backing":"Grass","colour":"Grass","width":"2ft","length":"25m","actualRate":"\u20b923.00","value":2138,"category":"Grass"}]},{"id":"29616","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","totalQty":122,"totalValue":520443,"lineCount":24,"categories":["TEFNO","Loop Rolls"],"lines":[{"no":"29616","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":5,"model":"TEFNO - 400","backing":"S-Mat","colour":"P.Green","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":29043,"category":"TEFNO"},{"no":"29617","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":3,"model":"TEFNO - 400","backing":"S-Mat","colour":"Red","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":17426,"category":"TEFNO"},{"no":"29618","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":3,"model":"TEFNO - 400","backing":"S-Mat","colour":"Blue","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":17426,"category":"TEFNO"},{"no":"29619","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":3,"model":"TEFNO - 400","backing":"S-Mat","colour":"Black","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":17426,"category":"TEFNO"},{"no":"29620","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":5,"model":"TEFNO - 400","backing":"S-Mat","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":14521,"category":"TEFNO"},{"no":"29621","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":3,"model":"TEFNO - 400","backing":"S-Mat","colour":"Red","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":8713,"category":"TEFNO"},{"no":"29622","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":3,"model":"TEFNO - 400","backing":"S-Mat","colour":"Blue","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":8713,"category":"TEFNO"},{"no":"29623","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":3,"model":"TEFNO - 400","backing":"S-Mat","colour":"Black","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":8713,"category":"TEFNO"},{"no":"29624","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":5,"model":"TEFNO - 900","backing":"S-Mat","colour":"Grey","width":"4ft","length":"10m","actualRate":"\u20b965.00","value":50338,"category":"TEFNO"},{"no":"29625","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":2,"model":"TEFNO - 900","backing":"S-Mat","colour":"P.Green","width":"4ft","length":"10m","actualRate":"\u20b965.00","value":20135,"category":"TEFNO"},{"no":"29626","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":5,"model":"TEFNO - 900","backing":"S-Mat","colour":"Grey","width":"2ft","length":"15m","actualRate":"\u20b965.00","value":25169,"category":"TEFNO"},{"no":"29627","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":2,"model":"TEFNO - 900","backing":"S-Mat","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b965.00","value":10068,"category":"TEFNO"},{"no":"29628","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":10,"model":"ALTO","backing":"Diamond","colour":"Grey","width":"4ft","length":"15m","actualRate":"\u20b921.00","value":48792,"category":"Loop Rolls"},{"no":"29629","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":10,"model":"ALTO","backing":"Diamond","colour":"P.Green","width":"4ft","length":"15m","actualRate":"\u20b921.00","value":48792,"category":"Loop Rolls"},{"no":"29630","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":5,"model":"ALTO","backing":"Diamond","colour":"Red","width":"4ft","length":"15m","actualRate":"\u20b921.00","value":24396,"category":"Loop Rolls"},{"no":"29631","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":5,"model":"ALTO","backing":"Diamond","colour":"Dark Grey-Black","width":"4ft","length":"15m","actualRate":"\u20b921.00","value":24396,"category":"Loop Rolls"},{"no":"29632","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":5,"model":"ALTO","backing":"Diamond","colour":"Beige-Brown","width":"4ft","length":"15m","actualRate":"\u20b921.00","value":24396,"category":"Loop Rolls"},{"no":"29633","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":5,"model":"ALTO","backing":"Diamond","colour":"Light Grey-Black","width":"4ft","length":"15m","actualRate":"\u20b921.00","value":24396,"category":"Loop Rolls"},{"no":"29634","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":10,"model":"ALTO","backing":"Diamond","colour":"Grey","width":"2ft","length":"15m","actualRate":"\u20b921.00","value":24396,"category":"Loop Rolls"},{"no":"29635","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":10,"model":"ALTO","backing":"Diamond","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b921.00","value":24396,"category":"Loop Rolls"},{"no":"29636","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":5,"model":"ALTO","backing":"Diamond","colour":"Red","width":"2ft","length":"15m","actualRate":"\u20b921.00","value":12198,"category":"Loop Rolls"},{"no":"29637","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":5,"model":"ALTO","backing":"Diamond","colour":"Dark Grey-Black","width":"2ft","length":"15m","actualRate":"\u20b921.00","value":12198,"category":"Loop Rolls"},{"no":"29638","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":5,"model":"ALTO","backing":"Diamond","colour":"Beige-Brown","width":"2ft","length":"15m","actualRate":"\u20b921.00","value":12198,"category":"Loop Rolls"},{"no":"29639","partyCode":"","party":"STYLE MY SPACE","salesPOC":"VS","piDate":"13/03/2026","qty":5,"model":"ALTO","backing":"Diamond","colour":"Light Grey-Black","width":"2ft","length":"15m","actualRate":"\u20b921.00","value":12198,"category":"Loop Rolls"}]},{"id":"29647","party":"SHREE SANMATI TRADERS","salesPOC":"AR","piDate":"13/03/2026","totalQty":6,"totalValue":14497,"lineCount":5,"categories":["Loop Rolls"],"lines":[{"no":"29647","partyCode":"YA0924","party":"SHREE SANMATI TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":2416,"category":"Loop Rolls"},{"no":"29648","partyCode":"YA0924","party":"SHREE SANMATI TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Black","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":2416,"category":"Loop Rolls"},{"no":"29649","partyCode":"YA0924","party":"SHREE SANMATI TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29650","partyCode":"YA0924","party":"SHREE SANMATI TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":2416,"category":"Loop Rolls"},{"no":"29651","partyCode":"YA0924","party":"SHREE SANMATI TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Blue","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":2416,"category":"Loop Rolls"}]},{"id":"29664","party":"SHREE NIHA TRADERS","salesPOC":"AR","piDate":"13/03/2026","totalQty":419,"totalValue":82167,"lineCount":12,"categories":["Grass","Loop Rolls","Foot Mat"],"lines":[{"no":"29664","partyCode":"UB01405","party":"SHREE NIHA TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29665","partyCode":"UB01405","party":"SHREE NIHA TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29666","partyCode":"UB01405","party":"SHREE NIHA TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29667","partyCode":"UB01405","party":"SHREE NIHA TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Blue","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29668","partyCode":"UB01405","party":"SHREE NIHA TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Red-Blue","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29669","partyCode":"UB01405","party":"SHREE NIHA TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Light Grey-Black","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29670","partyCode":"UB01405","party":"SHREE NIHA TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Red-Black","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29671","partyCode":"UB01405","party":"SHREE NIHA TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29672","partyCode":"UB01405","party":"SHREE NIHA TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":4,"model":"35mm","backing":"Grass","colour":"Grass","width":"2ft","length":"25m","actualRate":"\u20b920.00","value":15242,"category":"Grass"},{"no":"29673","partyCode":"UB01405","party":"SHREE NIHA TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":200,"model":"ALTO","backing":"Diamond","colour":"Mixed","width":"30cm","length":"45cm","actualRate":"\u20b940.00","value":9440,"category":"Foot Mat"},{"no":"29674","partyCode":"UB01405","party":"SHREE NIHA TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":100,"model":"ALTO","backing":"Diamond","colour":"Mixed","width":"38cm","length":"58cm","actualRate":"\u20b963.00","value":7434,"category":"Foot Mat"},{"no":"29675","partyCode":"UB01405","party":"SHREE NIHA TRADERS","salesPOC":"AR","piDate":"13/03/2026","qty":100,"model":"ALTO","backing":"Diamond","colour":"Mixed","width":"45cm","length":"75cm","actualRate":"\u20b996.50","value":11387,"category":"Foot Mat"}]},{"id":"29756","party":"NANDA ENTERPRISES","salesPOC":"VS","piDate":"14/03/2026","totalQty":22,"totalValue":55204,"lineCount":6,"categories":["Loop Rolls"],"lines":[{"no":"29756","partyCode":"XS01325","party":"NANDA ENTERPRISES","salesPOC":"VS","piDate":"14/03/2026","qty":4,"model":"NIMBO","backing":"Spike","colour":"Black","width":"2ft","length":"12m","actualRate":"\u20b927.00","value":10037,"category":"Loop Rolls"},{"no":"29757","partyCode":"XS01325","party":"NANDA ENTERPRISES","salesPOC":"VS","piDate":"14/03/2026","qty":4,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b927.00","value":10037,"category":"Loop Rolls"},{"no":"29758","partyCode":"XS01325","party":"NANDA ENTERPRISES","salesPOC":"VS","piDate":"14/03/2026","qty":4,"model":"NIMBO","backing":"Spike","colour":"Green-Blue","width":"2ft","length":"12m","actualRate":"\u20b927.00","value":10037,"category":"Loop Rolls"},{"no":"29759","partyCode":"XS01325","party":"NANDA ENTERPRISES","salesPOC":"VS","piDate":"14/03/2026","qty":4,"model":"NIMBO","backing":"Spike","colour":"Light Grey-Black","width":"2ft","length":"12m","actualRate":"\u20b927.00","value":10037,"category":"Loop Rolls"},{"no":"29760","partyCode":"XS01325","party":"NANDA ENTERPRISES","salesPOC":"VS","piDate":"14/03/2026","qty":4,"model":"NIMBO","backing":"Spike","colour":"Red-Black","width":"2ft","length":"12m","actualRate":"\u20b927.00","value":10037,"category":"Loop Rolls"},{"no":"29761","partyCode":"XS01325","party":"NANDA ENTERPRISES","salesPOC":"VS","piDate":"14/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Green-Yellow","width":"2ft","length":"12m","actualRate":"\u20b927.00","value":5019,"category":"Loop Rolls"}]},{"id":"29772","party":"DYNAMIC OVERSEAS","salesPOC":"AR","piDate":"14/03/2026","totalQty":110,"totalValue":650539,"lineCount":5,"categories":["Loop Rolls"],"lines":[{"no":"29772","partyCode":"WL01433","party":"DYNAMIC OVERSEAS","salesPOC":"AR","piDate":"14/03/2026","qty":30,"model":"STRATO","backing":"Spike","colour":"Red-Black","width":"4ft","length":"12m","actualRate":"\u20b938.00","value":176571,"category":"Loop Rolls"},{"no":"29773","partyCode":"WL01433","party":"DYNAMIC OVERSEAS","salesPOC":"AR","piDate":"14/03/2026","qty":15,"model":"STRATO","backing":"Spike","colour":"P.Green","width":"4ft","length":"12m","actualRate":"\u20b938.00","value":88285,"category":"Loop Rolls"},{"no":"29774","partyCode":"WL01433","party":"DYNAMIC OVERSEAS","salesPOC":"AR","piDate":"14/03/2026","qty":15,"model":"STRATO","backing":"Spike","colour":"Blue","width":"4ft","length":"12m","actualRate":"\u20b938.00","value":88285,"category":"Loop Rolls"},{"no":"29775","partyCode":"WL01433","party":"DYNAMIC OVERSEAS","salesPOC":"AR","piDate":"14/03/2026","qty":40,"model":"CIRRO","backing":"Spike","colour":"Red-Black","width":"4ft","length":"12m","actualRate":"\u20b932.00","value":237918,"category":"Loop Rolls"},{"no":"29776","partyCode":"WL01433","party":"DYNAMIC OVERSEAS","salesPOC":"AR","piDate":"14/03/2026","qty":10,"model":"CIRRO","backing":"Spike","colour":"Dark Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b932.00","value":59480,"category":"Loop Rolls"}]},{"id":"29797","party":"OCEANPARK MULTITECH LIMITED","salesPOC":"AR","piDate":"14/03/2026","totalQty":9,"totalValue":94099,"lineCount":2,"categories":["TEFNO"],"lines":[{"no":"29797","partyCode":"HM0747","party":"OCEANPARK MULTITECH LIMITED","salesPOC":"AR","piDate":"14/03/2026","qty":7,"model":"TEFNO - 600","backing":"S-Mat","colour":"Red","width":"4ft","length":"15m","actualRate":"\u20b945.00","value":73188,"category":"TEFNO"},{"no":"29798","partyCode":"HM0747","party":"OCEANPARK MULTITECH LIMITED","salesPOC":"AR","piDate":"14/03/2026","qty":2,"model":"TEFNO - 600","backing":"S-Mat","colour":"L.Grey","width":"4ft","length":"15m","actualRate":"\u20b945.00","value":20911,"category":"TEFNO"}]},{"id":"29799","party":"AUTO PERFECTION","salesPOC":"AR","piDate":"14/03/2026","totalQty":14,"totalValue":78066,"lineCount":5,"categories":["Monograss","Loop Rolls"],"lines":[{"no":"29799","partyCode":"YH0807","party":"AUTO PERFECTION","salesPOC":"AR","piDate":"14/03/2026","qty":9,"model":"NIMBO","backing":"Spike","colour":"Black","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":43494,"category":"Loop Rolls"},{"no":"29800","partyCode":"YH0807","party":"AUTO PERFECTION","salesPOC":"AR","piDate":"14/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Dark Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":9665,"category":"Loop Rolls"},{"no":"29870","partyCode":"YH0807","party":"AUTO PERFECTION","salesPOC":"AR","piDate":"14/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Beige-Brown","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29871","partyCode":"YH0807","party":"AUTO PERFECTION","salesPOC":"AR","piDate":"14/03/2026","qty":1,"model":"Monograss","backing":"Diamond","colour":"Black","width":"4ft","length":"24m","actualRate":"\u20b927.00","value":10037,"category":"Monograss"},{"no":"29872","partyCode":"YH0807","party":"AUTO PERFECTION","salesPOC":"AR","piDate":"14/03/2026","qty":1,"model":"Monograss","backing":"Diamond","colour":"Beige-Brown","width":"4ft","length":"24m","actualRate":"\u20b927.00","value":10037,"category":"Monograss"}]},{"id":"29804","party":"KRIPA ENTERPRISES ( NAGPUR )","salesPOC":"VS","piDate":"14/03/2026","totalQty":110,"totalValue":27966,"lineCount":2,"categories":["Car Set","Foot Mat"],"lines":[{"no":"29804","partyCode":"LO01225","party":"KRIPA ENTERPRISES ( NAGPUR )","salesPOC":"VS","piDate":"14/03/2026","qty":100,"model":"Printing","backing":"Printing","colour":"Mixed","width":"16in","length":"24in","actualRate":"\u20b9135.00","value":15930,"category":"Foot Mat"},{"no":"29805","partyCode":"LO01225","party":"KRIPA ENTERPRISES ( NAGPUR )","salesPOC":"VS","piDate":"14/03/2026","qty":10,"model":"Printing","backing":"Printing","colour":"Mixed","width":"5pc","length":"5pc","actualRate":"\u20b91,020.00","value":12036,"category":"Car Set"}]},{"id":"29813","party":"M/S RATHI BROTHERS","salesPOC":"SPM","piDate":"14/03/2026","totalQty":21,"totalValue":75044,"lineCount":11,"categories":["Turf","Loop Rolls"],"lines":[{"no":"29813","partyCode":"MB0537","party":"M/S RATHI BROTHERS","salesPOC":"SPM","piDate":"14/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"White-Black","width":"2ft","length":"12m","actualRate":"\u20b927.00","value":5019,"category":"Loop Rolls"},{"no":"29814","partyCode":"MB0537","party":"M/S RATHI BROTHERS","salesPOC":"SPM","piDate":"14/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Dark Grey-Black","width":"2ft","length":"12m","actualRate":"\u20b927.00","value":5019,"category":"Loop Rolls"},{"no":"29837","partyCode":"MB0537","party":"M/S RATHI BROTHERS","salesPOC":"SPM","piDate":"14/03/2026","qty":2,"model":"Kappa","backing":"Turf","colour":"P.Green","width":"4ft","length":"15m","actualRate":"\u20b924.00","value":10970,"category":"Turf"},{"no":"29838","partyCode":"MB0537","party":"M/S RATHI BROTHERS","salesPOC":"SPM","piDate":"14/03/2026","qty":1,"model":"Kappa","backing":"Turf","colour":"Grey","width":"4ft","length":"15m","actualRate":"\u20b924.00","value":5485,"category":"Turf"},{"no":"29839","partyCode":"MB0537","party":"M/S RATHI BROTHERS","salesPOC":"SPM","piDate":"14/03/2026","qty":4,"model":"Kappa","backing":"Turf","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b924.00","value":10970,"category":"Turf"},{"no":"29840","partyCode":"MB0537","party":"M/S RATHI BROTHERS","salesPOC":"SPM","piDate":"14/03/2026","qty":2,"model":"Kappa","backing":"Turf","colour":"Red","width":"2ft","length":"15m","actualRate":"\u20b924.00","value":5485,"category":"Turf"},{"no":"29841","partyCode":"MB0537","party":"M/S RATHI BROTHERS","salesPOC":"SPM","piDate":"14/03/2026","qty":2,"model":"Kappa","backing":"Turf","colour":"Blue","width":"2ft","length":"15m","actualRate":"\u20b924.00","value":5485,"category":"Turf"},{"no":"29842","partyCode":"MB0537","party":"M/S RATHI BROTHERS","salesPOC":"SPM","piDate":"14/03/2026","qty":2,"model":"Kappa","backing":"Turf","colour":"P.Green","width":"3ft","length":"15m","actualRate":"\u20b924.00","value":8228,"category":"Turf"},{"no":"29843","partyCode":"MB0537","party":"M/S RATHI BROTHERS","salesPOC":"SPM","piDate":"14/03/2026","qty":1,"model":"Kappa","backing":"Turf","colour":"Blue","width":"3ft","length":"15m","actualRate":"\u20b924.00","value":4114,"category":"Turf"},{"no":"29844","partyCode":"MB0537","party":"M/S RATHI BROTHERS","salesPOC":"SPM","piDate":"14/03/2026","qty":2,"model":"Kappa","backing":"Turf","colour":"Grey","width":"3ft","length":"15m","actualRate":"\u20b924.00","value":8228,"category":"Turf"},{"no":"29845","partyCode":"MB0537","party":"M/S RATHI BROTHERS","salesPOC":"SPM","piDate":"14/03/2026","qty":1,"model":"STRATO","backing":"Spike","colour":"P.Green","width":"4ft","length":"10m","actualRate":"\u20b939.00","value":6041,"category":"Loop Rolls"}]},{"id":"29873","party":"AUTONITY AAKURITY SEAT COVER","salesPOC":"SK","piDate":"15/03/2026","totalQty":10,"totalValue":96654,"lineCount":1,"categories":["Monograss"],"lines":[{"no":"29873","partyCode":"DW01590","party":"AUTONITY AAKURITY SEAT COVER","salesPOC":"SK","piDate":"15/03/2026","qty":10,"model":"Monograss","backing":"Diamond","colour":"Black","width":"4ft","length":"24m","actualRate":"\u20b926.00","value":96654,"category":"Monograss"}]},{"id":"29889","party":"NIRMAL PLASTICS","salesPOC":"VS","piDate":"16/03/2026","totalQty":100,"totalValue":10620,"lineCount":1,"categories":["Foot Mat"],"lines":[{"no":"29889","partyCode":"OP0999","party":"NIRMAL PLASTICS","salesPOC":"VS","piDate":"16/03/2026","qty":100,"model":"NIMBO","backing":"Spike","colour":"Mixed","width":"45cm","length":"75cm","actualRate":"\u20b990.00","value":10620,"category":"Foot Mat"}]},{"id":"29911","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"17/03/2026","totalQty":350,"totalValue":2254691,"lineCount":9,"categories":["Grass","Loop Rolls"],"lines":[{"no":"29911","partyCode":"CW01278","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"17/03/2026","qty":50,"model":"20mm","backing":"Single Backing","colour":"Grass","width":"2mtr","length":"25m","actualRate":"\u20b913.00","value":367322,"category":"Grass"},{"no":"29912","partyCode":"CW01278","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"17/03/2026","qty":20,"model":"20mm","backing":"Single Backing","colour":"Grass","width":"4ft","length":"25m","actualRate":"\u20b913.00","value":88157,"category":"Grass"},{"no":"29913","partyCode":"CW01278","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"17/03/2026","qty":40,"model":"20mm","backing":"Single Backing","colour":"Grass","width":"2ft","length":"25m","actualRate":"\u20b913.00","value":88157,"category":"Grass"},{"no":"29914","partyCode":"CW01278","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"17/03/2026","qty":100,"model":"20mm","backing":"Double Backing","colour":"Grass","width":"2mtr","length":"25m","actualRate":"\u20b916.00","value":904176,"category":"Grass"},{"no":"29915","partyCode":"CW01278","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"17/03/2026","qty":20,"model":"20mm","backing":"Double Backing","colour":"Grass","width":"10ft","length":"25m","actualRate":"\u20b916.00","value":271253,"category":"Grass"},{"no":"29916","partyCode":"CW01278","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"17/03/2026","qty":30,"model":"35mm","backing":"Double Backing","colour":"Grass","width":"2mtr","length":"25m","actualRate":"\u20b920.00","value":339066,"category":"Grass"},{"no":"29972","partyCode":"CW01278","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"17/03/2026","qty":30,"model":"ALTO","backing":"Spike","colour":"Tan-Black","width":"2ft","length":"12m","actualRate":"\u20b923.50","value":65520,"category":"Loop Rolls"},{"no":"29973","partyCode":"CW01278","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"17/03/2026","qty":30,"model":"ALTO","backing":"Spike","colour":"Light Grey-Black","width":"2ft","length":"12m","actualRate":"\u20b923.50","value":65520,"category":"Loop Rolls"},{"no":"29974","partyCode":"CW01278","party":"JAI MAA KAMAKHYA TRADERS","salesPOC":"AR","piDate":"17/03/2026","qty":30,"model":"ALTO","backing":"Spike","colour":"Dark Grey-Black","width":"2ft","length":"12m","actualRate":"\u20b923.50","value":65520,"category":"Loop Rolls"}]},{"id":"29917","party":"AUTOFURNISH LTD","salesPOC":"YA","piDate":"17/03/2026","totalQty":40,"totalValue":237684,"lineCount":1,"categories":["Wire"],"lines":[{"no":"29917","partyCode":"FK01642","party":"AUTOFURNISH LTD","salesPOC":"YA","piDate":"17/03/2026","qty":40,"model":"WIRE","backing":"WIRE","colour":"Black","width":"4ft","length":"15m","actualRate":"\u20b926.00","value":237684,"category":"Wire"}]},{"id":"29918","party":"HOMEE TRIENDS","salesPOC":"AR","piDate":"17/03/2026","totalQty":100,"totalValue":14821,"lineCount":2,"categories":["Foot Mat"],"lines":[{"no":"29918","partyCode":"","party":"HOMEE TRIENDS","salesPOC":"AR","piDate":"17/03/2026","qty":60,"model":"STRATO","backing":"Spike","colour":"Mixed","width":"16in","length":"24in","actualRate":"\u20b9106.00","value":7741,"category":"Foot Mat"},{"no":"29919","partyCode":"","party":"HOMEE TRIENDS","salesPOC":"AR","piDate":"17/03/2026","qty":40,"model":"STRATO","backing":"Spike","colour":"Mixed","width":"18in","length":"30in","actualRate":"\u20b9150.00","value":7080,"category":"Foot Mat"}]},{"id":"29920","party":"KRISHNA ENTERPRISES","salesPOC":"VS","piDate":"17/03/2026","totalQty":50,"totalValue":4552,"lineCount":1,"categories":["Foot Mat"],"lines":[{"no":"29920","partyCode":"","party":"KRISHNA ENTERPRISES","salesPOC":"VS","piDate":"17/03/2026","qty":50,"model":"MCRO","backing":"FIBRE","colour":"Mixed","width":"38cm","length":"58cm","actualRate":"\u20b977.15","value":4552,"category":"Foot Mat"}]},{"id":"29926","party":"NAKODA TRADE LINK","salesPOC":"AA","piDate":"17/03/2026","totalQty":20,"totalValue":118843,"lineCount":2,"categories":["Wire"],"lines":[{"no":"29926","partyCode":"","party":"NAKODA TRADE LINK","salesPOC":"AA","piDate":"17/03/2026","qty":15,"model":"WIRE","backing":"WIRE","colour":"Black","width":"4ft","length":"15m","actualRate":"\u20b926.00","value":89132,"category":"Wire"},{"no":"29927","partyCode":"","party":"NAKODA TRADE LINK","salesPOC":"AA","piDate":"17/03/2026","qty":5,"model":"WIRE","backing":"WIRE","colour":"Beige","width":"4ft","length":"15m","actualRate":"\u20b926.00","value":29711,"category":"Wire"}]},{"id":"29928","party":"SMB Traders","salesPOC":"AR","piDate":"17/03/2026","totalQty":3,"totalValue":13941,"lineCount":3,"categories":["Loop Rolls"],"lines":[{"no":"29928","partyCode":"EA037","party":"SMB Traders","salesPOC":"AR","piDate":"17/03/2026","qty":1,"model":"ALTO","backing":"Spike","colour":"Red","width":"4ft","length":"12m","actualRate":"\u20b925.00","value":4647,"category":"Loop Rolls"},{"no":"29929","partyCode":"EA037","party":"SMB Traders","salesPOC":"AR","piDate":"17/03/2026","qty":1,"model":"ALTO","backing":"Spike","colour":"P.Green","width":"4ft","length":"12m","actualRate":"\u20b925.00","value":4647,"category":"Loop Rolls"},{"no":"29930","partyCode":"EA037","party":"SMB Traders","salesPOC":"AR","piDate":"17/03/2026","qty":1,"model":"ALTO","backing":"Spike","colour":"Blue","width":"4ft","length":"12m","actualRate":"\u20b925.00","value":4647,"category":"Loop Rolls"}]},{"id":"29932","party":"SRI RAM SEASON CENTER","salesPOC":"AR","piDate":"17/03/2026","totalQty":30,"totalValue":72491,"lineCount":3,"categories":["Loop Rolls"],"lines":[{"no":"29932","partyCode":"IQ096","party":"SRI RAM SEASON CENTER","salesPOC":"AR","piDate":"17/03/2026","qty":23,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":55576,"category":"Loop Rolls"},{"no":"29933","partyCode":"IQ096","party":"SRI RAM SEASON CENTER","salesPOC":"AR","piDate":"17/03/2026","qty":5,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":12082,"category":"Loop Rolls"},{"no":"29934","partyCode":"IQ096","party":"SRI RAM SEASON CENTER","salesPOC":"AR","piDate":"17/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Blue","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"}]},{"id":"29935","party":"RAJESH ENTERPRISES","salesPOC":"AR","piDate":"17/03/2026","totalQty":460,"totalValue":39477,"lineCount":4,"categories":["Foot Mat"],"lines":[{"no":"29935","partyCode":"GL01141","party":"RAJESH ENTERPRISES","salesPOC":"AR","piDate":"17/03/2026","qty":150,"model":"ALTO","backing":"Spike","colour":"Mixed","width":"14in","length":"24in","actualRate":"\u20b956.00","value":10148,"category":"Foot Mat"},{"no":"29936","partyCode":"GL01141","party":"RAJESH ENTERPRISES","salesPOC":"AR","piDate":"17/03/2026","qty":40,"model":"ALTO","backing":"Spike","colour":"Mixed","width":"18in","length":"30in","actualRate":"\u20b990.00","value":4248,"category":"Foot Mat"},{"no":"29937","partyCode":"GL01141","party":"RAJESH ENTERPRISES","salesPOC":"AR","piDate":"17/03/2026","qty":150,"model":"ALTO","backing":"Spike","colour":"Single Mixed","width":"38cm","length":"58cm","actualRate":"\u20b966.50","value":11771,"category":"Foot Mat"},{"no":"29938","partyCode":"GL01141","party":"RAJESH ENTERPRISES","salesPOC":"AR","piDate":"17/03/2026","qty":120,"model":"ALTO","backing":"Spike","colour":"Single Mixed","width":"45cm","length":"75cm","actualRate":"\u20b994.00","value":13310,"category":"Foot Mat"}]},{"id":"29939","party":"M.SWAMY MARKETING","salesPOC":"AR","piDate":"17/03/2026","totalQty":82,"totalValue":11583,"lineCount":2,"categories":["Foot Mat","Loop Rolls"],"lines":[{"no":"29939","partyCode":"WE01432","party":"M.SWAMY MARKETING","salesPOC":"AR","piDate":"17/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":5069,"category":"Loop Rolls"},{"no":"29940","partyCode":"WE01432","party":"M.SWAMY MARKETING","salesPOC":"AR","piDate":"17/03/2026","qty":80,"model":"NIMBO","backing":"Diamond","colour":"Single Mixed","width":"38cm","length":"58cm","actualRate":"\u20b969.00","value":6514,"category":"Foot Mat"}]},{"id":"29945","party":"AMAN CAR ACCESSORIES","salesPOC":"VS","piDate":"17/03/2026","totalQty":30,"totalValue":178263,"lineCount":2,"categories":["Wire"],"lines":[{"no":"29945","partyCode":"ZC01569","party":"AMAN CAR ACCESSORIES","salesPOC":"VS","piDate":"17/03/2026","qty":28,"model":"WIRE","backing":"WIRE","colour":"Black","width":"4ft","length":"15m","actualRate":"\u20b926.00","value":166379,"category":"Wire"},{"no":"29946","partyCode":"ZC01569","party":"AMAN CAR ACCESSORIES","salesPOC":"VS","piDate":"17/03/2026","qty":2,"model":"WIRE","backing":"WIRE","colour":"Beige-Brown","width":"4ft","length":"15m","actualRate":"\u20b926.00","value":11884,"category":"Wire"}]},{"id":"29947","party":"HEALTH CURE HURSING HOME","salesPOC":"SK","piDate":"17/03/2026","totalQty":4,"totalValue":20446,"lineCount":1,"categories":["Loop Rolls"],"lines":[{"no":"29947","partyCode":"","party":"HEALTH CURE HURSING HOME","salesPOC":"SK","piDate":"17/03/2026","qty":4,"model":"ALTO","backing":"Diamond","colour":"P.Green","width":"4ft","length":"15m","actualRate":"\u20b922.00","value":20446,"category":"Loop Rolls"}]},{"id":"29948","party":"VP ACCESSORIES","salesPOC":"VS","piDate":"17/03/2026","totalQty":20,"totalValue":95725,"lineCount":2,"categories":["Loop Rolls"],"lines":[{"no":"29948","partyCode":"","party":"VP ACCESSORIES","salesPOC":"VS","piDate":"17/03/2026","qty":15,"model":"NIMBO","backing":"Spike","colour":"Black","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":72491,"category":"Loop Rolls"},{"no":"29949","partyCode":"","party":"VP ACCESSORIES","salesPOC":"VS","piDate":"17/03/2026","qty":5,"model":"NIMBO","backing":"Spike","colour":"Light Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b925.00","value":23234,"category":"Loop Rolls"}]},{"id":"29950","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","totalQty":31,"totalValue":132432,"lineCount":22,"categories":["TEFNO","Loop Rolls"],"lines":[{"no":"29950","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"4ft","length":"12m","actualRate":"\u20b925.00","value":9294,"category":"Loop Rolls"},{"no":"29951","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Red","width":"4ft","length":"12m","actualRate":"\u20b925.00","value":9294,"category":"Loop Rolls"},{"no":"29952","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":3,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"4ft","length":"12m","actualRate":"\u20b925.00","value":13941,"category":"Loop Rolls"},{"no":"29953","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Blue","width":"4ft","length":"12m","actualRate":"\u20b925.00","value":4647,"category":"Loop Rolls"},{"no":"29954","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b925.00","value":4647,"category":"Loop Rolls"},{"no":"29955","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b925.00","value":4647,"category":"Loop Rolls"},{"no":"29956","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"2ft","length":"12m","actualRate":"\u20b925.00","value":4647,"category":"Loop Rolls"},{"no":"29957","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Blue","width":"2ft","length":"12m","actualRate":"\u20b925.00","value":2323,"category":"Loop Rolls"},{"no":"29958","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"TEFNO - 900","backing":"S-Mat","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b964.00","value":4956,"category":"TEFNO"},{"no":"29959","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"TEFNO - 900","backing":"S-Mat","colour":"Red","width":"2ft","length":"15m","actualRate":"\u20b964.00","value":4956,"category":"TEFNO"},{"no":"29960","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"TEFNO - 900","backing":"S-Mat","colour":"Grey","width":"2ft","length":"15m","actualRate":"\u20b964.00","value":4956,"category":"TEFNO"},{"no":"29961","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"TEFNO - 600","backing":"S-Mat","colour":"P.Green","width":"4ft","length":"15m","actualRate":"\u20b930.00","value":6970,"category":"TEFNO"},{"no":"29962","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"TEFNO - 600","backing":"S-Mat","colour":"Red","width":"4ft","length":"15m","actualRate":"\u20b930.00","value":6970,"category":"TEFNO"},{"no":"29963","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"TEFNO - 600","backing":"S-Mat","colour":"L.Grey","width":"4ft","length":"15m","actualRate":"\u20b930.00","value":6970,"category":"TEFNO"},{"no":"29964","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"TEFNO - 600","backing":"S-Mat","colour":"Blue","width":"4ft","length":"15m","actualRate":"\u20b930.00","value":6970,"category":"TEFNO"},{"no":"29965","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"TEFNO - 400","backing":"S-Mat","colour":"P.Green","width":"4ft","length":"15m","actualRate":"\u20b924.00","value":5576,"category":"TEFNO"},{"no":"29966","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"TEFNO - 400","backing":"S-Mat","colour":"Red","width":"4ft","length":"15m","actualRate":"\u20b924.00","value":5576,"category":"TEFNO"},{"no":"29967","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"TEFNO - 400","backing":"S-Mat","colour":"L.Grey","width":"4ft","length":"15m","actualRate":"\u20b924.00","value":5576,"category":"TEFNO"},{"no":"29968","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"TEFNO - 400","backing":"S-Mat","colour":"Blue","width":"4ft","length":"15m","actualRate":"\u20b924.00","value":5576,"category":"TEFNO"},{"no":"29969","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":2,"model":"TEFNO - 400","backing":"S-Mat","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b924.00","value":5576,"category":"TEFNO"},{"no":"29970","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":1,"model":"TEFNO - 400","backing":"S-Mat","colour":"Red","width":"2ft","length":"15m","actualRate":"\u20b924.00","value":2788,"category":"TEFNO"},{"no":"29971","partyCode":"","party":"JND INTERIOR","salesPOC":"AA","piDate":"17/03/2026","qty":2,"model":"TEFNO - 400","backing":"S-Mat","colour":"L.Grey","width":"2ft","length":"15m","actualRate":"\u20b924.00","value":5576,"category":"TEFNO"}]},{"id":"29975","party":"NIRMAL ENTERPRISES ( HALDWANI )","salesPOC":"AR","piDate":"18/03/2026","totalQty":4,"totalValue":19331,"lineCount":2,"categories":["Loop Rolls"],"lines":[{"no":"29975","partyCode":"PS0190","party":"NIRMAL ENTERPRISES ( HALDWANI )","salesPOC":"AR","piDate":"18/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"29976","partyCode":"PS0190","party":"NIRMAL ENTERPRISES ( HALDWANI )","salesPOC":"AR","piDate":"18/03/2026","qty":3,"model":"NIMBO","backing":"Spike","colour":"Dark Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":14498,"category":"Loop Rolls"}]},{"id":"29977","party":"HINDKUSH DECOR PVT LTD","salesPOC":"VS","piDate":"18/03/2026","totalQty":30,"totalValue":144981,"lineCount":4,"categories":["Monograss"],"lines":[{"no":"29977","partyCode":"DN01734","party":"HINDKUSH DECOR PVT LTD","salesPOC":"VS","piDate":"18/03/2026","qty":21,"model":"Monograss","backing":"Diamond","colour":"Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":101487,"category":"Monograss"},{"no":"29978","partyCode":"DN01734","party":"HINDKUSH DECOR PVT LTD","salesPOC":"VS","piDate":"18/03/2026","qty":3,"model":"Monograss","backing":"Diamond","colour":"P.Green","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":14498,"category":"Monograss"},{"no":"29979","partyCode":"DN01734","party":"HINDKUSH DECOR PVT LTD","salesPOC":"VS","piDate":"18/03/2026","qty":3,"model":"Monograss","backing":"Diamond","colour":"Red-Black","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":14498,"category":"Monograss"},{"no":"29980","partyCode":"DN01734","party":"HINDKUSH DECOR PVT LTD","salesPOC":"VS","piDate":"18/03/2026","qty":3,"model":"Monograss","backing":"Diamond","colour":"Beige-Brown","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":14498,"category":"Monograss"}]},{"id":"29987","party":"AJANTA FURNISHING JALLANDAR","salesPOC":"VS","piDate":"18/03/2026","totalQty":13,"totalValue":78068,"lineCount":8,"categories":["TEFNO","Loop Rolls"],"lines":[{"no":"29987","partyCode":"FR01584","party":"AJANTA FURNISHING JALLANDAR","salesPOC":"VS","piDate":"18/03/2026","qty":3,"model":"ALTO","backing":"Spike","colour":"Red","width":"4ft","length":"12m","actualRate":"\u20b925.50","value":14219,"category":"Loop Rolls"},{"no":"29988","partyCode":"FR01584","party":"AJANTA FURNISHING JALLANDAR","salesPOC":"VS","piDate":"18/03/2026","qty":2,"model":"ALTO","backing":"Spike","colour":"P.Green","width":"4ft","length":"12m","actualRate":"\u20b925.50","value":9480,"category":"Loop Rolls"},{"no":"29989","partyCode":"FR01584","party":"AJANTA FURNISHING JALLANDAR","salesPOC":"VS","piDate":"18/03/2026","qty":2,"model":"ALTO","backing":"Spike","colour":"Dark Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b925.50","value":9480,"category":"Loop Rolls"},{"no":"29990","partyCode":"FR01584","party":"AJANTA FURNISHING JALLANDAR","salesPOC":"VS","piDate":"18/03/2026","qty":2,"model":"ALTO","backing":"Spike","colour":"Beige-Brown","width":"4ft","length":"12m","actualRate":"\u20b925.50","value":9480,"category":"Loop Rolls"},{"no":"29991","partyCode":"FR01584","party":"AJANTA FURNISHING JALLANDAR","salesPOC":"VS","piDate":"18/03/2026","qty":1,"model":"ALTO","backing":"Spike","colour":"Tan-Black","width":"4ft","length":"12m","actualRate":"\u20b925.50","value":4740,"category":"Loop Rolls"},{"no":"29992","partyCode":"FR01584","party":"AJANTA FURNISHING JALLANDAR","salesPOC":"VS","piDate":"18/03/2026","qty":1,"model":"TEFNO - 900","backing":"S-Mat","colour":"P.Green","width":"4ft","length":"10m","actualRate":"\u20b966.00","value":10223,"category":"TEFNO"},{"no":"29993","partyCode":"FR01584","party":"AJANTA FURNISHING JALLANDAR","salesPOC":"VS","piDate":"18/03/2026","qty":1,"model":"TEFNO - 900","backing":"S-Mat","colour":"Blue","width":"4ft","length":"10m","actualRate":"\u20b966.00","value":10223,"category":"TEFNO"},{"no":"29994","partyCode":"FR01584","party":"AJANTA FURNISHING JALLANDAR","salesPOC":"VS","piDate":"18/03/2026","qty":1,"model":"TEFNO - 900","backing":"S-Mat","colour":"Red","width":"4ft","length":"10m","actualRate":"\u20b966.00","value":10223,"category":"TEFNO"}]},{"id":"29995","party":"MILAP TRADING CO.","salesPOC":"AR","piDate":"18/03/2026","totalQty":14,"totalValue":57707,"lineCount":5,"categories":["Turf","TEFNO"],"lines":[{"no":"29995","partyCode":"YT0648","party":"MILAP TRADING CO.","salesPOC":"AR","piDate":"18/03/2026","qty":6,"model":"TEFNO - 600","backing":"S-Mat","colour":"L.Grey","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":34851,"category":"TEFNO"},{"no":"29996","partyCode":"YT0648","party":"MILAP TRADING CO.","salesPOC":"AR","piDate":"18/03/2026","qty":2,"model":"Kappa","backing":"Turf","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":5714,"category":"Turf"},{"no":"29997","partyCode":"YT0648","party":"MILAP TRADING CO.","salesPOC":"AR","piDate":"18/03/2026","qty":2,"model":"Kappa","backing":"Turf","colour":"Red","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":5714,"category":"Turf"},{"no":"29998","partyCode":"YT0648","party":"MILAP TRADING CO.","salesPOC":"AR","piDate":"18/03/2026","qty":2,"model":"Kappa","backing":"Turf","colour":"Grey","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":5714,"category":"Turf"},{"no":"29999","partyCode":"YT0648","party":"MILAP TRADING CO.","salesPOC":"AR","piDate":"18/03/2026","qty":2,"model":"Kappa","backing":"Turf","colour":"Black","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":5714,"category":"Turf"}]},{"id":"30000","party":"RAJA HANDLOOM","salesPOC":"SK","piDate":"18/03/2026","totalQty":108,"totalValue":29621,"lineCount":8,"categories":["Turf","Foot Mat","TEFNO","Loop Rolls"],"lines":[{"no":"30000","partyCode":"TJ01568","party":"RAJA HANDLOOM","salesPOC":"SK","piDate":"18/03/2026","qty":1,"model":"TEFNO - 600","backing":"S-Mat","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b930.00","value":3485,"category":"TEFNO"},{"no":"30001","partyCode":"TJ01568","party":"RAJA HANDLOOM","salesPOC":"SK","piDate":"18/03/2026","qty":1,"model":"ALTO","backing":"Spike","colour":"Green-Black","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":2230,"category":"Loop Rolls"},{"no":"30002","partyCode":"TJ01568","party":"RAJA HANDLOOM","salesPOC":"SK","piDate":"18/03/2026","qty":2,"model":"ALTO","backing":"Spike","colour":"Light Grey-Black","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":4461,"category":"Loop Rolls"},{"no":"30003","partyCode":"TJ01568","party":"RAJA HANDLOOM","salesPOC":"SK","piDate":"18/03/2026","qty":1,"model":"ALTO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b924.00","value":2230,"category":"Loop Rolls"},{"no":"30004","partyCode":"TJ01568","party":"RAJA HANDLOOM","salesPOC":"SK","piDate":"18/03/2026","qty":2,"model":"Kappa","backing":"Turf","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b926.00","value":5942,"category":"Turf"},{"no":"30005","partyCode":"TJ01568","party":"RAJA HANDLOOM","salesPOC":"SK","piDate":"18/03/2026","qty":50,"model":"WELCOME","backing":"Welcome","colour":"Double Mixed","width":"38cm","length":"58cm","actualRate":"\u20b962.00","value":3658,"category":"Foot Mat"},{"no":"30006","partyCode":"TJ01568","party":"RAJA HANDLOOM","salesPOC":"SK","piDate":"18/03/2026","qty":50,"model":"ALTO","backing":"Spike","colour":"Double Mixed","width":"16in","length":"24in","actualRate":"\u20b970.00","value":4130,"category":"Foot Mat"},{"no":"30007","partyCode":"TJ01568","party":"RAJA HANDLOOM","salesPOC":"SK","piDate":"18/03/2026","qty":1,"model":"TEFNO - 600","backing":"S-Mat","colour":"L.Grey","width":"2ft","length":"15m","actualRate":"\u20b930.00","value":3485,"category":"TEFNO"}]},{"id":"30021","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","totalQty":105,"totalValue":434998,"lineCount":33,"categories":["Loop Rolls"],"lines":[{"no":"30021","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"STRATO","backing":"Spike","colour":"Green-Black","width":"4ft","length":"10m","actualRate":"\u20b941.00","value":12701,"category":"Loop Rolls"},{"no":"30022","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":4,"model":"STRATO","backing":"Spike","colour":"Dark Grey-Black","width":"4ft","length":"10m","actualRate":"\u20b941.00","value":25401,"category":"Loop Rolls"},{"no":"30023","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":4,"model":"STRATO","backing":"Spike","colour":"Beige-Brown","width":"4ft","length":"10m","actualRate":"\u20b941.00","value":25401,"category":"Loop Rolls"},{"no":"30024","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":4,"model":"STRATO","backing":"Spike","colour":"Black","width":"4ft","length":"10m","actualRate":"\u20b941.00","value":25401,"category":"Loop Rolls"},{"no":"30025","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"STRATO","backing":"Spike","colour":"Red-Black","width":"4ft","length":"10m","actualRate":"\u20b941.00","value":12701,"category":"Loop Rolls"},{"no":"30026","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Beige-Brown","width":"4ft","length":"12m","actualRate":"\u20b929.00","value":10781,"category":"Loop Rolls"},{"no":"30027","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Dark Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b929.00","value":10781,"category":"Loop Rolls"},{"no":"30028","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Black","width":"4ft","length":"12m","actualRate":"\u20b929.00","value":10781,"category":"Loop Rolls"},{"no":"30029","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"STRATO","backing":"Spike","colour":"Green-Black","width":"4ft","length":"10m","actualRate":"\u20b941.00","value":12701,"category":"Loop Rolls"},{"no":"30030","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":4,"model":"STRATO","backing":"Spike","colour":"Dark Grey-Black","width":"4ft","length":"10m","actualRate":"\u20b941.00","value":25401,"category":"Loop Rolls"},{"no":"30031","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":4,"model":"STRATO","backing":"Spike","colour":"Beige-Brown","width":"4ft","length":"10m","actualRate":"\u20b941.00","value":25401,"category":"Loop Rolls"},{"no":"30032","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":4,"model":"STRATO","backing":"Spike","colour":"Black","width":"4ft","length":"10m","actualRate":"\u20b941.00","value":25401,"category":"Loop Rolls"},{"no":"30033","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"STRATO","backing":"Spike","colour":"Red-Black","width":"4ft","length":"10m","actualRate":"\u20b941.00","value":12701,"category":"Loop Rolls"},{"no":"30034","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Beige-Brown","width":"4ft","length":"12m","actualRate":"\u20b929.00","value":10781,"category":"Loop Rolls"},{"no":"30035","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Dark Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b929.00","value":10781,"category":"Loop Rolls"},{"no":"30036","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Black","width":"4ft","length":"12m","actualRate":"\u20b929.00","value":5390,"category":"Loop Rolls"},{"no":"30037","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Light Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b929.00","value":10781,"category":"Loop Rolls"},{"no":"30038","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":5,"model":"NIMBO","backing":"Spike","colour":"Light Grey-Black","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":13476,"category":"Loop Rolls"},{"no":"30039","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Black","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":5390,"category":"Loop Rolls"},{"no":"30040","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":5,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":13476,"category":"Loop Rolls"},{"no":"30041","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":5,"model":"NIMBO","backing":"Spike","colour":"Green-Black","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":13476,"category":"Loop Rolls"},{"no":"30042","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":5,"model":"NIMBO","backing":"Spike","colour":"Beige-Brown","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":13476,"category":"Loop Rolls"},{"no":"30043","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":3,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":8086,"category":"Loop Rolls"},{"no":"30044","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":3,"model":"NIMBO","backing":"Spike","colour":"Red-Black","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":8086,"category":"Loop Rolls"},{"no":"30045","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Beige","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":5390,"category":"Loop Rolls"},{"no":"30046","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":5,"model":"NIMBO","backing":"Spike","colour":"Light Grey-Black","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":13476,"category":"Loop Rolls"},{"no":"30047","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Black","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":5390,"category":"Loop Rolls"},{"no":"30048","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":5,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":13476,"category":"Loop Rolls"},{"no":"30049","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":5,"model":"NIMBO","backing":"Spike","colour":"Green-Black","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":13476,"category":"Loop Rolls"},{"no":"30050","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":5,"model":"NIMBO","backing":"Spike","colour":"Beige-Brown","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":13476,"category":"Loop Rolls"},{"no":"30051","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":3,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":8086,"category":"Loop Rolls"},{"no":"30052","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":3,"model":"NIMBO","backing":"Spike","colour":"Red-Black","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":8086,"category":"Loop Rolls"},{"no":"30053","partyCode":"DK0685","party":"MAXXWELL","salesPOC":"SPM","piDate":"18/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Beige","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":5390,"category":"Loop Rolls"}]},{"id":"30058","party":"BOMBAY MAT & CHEMICALS","salesPOC":"AR","piDate":"19/03/2026","totalQty":7,"totalValue":29043,"lineCount":5,"categories":["TEFNO"],"lines":[{"no":"30058","partyCode":"LV01162","party":"BOMBAY MAT & CHEMICALS","salesPOC":"AR","piDate":"19/03/2026","qty":2,"model":"TEFNO - 400","backing":"S-Mat","colour":"P.Green","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":5809,"category":"TEFNO"},{"no":"30059","partyCode":"LV01162","party":"BOMBAY MAT & CHEMICALS","salesPOC":"AR","piDate":"19/03/2026","qty":1,"model":"TEFNO - 400","backing":"S-Mat","colour":"Red","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":2904,"category":"TEFNO"},{"no":"30060","partyCode":"LV01162","party":"BOMBAY MAT & CHEMICALS","salesPOC":"AR","piDate":"19/03/2026","qty":1,"model":"TEFNO - 400","backing":"S-Mat","colour":"L.Grey","width":"2ft","length":"15m","actualRate":"\u20b925.00","value":2904,"category":"TEFNO"},{"no":"30061","partyCode":"LV01162","party":"BOMBAY MAT & CHEMICALS","salesPOC":"AR","piDate":"19/03/2026","qty":1,"model":"TEFNO - 400","backing":"S-Mat","colour":"P.Green","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":5809,"category":"TEFNO"},{"no":"30062","partyCode":"LV01162","party":"BOMBAY MAT & CHEMICALS","salesPOC":"AR","piDate":"19/03/2026","qty":2,"model":"TEFNO - 400","backing":"S-Mat","colour":"L.Grey","width":"4ft","length":"15m","actualRate":"\u20b925.00","value":11617,"category":"TEFNO"}]},{"id":"30063","party":"YASICA HOME DECOR","salesPOC":"SK","piDate":"19/03/2026","totalQty":1,"totalValue":7621,"lineCount":1,"categories":["Grass"],"lines":[{"no":"30063","partyCode":"","party":"YASICA HOME DECOR","salesPOC":"SK","piDate":"19/03/2026","qty":1,"model":"35mm","backing":"Grass","colour":"Grass","width":"4ft","length":"25m","actualRate":"\u20b920.00","value":7621,"category":"Grass"}]},{"id":"30068","party":"SOORYA  SPORT & FITNESS","salesPOC":"VS","piDate":"19/03/2026","totalQty":6,"totalValue":31227,"lineCount":1,"categories":["Loop Rolls"],"lines":[{"no":"30068","partyCode":"TW01320","party":"SOORYA  SPORT & FITNESS","salesPOC":"VS","piDate":"19/03/2026","qty":6,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"4ft","length":"12m","actualRate":"\u20b928.00","value":31227,"category":"Loop Rolls"}]},{"id":"30072","party":"AABHAV","salesPOC":"VS","piDate":"19/03/2026","totalQty":87,"totalValue":41376,"lineCount":9,"categories":["Grass","Loop Rolls","Foot Mat"],"lines":[{"no":"30072","partyCode":"UH01331","party":"AABHAV","salesPOC":"VS","piDate":"19/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Dark Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"30073","partyCode":"UH01331","party":"AABHAV","salesPOC":"VS","piDate":"19/03/2026","qty":4,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":9665,"category":"Loop Rolls"},{"no":"30074","partyCode":"UH01331","party":"AABHAV","salesPOC":"VS","piDate":"19/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Beige-Brown","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"30075","partyCode":"UH01331","party":"AABHAV","salesPOC":"VS","piDate":"19/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Green-Black","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":4833,"category":"Loop Rolls"},{"no":"30076","partyCode":"UH01331","party":"AABHAV","salesPOC":"VS","piDate":"19/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Maroon","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":2416,"category":"Loop Rolls"},{"no":"30077","partyCode":"UH01331","party":"AABHAV","salesPOC":"VS","piDate":"19/03/2026","qty":1,"model":"25mm","backing":"Grass","colour":"Grass","width":"4ft","length":"25m","actualRate":"\u20b913.50","value":5144,"category":"Grass"},{"no":"30078","partyCode":"UH01331","party":"AABHAV","salesPOC":"VS","piDate":"19/03/2026","qty":1,"model":"25mm","backing":"Double Backing","colour":"Grass","width":"2ft","length":"25m","actualRate":"\u20b913.50","value":2572,"category":"Grass"},{"no":"30079","partyCode":"UH01331","party":"AABHAV","salesPOC":"VS","piDate":"19/03/2026","qty":50,"model":"NIMBO","backing":"Spike","colour":"Mixed","width":"16in","length":"24in","actualRate":"\u20b970.00","value":4130,"category":"Foot Mat"},{"no":"30080","partyCode":"UH01331","party":"AABHAV","salesPOC":"VS","piDate":"19/03/2026","qty":25,"model":"NIMBO","backing":"Spike","colour":"Mixed","width":"18in","length":"30in","actualRate":"\u20b9100.00","value":2950,"category":"Foot Mat"}]},{"id":"30094","party":"VISHAL FOOTWEAR","salesPOC":"SPM","piDate":"19/03/2026","totalQty":100,"totalValue":516960,"lineCount":2,"categories":["Loop Rolls"],"lines":[{"no":"30094","partyCode":"PJ01062","party":"VISHAL FOOTWEAR","salesPOC":"SPM","piDate":"19/03/2026","qty":50,"model":"ALTO","backing":"Diamond","colour":"Black","width":"4ft","length":"15m","actualRate":"\u20b922.25","value":258480,"category":"Loop Rolls"},{"no":"30095","partyCode":"PJ01062","party":"VISHAL FOOTWEAR","salesPOC":"SPM","piDate":"19/03/2026","qty":50,"model":"ALTO","backing":"Diamond","colour":"Light Grey-Black","width":"4ft","length":"15m","actualRate":"\u20b922.25","value":258480,"category":"Loop Rolls"}]},{"id":"30098","party":"HOME STYLE-ODISHA","salesPOC":"VS","piDate":"19/03/2026","totalQty":1,"totalValue":0,"lineCount":1,"categories":["Loop Rolls"],"lines":[{"no":"30098","partyCode":"XZ01574","party":"HOME STYLE-ODISHA","salesPOC":"VS","piDate":"19/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Green-Yellow","width":"2ft","length":"12m","actualRate":"\u20b928.00","value":0,"category":"Loop Rolls"}]},{"id":"30104","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"19/03/2026","totalQty":45,"totalValue":132899,"lineCount":3,"categories":["Loop Rolls"],"lines":[{"no":"30104","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"19/03/2026","qty":15,"model":"NIMBO","backing":"Spike","colour":"Red","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":36245,"category":"Loop Rolls"},{"no":"30105","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"19/03/2026","qty":20,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"2ft","length":"12m","actualRate":"\u20b926.00","value":48327,"category":"Loop Rolls"},{"no":"30106","partyCode":"EB01142","party":"SAHIL AGENCY","salesPOC":"AR","piDate":"19/03/2026","qty":10,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"4ft","length":"12m","actualRate":"\u20b926.00","value":48327,"category":"Loop Rolls"}]},{"id":"30107","party":"ODISHA FRAGRANCES","salesPOC":"VS","piDate":"19/03/2026","totalQty":1,"totalValue":3851,"lineCount":1,"categories":["TEFNO"],"lines":[{"no":"30107","partyCode":"","party":"ODISHA FRAGRANCES","salesPOC":"VS","piDate":"19/03/2026","qty":1,"model":"TEFNO - 600","backing":"S-Mat","colour":"L.Grey","width":"2ft","length":"15m","actualRate":"\u20b933.15","value":3851,"category":"TEFNO"}]},{"id":"30108","party":"RAJ FURNISHING ( Rajrang)","salesPOC":"AR","piDate":"19/03/2026","totalQty":28,"totalValue":52987,"lineCount":7,"categories":["Car Set","Monograss"],"lines":[{"no":"30108","partyCode":"KM01205","party":"RAJ FURNISHING ( Rajrang)","salesPOC":"AR","piDate":"19/03/2026","qty":6,"model":"STRATO","backing":"Spike","colour":"Beige-Brown","width":"3pc","length":"3pc","actualRate":"\u20b9660.00","value":4909,"category":"Car Set"},{"no":"30109","partyCode":"KM01205","party":"RAJ FURNISHING ( Rajrang)","salesPOC":"AR","piDate":"19/03/2026","qty":6,"model":"STRATO","backing":"Spike","colour":"Dark Grey-Black","width":"3pc","length":"3pc","actualRate":"\u20b9660.00","value":4673,"category":"Car Set"},{"no":"30110","partyCode":"KM01205","party":"RAJ FURNISHING ( Rajrang)","salesPOC":"AR","piDate":"19/03/2026","qty":2,"model":"STRATO","backing":"Spike","colour":"Blue-Black","width":"3pc","length":"3pc","actualRate":"\u20b9660.00","value":1558,"category":"Car Set"},{"no":"30111","partyCode":"KM01205","party":"RAJ FURNISHING ( Rajrang)","salesPOC":"AR","piDate":"19/03/2026","qty":4,"model":"STRATO","backing":"Spike","colour":"Red-Black","width":"3pc","length":"3pc","actualRate":"\u20b9660.00","value":3115,"category":"Car Set"},{"no":"30112","partyCode":"KM01205","party":"RAJ FURNISHING ( Rajrang)","salesPOC":"AR","piDate":"19/03/2026","qty":2,"model":"STRATO","backing":"Spike","colour":"Green-Black","width":"3pc","length":"3pc","actualRate":"\u20b9660.00","value":1558,"category":"Car Set"},{"no":"30113","partyCode":"KM01205","party":"RAJ FURNISHING ( Rajrang)","salesPOC":"AR","piDate":"19/03/2026","qty":4,"model":"Monograss","backing":"STRIPE","colour":"Grey","width":"2ft","length":"24m","actualRate":"\u20b925.00","value":18587,"category":"Monograss"},{"no":"30114","partyCode":"KM01205","party":"RAJ FURNISHING ( Rajrang)","salesPOC":"AR","piDate":"19/03/2026","qty":4,"model":"Monograss","backing":"STRIPE","colour":"Brown","width":"2ft","length":"24m","actualRate":"\u20b925.00","value":18587,"category":"Monograss"}]},{"id":"30115","party":"SARDAR SINGH & SONS","salesPOC":"SPM","piDate":"19/03/2026","totalQty":68,"totalValue":282400,"lineCount":12,"categories":["Loop Rolls"],"lines":[{"no":"30115","partyCode":"NL0545","party":"SARDAR SINGH & SONS","salesPOC":"SPM","piDate":"19/03/2026","qty":6,"model":"STRATO","backing":"Spike","colour":"P.Green","width":"4ft","length":"10m","actualRate":"\u20b940.00","value":37173,"category":"Loop Rolls"},{"no":"30116","partyCode":"NL0545","party":"SARDAR SINGH & SONS","salesPOC":"SPM","piDate":"19/03/2026","qty":6,"model":"STRATO","backing":"Spike","colour":"Grey","width":"4ft","length":"10m","actualRate":"\u20b940.00","value":37173,"category":"Loop Rolls"},{"no":"30117","partyCode":"NL0545","party":"SARDAR SINGH & SONS","salesPOC":"SPM","piDate":"19/03/2026","qty":2,"model":"STRATO","backing":"Spike","colour":"Red","width":"4ft","length":"10m","actualRate":"\u20b940.00","value":12391,"category":"Loop Rolls"},{"no":"30118","partyCode":"NL0545","party":"SARDAR SINGH & SONS","salesPOC":"SPM","piDate":"19/03/2026","qty":2,"model":"STRATO","backing":"Spike","colour":"Brown","width":"4ft","length":"10m","actualRate":"\u20b940.00","value":12391,"category":"Loop Rolls"},{"no":"30119","partyCode":"NL0545","party":"SARDAR SINGH & SONS","salesPOC":"SPM","piDate":"19/03/2026","qty":6,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"4ft","length":"12m","actualRate":"\u20b929.00","value":32342,"category":"Loop Rolls"},{"no":"30120","partyCode":"NL0545","party":"SARDAR SINGH & SONS","salesPOC":"SPM","piDate":"19/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Red","width":"4ft","length":"12m","actualRate":"\u20b929.00","value":10781,"category":"Loop Rolls"},{"no":"30121","partyCode":"NL0545","party":"SARDAR SINGH & SONS","salesPOC":"SPM","piDate":"19/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"4ft","length":"12m","actualRate":"\u20b929.00","value":10781,"category":"Loop Rolls"},{"no":"30122","partyCode":"NL0545","party":"SARDAR SINGH & SONS","salesPOC":"SPM","piDate":"19/03/2026","qty":4,"model":"NIMBO","backing":"Spike","colour":"Brown","width":"4ft","length":"12m","actualRate":"\u20b929.00","value":21561,"category":"Loop Rolls"},{"no":"30123","partyCode":"NL0545","party":"SARDAR SINGH & SONS","salesPOC":"SPM","piDate":"19/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Blue","width":"4ft","length":"12m","actualRate":"\u20b929.00","value":10781,"category":"Loop Rolls"},{"no":"30124","partyCode":"NL0545","party":"SARDAR SINGH & SONS","salesPOC":"SPM","piDate":"19/03/2026","qty":20,"model":"NIMBO","backing":"Spike","colour":"P.Green","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":53903,"category":"Loop Rolls"},{"no":"30125","partyCode":"NL0545","party":"SARDAR SINGH & SONS","salesPOC":"SPM","piDate":"19/03/2026","qty":10,"model":"NIMBO","backing":"Spike","colour":"Grey","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":26952,"category":"Loop Rolls"},{"no":"30126","partyCode":"NL0545","party":"SARDAR SINGH & SONS","salesPOC":"SPM","piDate":"19/03/2026","qty":6,"model":"NIMBO","backing":"Spike","colour":"Blue","width":"2ft","length":"12m","actualRate":"\u20b929.00","value":16171,"category":"Loop Rolls"}]},{"id":"30127","party":"FUTURE SENSE AUTOCARE","salesPOC":"SPM","piDate":"19/03/2026","totalQty":50,"totalValue":260222,"lineCount":7,"categories":["Loop Rolls"],"lines":[{"no":"30127","partyCode":"ZC0640","party":"FUTURE SENSE AUTOCARE","salesPOC":"SPM","piDate":"19/03/2026","qty":18,"model":"NIMBO","backing":"Spike","colour":"Black","width":"4ft","length":"12m","actualRate":"\u20b928.00","value":93680,"category":"Loop Rolls"},{"no":"30128","partyCode":"ZC0640","party":"FUTURE SENSE AUTOCARE","salesPOC":"SPM","piDate":"19/03/2026","qty":7,"model":"NIMBO","backing":"Spike","colour":"Light Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b928.00","value":36431,"category":"Loop Rolls"},{"no":"30129","partyCode":"ZC0640","party":"FUTURE SENSE AUTOCARE","salesPOC":"SPM","piDate":"19/03/2026","qty":13,"model":"NIMBO","backing":"Spike","colour":"Black","width":"4ft","length":"12m","actualRate":"\u20b928.00","value":67658,"category":"Loop Rolls"},{"no":"30130","partyCode":"ZC0640","party":"FUTURE SENSE AUTOCARE","salesPOC":"SPM","piDate":"19/03/2026","qty":7,"model":"NIMBO","backing":"Spike","colour":"Light Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b928.00","value":36431,"category":"Loop Rolls"},{"no":"30131","partyCode":"ZC0640","party":"FUTURE SENSE AUTOCARE","salesPOC":"SPM","piDate":"19/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Brown","width":"4ft","length":"12m","actualRate":"\u20b928.00","value":10409,"category":"Loop Rolls"},{"no":"30132","partyCode":"ZC0640","party":"FUTURE SENSE AUTOCARE","salesPOC":"SPM","piDate":"19/03/2026","qty":1,"model":"NIMBO","backing":"Spike","colour":"Beige-Brown","width":"4ft","length":"12m","actualRate":"\u20b928.00","value":5204,"category":"Loop Rolls"},{"no":"30133","partyCode":"ZC0640","party":"FUTURE SENSE AUTOCARE","salesPOC":"SPM","piDate":"19/03/2026","qty":2,"model":"NIMBO","backing":"Spike","colour":"Dark Grey-Black","width":"4ft","length":"12m","actualRate":"\u20b928.00","value":10409,"category":"Loop Rolls"}]},{"id":"30134","party":"ANGEL WIRE NETTING","salesPOC":"AR","piDate":"19/03/2026","totalQty":2,"totalValue":16766,"lineCount":1,"categories":["Grass"],"lines":[{"no":"30134","partyCode":"CP0767","party":"ANGEL WIRE NETTING","salesPOC":"AR","piDate":"19/03/2026","qty":2,"model":"35mm","backing":"Double Backing","colour":"Grass","width":"4ft","length":"25m","actualRate":"\u20b922.00","value":16766,"category":"Grass"}]},{"id":"30138","party":"VASSGRO SPORTS AND DECOR","salesPOC":"AR","piDate":"19/03/2026","totalQty":22,"totalValue":61338,"lineCount":3,"categories":["Loop Rolls"],"lines":[{"no":"30138","partyCode":"KW01016","party":"VASSGRO SPORTS AND DECOR","salesPOC":"AR","piDate":"19/03/2026","qty":12,"model":"CIRRO","backing":"Spike","colour":"Dark Grey-Black","width":"2ft","length":"12m","actualRate":"\u20b930.00","value":33457,"category":"Loop Rolls"},{"no":"30139","partyCode":"KW01016","party":"VASSGRO SPORTS AND DECOR","salesPOC":"AR","piDate":"19/03/2026","qty":8,"model":"CIRRO","backing":"Spike","colour":"Beige-Brown","width":"2ft","length":"12m","actualRate":"\u20b930.00","value":22305,"category":"Loop Rolls"},{"no":"30140","partyCode":"KW01016","party":"VASSGRO SPORTS AND DECOR","salesPOC":"AR","piDate":"19/03/2026","qty":2,"model":"CIRRO","backing":"Spike","colour":"Black","width":"2ft","length":"12m","actualRate":"\u20b930.00","value":5576,"category":"Loop Rolls"}]},{"id":"30141","party":"AUTO PERFECTION","salesPOC":"AR","piDate":"19/03/2026","totalQty":1,"totalValue":6399,"lineCount":1,"categories":["Wire"],"lines":[{"no":"30141","partyCode":"YH0807","party":"AUTO PERFECTION","salesPOC":"AR","piDate":"19/03/2026","qty":1,"model":"WIRE","backing":"Diamond","colour":"Black","width":"4ft","length":"15m","actualRate":"\u20b928.00","value":6399,"category":"Wire"}]},{"id":"30142","party":"NAVCHETAN ENTERPRISES","salesPOC":"SPM","piDate":"19/03/2026","totalQty":79,"totalValue":33722,"lineCount":2,"categories":["Foot Mat","TEFNO"],"lines":[{"no":"30142","partyCode":"CW0782","party":"NAVCHETAN ENTERPRISES","salesPOC":"SPM","piDate":"19/03/2026","qty":75,"model":"ALTO","backing":"Spike","colour":"Mixed","width":"38cm","length":"58cm","actualRate":"\u20b966.00","value":5841,"category":"Foot Mat"},{"no":"30143","partyCode":"CW0782","party":"NAVCHETAN ENTERPRISES","salesPOC":"SPM","piDate":"19/03/2026","qty":4,"model":"TEFNO - 600","backing":"S-Mat","colour":"Red","width":"4ft","length":"15m","actualRate":"\u20b930.00","value":27881,"category":"TEFNO"}]}];
@@ -119,6 +119,182 @@ function payStatus(approved){
   if(approved) return {label:"Approved",color:"#059669",bg:"#ecfdf5",border:"#86efac"};
   return {label:"Not Approved",color:"#ea580c",bg:"#fff7ed",border:"#fed7aa"};
 }
+function buildInsight(filtered,readyToDispatch,pendingApproval,rtdOverdue,allLines,cat){
+  const totalVal=filtered.reduce((s,o)=>s+o.totalValue,0);
+  const rtdVal=readyToDispatch.reduce((s,o)=>s+o.totalValue,0);
+  const odVal=rtdOverdue.reduce((s,o)=>s+o.totalValue,0);
+  const pendVal=pendingApproval.reduce((s,o)=>s+o.totalValue,0);
+  const readyPct=filtered.length>0?Math.round(readyToDispatch.length/filtered.length*100):0;
+  const pendPct=filtered.length>0?Math.round(pendingApproval.length/filtered.length*100):0;
+  const topCat=Object.entries(allLines.reduce((m,l)=>{m[l.category]=(m[l.category]||0)+l.qty;return m;},{})).sort((a,b)=>b[1]-a[1]);
+  const topPOC=Object.entries(filtered.reduce((m,o)=>{const p=o.salesPOC||"?";m[p]=(m[p]||0)+1;return m;},{})).sort((a,b)=>b[1]-a[1]);
+
+  // --- Step 1: Detect all insights ---
+  const insights=[];
+  const S={H:"high",M:"medium",L:"low"};
+  const totalQty=allLines.reduce((s,l)=>s+l.qty,0);
+
+  // --- Detect insights with sharp, specific copy ---
+
+  if(rtdOverdue.length>0){
+    insights.push({type:"overdue",cat:"problem",impact:rtdOverdue.length>=3?S.H:S.M,urgency:S.H,actionability:S.H,
+      headline:fmtVal(odVal)+" is blocked in "+rtdOverdue.length+" overdue order"+(rtdOverdue.length>1?"s":""),
+      body:"Approved but not shipped for over 7 days — delays are increasing cancellation risk.",
+      cta:"Review overdue orders",tone:"urgent",
+      orders:rtdOverdue.sort((a,b)=>b.totalValue-a.totalValue),
+      issue:o=>daysSince(o.approvalDate)+"d since approval"});
+  }
+
+  if(pendPct>=65&&pendingApproval.length>=5){
+    insights.push({type:"bottleneck",cat:"problem",impact:S.H,urgency:S.H,actionability:S.H,
+      headline:fmtVal(pendVal)+" blocked in "+pendingApproval.length+" unapproved orders",
+      body:Math.round(pendPct)+"% of pipeline is stalled — nothing ships until approvals clear.",
+      cta:"Review pending orders",tone:"warning",
+      orders:pendingApproval.sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),
+      issue:o=>daysSince(o.piDate)+"d waiting"});
+  } else if(pendingApproval.length>readyToDispatch.length*2&&pendingApproval.length>=4){
+    insights.push({type:"bottleneck",cat:"problem",impact:S.M,urgency:S.M,actionability:S.H,
+      headline:"Approval backlog: "+pendingApproval.length+" pending vs "+readyToDispatch.length+" ready",
+      body:"Dispatch capacity is underutilised — approvals are the constraint.",
+      cta:"Review pending orders",tone:"warning",
+      orders:pendingApproval.sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),
+      issue:o=>daysSince(o.piDate)+"d waiting"});
+  }
+
+  if(readyToDispatch.length>=5&&readyPct>=40&&rtdOverdue.length===0){
+    insights.push({type:"ready_batch",cat:"opportunity",impact:S.M,urgency:S.M,actionability:S.H,
+      headline:fmtVal(rtdVal)+" in "+readyToDispatch.length+" orders ready to ship",
+      body:"No overdue items — clear window to dispatch a large batch.",
+      cta:"Review ready orders",tone:"positive",
+      orders:readyToDispatch.sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),
+      issue:o=>"Ready since "+o.approvalDate});
+  }
+
+  // --- Strong but blocked (skip if overdue or bottleneck already covers it) ---
+  if(totalVal>0&&(rtdOverdue.length>0||pendPct>=40)&&readyToDispatch.length>=3&&!insights.some(i=>i.type==="overdue")&&!insights.some(i=>i.type==="bottleneck")){
+    const blockedVal=odVal+pendVal;
+    insights.push({type:"strong_blocked",cat:"problem",impact:S.M,urgency:S.M,actionability:S.H,
+      headline:fmtVal(blockedVal)+" at risk — stuck in overdue and unapproved orders",
+      body:"Pipeline is "+fmtVal(totalVal)+" but execution is blocked. Revenue won't convert until these clear.",
+      cta:"Review blocked orders",tone:"warning",
+      orders:[...rtdOverdue,...pendingApproval].sort((a,b)=>b.totalValue-a.totalValue).slice(0,10),
+      issue:o=>o.approvalDate&&daysSince(o.approvalDate)>7?"Overdue "+daysSince(o.approvalDate)+"d":"Pending "+daysSince(o.piDate)+"d"});
+  }
+
+  // --- Aging (skip if bottleneck already selected, similar message) ---
+  const aged=pendingApproval.filter(o=>daysSince(o.piDate)>30);
+  if(aged.length>=2&&!insights.some(i=>i.type==="bottleneck")){
+    const agedVal=aged.reduce((s,o)=>s+o.totalValue,0);
+    insights.push({type:"aging",cat:"risk",impact:aged.length>=5?S.H:S.M,urgency:S.M,actionability:S.H,
+      headline:fmtVal(agedVal)+" at risk in "+aged.length+" stale orders",
+      body:"Unapproved for 30+ days — orders this old rarely convert.",
+      cta:"Review stale orders",tone:"warning",
+      orders:aged.sort((a,b)=>b.totalValue-a.totalValue),
+      issue:o=>daysSince(o.piDate)+"d old"});
+  }
+
+  // --- High-value stuck ---
+  const avgVal=filtered.length>0?totalVal/filtered.length:0;
+  const highValStuck=pendingApproval.filter(o=>o.totalValue>=avgVal*3&&daysSince(o.piDate)>7).sort((a,b)=>b.totalValue-a.totalValue);
+  if(highValStuck.length>0){
+    const hv=highValStuck[0];const hvPct=Math.round(hv.totalValue/totalVal*100);
+    insights.push({type:"high_value_stuck",cat:"risk",impact:S.M,urgency:S.M,actionability:S.H,
+      headline:fmtVal(hv.totalValue)+" order from "+hv.party+" delayed "+daysSince(hv.piDate)+" days",
+      body:hvPct+"% of total pipeline in a single unapproved order.",
+      cta:"Review this order",tone:"warning",
+      orders:highValStuck.slice(0,5),
+      issue:o=>daysSince(o.piDate)+"d, "+fmtVal(o.totalValue)});
+  }
+
+  // --- Context insights (lower priority, never primary) ---
+  if(topPOC.length>0&&topPOC[0][1]>=filtered.length*0.5&&filtered.length>=6){
+    const pocPct=Math.round(topPOC[0][1]/filtered.length*100);
+    insights.push({type:"poc_concentration",cat:"context",impact:S.L,urgency:S.L,actionability:S.M,
+      headline:pocPct+"% of orders depend on "+topPOC[0][0],
+      body:"High concentration — any delay on their end impacts most of dispatch.",
+      cta:"",tone:"neutral",orders:[],issue:()=>""});
+  }
+
+  if(topCat.length>0&&topCat[0][1]>=totalQty*0.5&&totalQty>=10){
+    const catName=(CC[topCat[0][0]]||CC.Other).l||topCat[0][0];
+    const catPct=Math.round(topCat[0][1]/totalQty*100);
+    insights.push({type:"category_dominance",cat:"context",impact:S.L,urgency:S.L,actionability:S.L,
+      headline:catName+" drives "+catPct+"% of current demand",
+      body:"Ensure stock availability to avoid missed dispatch.",
+      cta:"",tone:"neutral",orders:[],issue:()=>""});
+  }
+
+  if(filtered.length===0){
+    return [{headline:"No pending orders",body:"All orders dispatched or no matches for current filters.",cta:"",tone:"neutral",orders:[],issue:()=>"",cat:"context"}];
+  }
+
+  // --- Step 2: Rank by impact > urgency > actionability ---
+  const rank={high:3,medium:2,low:1};
+  insights.sort((a,b)=>{
+    const sa=rank[a.impact]*4+rank[a.urgency]*2+rank[a.actionability];
+    const sb=rank[b.impact]*4+rank[b.urgency]*2+rank[b.actionability];
+    return sb-sa;
+  });
+
+  // --- Step 3: State-aware selection — always 1 primary + 1-2 secondary ---
+  const hasCritical=insights.some(i=>rank[i.impact]>=3&&rank[i.urgency]>=3);
+  const hasModerate=insights.some(i=>rank[i.impact]>=2||rank[i.urgency]>=2);
+
+  // Generate "healthy" and "watch" fallback insights
+  const healthyPrimary={headline:"Operations running smoothly",
+    body:readyToDispatch.length>0
+      ?readyToDispatch.length+" orders worth "+fmtVal(rtdVal)+" ready to ship, no blockers in the pipeline."
+      :filtered.length+" orders in pipeline worth "+fmtVal(totalVal)+". No critical issues detected.",
+    cta:readyToDispatch.length>0?"Review ready orders":"",tone:"positive",cat:"opportunity",
+    orders:readyToDispatch.sort((a,b)=>b.totalValue-a.totalValue).slice(0,8),issue:o=>o.approvalDate?"Ready since "+o.approvalDate:"Pending"};
+
+  const healthySecondary=[];
+  // Always generate a pipeline summary as a secondary
+  if(filtered.length>0)healthySecondary.push({headline:fmtVal(totalVal)+" across "+filtered.length+" active orders",
+    body:readyToDispatch.length+" ready, "+pendingApproval.length+" pending approval.",
+    cta:"",tone:"neutral",cat:"context",orders:[],issue:()=>""});
+  // Add a velocity note if there's dispatch data
+  if(readyToDispatch.length>0&&pendingApproval.length>0){
+    const ratio=Math.round(readyToDispatch.length/(readyToDispatch.length+pendingApproval.length)*100);
+    healthySecondary.push({headline:ratio+"% of orders are dispatch-ready",
+      body:ratio>=50?"Healthy conversion rate — keep clearing approvals.":"Approval rate is below 50% — room to improve.",
+      cta:"",tone:ratio>=50?"positive":"neutral",cat:"context",orders:[],issue:()=>""});
+  }
+
+  let result=[];
+
+  if(insights.length===0){
+    // --- Healthy state: no detected issues ---
+    result=[healthyPrimary,...healthySecondary.slice(0,2)];
+  } else if(!hasCritical&&!hasModerate){
+    // --- Healthy with low-priority context available ---
+    result=[healthyPrimary,...insights.slice(0,2)];
+  } else if(!hasCritical&&hasModerate){
+    // --- Watch state: no critical, but moderate concerns ---
+    // Promote the top moderate concern to primary, add context as secondary
+    result=[insights[0]];
+    const seen=new Set([insights[0].type]);
+    for(let i=1;i<insights.length&&result.length<3;i++){
+      if(!seen.has(insights[i].type)){seen.add(insights[i].type);result.push(insights[i]);}
+    }
+    // If we only got 1, backfill with healthy context
+    if(result.length<2)result.push(...healthySecondary.slice(0,3-result.length));
+  } else {
+    // --- Critical state: urgent issues exist ---
+    result=[insights[0]];
+    const seen=new Set([insights[0].type]);
+    for(let i=1;i<insights.length&&result.length<3;i++){
+      if(!seen.has(insights[i].type)){seen.add(insights[i].type);result.push(insights[i]);}
+    }
+    // If we only got 1, backfill from context insights
+    if(result.length<2)result.push(...healthySecondary.slice(0,3-result.length));
+  }
+
+  // Guarantee at least 1 primary + 1 secondary (never leave section looking empty)
+  if(result.length<2)result.push(...healthySecondary.slice(0,2-result.length));
+
+  return result;
+}
 function useW(){const[w,setW]=useState(typeof window!=='undefined'?window.innerWidth:1200);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);return w;}
 
 /* ═══════════════ MICRO COMPONENTS ═══════════════ */
@@ -135,23 +311,24 @@ function Badge({cat}){const x=CC[cat]||CC["Other"];return <span style={{...S.pil
 function Dot({c,s=6}){return <span style={{width:s,height:s,borderRadius:"50%",background:c,display:"inline-block",flexShrink:0}}/>;}
 
 function StatCard({icon,l,v,sub,sub2,accent,breakdown,unit,span2}){
-  const ac=accent||AC2;
-  const glassCard={padding:"14px 16px",borderRadius:16,background:"rgba(255,255,255,0.08)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",border:"1px solid rgba(255,255,255,0.15)",boxShadow:"0 1px 8px rgba(0,0,0,0.15)",position:"relative",overflow:"hidden"};
+  const ac=accent||"#2563eb";
   return(
-    <div style={{...glassCard,...(span2?{gridColumn:"span 2"}:{})}}>
-      <div style={{position:"absolute",top:-18,right:-18,width:64,height:64,borderRadius:"50%",background:ac,opacity:0.2,filter:"blur(16px)",pointerEvents:"none"}}/>
-      <div style={{fontSize:9,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)",marginBottom:6}}>{l}</div>
-      <div style={{display:"flex",alignItems:"baseline",gap:4}}>
-        <div style={{fontFamily:MN,fontSize:26,fontWeight:700,color:"#fff",lineHeight:1}}>{v}</div>
-        {unit&&<div style={{fontFamily:MN,fontSize:10,color:ac,fontWeight:700}}>{unit}</div>}
+    <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7eb",padding:"14px 16px",...(span2?{gridColumn:"span 2"}:{})}}>
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+        {accent&&<span style={{width:6,height:6,borderRadius:"50%",background:ac,flexShrink:0}}/>}
+        <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94a3b8"}}>{l}</div>
       </div>
-      {sub&&<div style={{fontSize:11,color:"rgba(255,255,255,0.6)",fontWeight:500,marginTop:3,fontFamily:MN}}>{sub}</div>}
-      {sub2&&<div style={{fontSize:10,color:"rgba(255,255,255,0.4)",marginTop:2,fontFamily:MN}}>{sub2}</div>}
-      {breakdown&&<div style={{marginTop:8,paddingTop:6,borderTop:"1px solid rgba(255,255,255,0.1)",display:"flex",gap:4,flexWrap:"wrap"}}>
+      <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+        <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:"#0f172a",lineHeight:1}}>{v}</div>
+        {unit&&<div style={{fontFamily:MN,fontSize:10,color:"#94a3b8",fontWeight:600}}>{unit}</div>}
+      </div>
+      {sub&&<div style={{fontSize:11,color:"#64748b",fontWeight:500,marginTop:4,fontFamily:MN}}>{sub}</div>}
+      {sub2&&<div style={{fontSize:10,color:"#94a3b8",marginTop:2,fontFamily:MN}}>{sub2}</div>}
+      {breakdown&&<div style={{marginTop:8,paddingTop:6,borderTop:"1px solid #f1f5f9",display:"flex",gap:4,flexWrap:"wrap"}}>
         {breakdown.filter(([,q])=>q>0).map(([lbl,qty])=>(
-          <div key={lbl} style={{display:"flex",alignItems:"center",gap:3,background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.25)",padding:"2px 7px",borderRadius:8}}>
-            <span style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.55)"}}>{lbl}</span>
-            <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#fff"}}>{qty}</span>
+          <div key={lbl} style={{display:"flex",alignItems:"center",gap:3,background:"#f8fafc",border:"1px solid #e5e7eb",padding:"2px 7px",borderRadius:6}}>
+            <span style={{fontFamily:MN,fontSize:9,color:"#94a3b8"}}>{lbl}</span>
+            <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#0f172a"}}>{qty}</span>
           </div>
         ))}
       </div>}
@@ -975,10 +1152,393 @@ function AnalyticsTab({mob}){
   </div>;
 }
 
+/* ═══════ PRODUCTION TAB ═══════ */
+const MIXING_ALL=["PVC","SCRAP","CALCIUM","DOP","CPW","ADIL","EPOXY","STERIC ACID","FINOWAX","TITANIUM","HEAT STB."];
+const MIXING_GLUE=["PVC PASTE","DOP","CPW","MTO","DBP","D80"];
+const MIXING_SHEET=["SCRAP","CALCIUM","DOP","STERIC ACID","CPW"];
+const MIX_SECTIONS=[{id:"all",label:"Mixing (Loop)",materials:MIXING_ALL},{id:"glue",label:"Mixing (Glue)",materials:MIXING_GLUE},{id:"sheet",label:"Mixing (Sheet)",materials:MIXING_SHEET}];
+const PROD_COLORS=["P.GREEN","RED","BLUE","GREY","BROWN","MAROON","BEIGE","BLACK","BEIGE-BROWN","LIGHT GREY-BLACK","DARK GREY-BLACK","GREEN-BLACK","RED-BLACK","BLUE-BLACK","GREEN-BLUE","RED-BLUE","TAN-BLACK","WHITE-BLACK","GREEN-YELLOW"];
+const PROD_LINES=["LINE - 1","LINE - 2","LINE - 3"];
+const PROD_PRODUCTS=["LOOP","S-MAT","TURF"];
+
+function ProductionTab({mob,user}){
+  const[entries,setEntries]=useState([]);const[loading,setLoading]=useState(true);
+  const[formOpen,setFormOpen]=useState(false);const[saving,setSaving]=useState(false);
+  const[expanded,setExpanded]=useState("all");const[formData,setFormData]=useState({});
+  const[period,setPeriod]=useState("today");const[saveMsg,setSaveMsg]=useState("");
+  const[formColor,setFormColor]=useState("");const[colorFilter,setColorFilter]=useState("all");
+  const[formLine,setFormLine]=useState("");const[formProduct,setFormProduct]=useState("");
+  const[lineFilter,setLineFilter]=useState("all");const[productFilter,setProductFilter]=useState("all");
+  const[lots,setLots]=useState(1);
+  const[sheetColor,setSheetColor]=useState("");
+
+  // Fetch entries
+  useEffect(()=>{
+    fetch("/api/production").then(r=>r.json()).then(d=>{setEntries(d.entries||[]);setLoading(false);}).catch(()=>setLoading(false));
+  },[]);
+
+  // Filter entries by period
+  const filtered=useMemo(()=>{
+    const now=new Date();const todayStr=now.toLocaleDateString("en-IN",{day:"2-digit",month:"2-digit",year:"numeric"});
+    let r=entries;
+    if(colorFilter!=="all")r=r.filter(e=>e.color===colorFilter);
+    if(lineFilter!=="all")r=r.filter(e=>e.line===lineFilter);
+    if(productFilter!=="all")r=r.filter(e=>e.product===productFilter);
+    if(period==="today")return r.filter(e=>e.date===todayStr);
+    if(period==="7d"){const d7=new Date(now-7*86400000);return r.filter(e=>{try{const p=e.date.split("/");const d=new Date(+p[2],+p[1]-1,+p[0]);return d>=d7;}catch{return false;}});}
+    if(period==="30d"){const d30=new Date(now-30*86400000);return r.filter(e=>{try{const p=e.date.split("/");const d=new Date(+p[2],+p[1]-1,+p[0]);return d>=d30;}catch{return false;}});}
+    return r;
+  },[entries,period,colorFilter,lineFilter,productFilter]);
+
+  // Consumption totals by material
+  const consumption=useMemo(()=>{
+    const m={};filtered.forEach(e=>{m[e.material]=(m[e.material]||0)+e.qty;});
+    return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+  },[filtered]);
+
+  // By section
+  const bySection=useMemo(()=>{
+    const m={};filtered.forEach(e=>{if(!m[e.section])m[e.section]=0;m[e.section]+=e.qty;});
+    return m;
+  },[filtered]);
+
+  // Today's total
+  const todayTotal=useMemo(()=>filtered.reduce((s,e)=>s+e.qty,0),[filtered]);
+
+  // Update form quantity
+  const setQty=(section,material,val)=>{
+    setFormData(d=>({...d,[section+"|"+material]:val}));
+  };
+  const getQty=(section,material)=>formData[section+"|"+material]||"";
+
+  // Save
+  const handleSave=async()=>{
+    if(!formLine){setSaveMsg("Please select a line first");return;}
+    if(!formProduct){setSaveMsg("Please select a product first");return;}
+    if(!formColor){setSaveMsg("Please select a colour first");return;}
+    setSaving(true);setSaveMsg("");
+    const ents=[];
+    // Loop and Glue use the main formColor — multiplied by lots
+    MIX_SECTIONS.filter(s=>s.id!=="sheet").forEach(sec=>{
+      sec.materials.forEach(mat=>{
+        const q=parseFloat(getQty(sec.id,mat));
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:formColor,line:formLine,product:formProduct});
+      });
+    });
+    // Pigment — also multiplied by lots
+    const pigQty=parseFloat(getQty("pigment",formColor));
+    if(pigQty>0)ents.push({section:"Mixing (Loop)",material:"PIGMENT",qty:pigQty*lots,color:formColor,line:formLine,product:formProduct,unit:"gm"});
+    // Sheet uses its own sheetColor
+    const sheetSec=MIX_SECTIONS.find(s=>s.id==="sheet");
+    if(sheetSec&&sheetColor){
+      sheetSec.materials.forEach(mat=>{
+        const q=parseFloat(getQty("sheet",mat));
+        if(q>0)ents.push({section:sheetSec.label,material:mat,qty:q,color:sheetColor,line:formLine,product:formProduct});
+      });
+      // Sheet colour (grams)
+      const sheetColQty=parseFloat(getQty("sheetcolour",sheetColor));
+      if(sheetColQty>0)ents.push({section:"Mixing (Sheet)",material:"COLOUR",qty:sheetColQty,color:sheetColor,line:formLine,product:formProduct,unit:"gm"});
+    }
+    if(ents.length===0){setSaving(false);setSaveMsg("No quantities entered");return;}
+    try{
+      const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown"})});
+      const data=await res.json();
+      if(data.ok){setSaveMsg(data.saved+" entries saved for "+formLine+" · "+formProduct+" · "+formColor+(lots>1?" × "+lots+" lots":""));setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setSheetColor("");
+        // Refresh
+        const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
+      }else{setSaveMsg(data.error||"Failed to save");}
+    }catch{setSaveMsg("Error saving");}
+    finally{setSaving(false);}
+  };
+
+  return <div>
+    {/* Header */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
+      <div>
+        <div style={{fontSize:18,fontWeight:600,color:"#0F172A",marginBottom:4}}>Production — Raw Material</div>
+        <div style={{fontFamily:MN,fontSize:11,color:"#94A3B8"}}>Mixing department consumption tracking</div>
+      </div>
+      <button onClick={()=>setFormOpen(o=>!o)} className="hv-btn" style={{fontFamily:MN,fontSize:11,fontWeight:600,color:formOpen?"#475569":"#fff",background:formOpen?"#F1F5F9":"#0F172A",border:formOpen?"1px solid #E5E7EB":"none",borderRadius:8,padding:"8px 18px",cursor:"pointer"}}>{formOpen?"Close":"+ Add Entry"}</button>
+    </div>
+
+    {/* Entry Form */}
+    {formOpen&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:24,overflow:"hidden"}}>
+      <div style={{padding:"16px 20px",borderBottom:"1px solid #E5E7EB"}}>
+        <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Enter today's raw material usage</div>
+        <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:2}}>Select Line → Product → Colour, then enter quantities in kg.</div>
+      </div>
+      <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:(formLine&&formProduct&&formColor)?"#F0FDF4":"#FFFBEB"}}>
+        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:12}}>
+          <div>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formLine?"#16A34A":"#D97706",marginBottom:5}}>Line {formLine?"·":"(required)"}</div>
+            <select value={formLine} onChange={e=>setFormLine(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formLine?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formLine?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
+              <option value="">Select line...</option>
+              {PROD_LINES.map(l=><option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:!formLine?"#D4D4D8":formProduct?"#16A34A":"#D97706",marginBottom:5}}>Product {!formLine?"":formProduct?"·":"(required)"}</div>
+            <select value={formProduct} onChange={e=>setFormProduct(e.target.value)} disabled={!formLine} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(!formLine?"#E5E7EB":formProduct?"#16A34A":"#D97706"),borderRadius:8,background:!formLine?"#F8FAFC":"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:!formLine?"#D4D4D8":formProduct?"#0F172A":"#94A3B8",outline:"none",cursor:!formLine?"not-allowed":"pointer"}}>
+              <option value="">Select product...</option>
+              {PROD_PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:!formProduct?"#D4D4D8":formColor?"#16A34A":"#D97706",marginBottom:5}}>Colour {!formProduct?"":formColor?"·":"(required)"}</div>
+            <select value={formColor} onChange={e=>setFormColor(e.target.value)} disabled={!formProduct} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(!formProduct?"#E5E7EB":formColor?"#16A34A":"#D97706"),borderRadius:8,background:!formProduct?"#F8FAFC":"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:!formProduct?"#D4D4D8":formColor?"#0F172A":"#94A3B8",outline:"none",cursor:!formProduct?"not-allowed":"pointer"}}>
+              <option value="">Select colour...</option>
+              {PROD_COLORS.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+      {!(formLine&&formProduct&&formColor)&&<div style={{padding:"32px 20px",textAlign:"center",background:"#FFFBEB"}}>
+        <div style={{fontSize:13,color:"#92400E",fontWeight:500}}>Complete line, product and colour above to start entering material quantities</div>
+      </div>}
+      {formLine&&formProduct&&formColor&&(()=>{
+        // Compute totals for Loop and Glue
+        const loopSec=MIX_SECTIONS.find(s=>s.id==="all");
+        const glueSec=MIX_SECTIONS.find(s=>s.id==="glue");
+        const sheetSec=MIX_SECTIONS.find(s=>s.id==="sheet");
+        const loopTotal=loopSec?loopSec.materials.reduce((s,m)=>s+(parseFloat(getQty("all",m))||0),0):0;
+        const pigTotal=parseFloat(getQty("pigment",formColor))||0;
+        const glueTotal=glueSec?glueSec.materials.reduce((s,m)=>s+(parseFloat(getQty("glue",m))||0),0):0;
+
+        const renderSection=(sec,extraAfter)=>{
+          const isExp=expanded===sec.id;
+          const filledCount=sec.materials.filter(m=>parseFloat(getQty(sec.id,m))>0).length;
+          const secTotal=sec.materials.reduce((s,m)=>s+(parseFloat(getQty(sec.id,m))||0),0);
+          return <div key={sec.id}>
+            <div className="hv-row" onClick={()=>setExpanded(isExp?null:sec.id)} style={{padding:"14px 20px",borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontFamily:MN,fontSize:12,color:"#94A3B8",transition:"transform 0.2s",transform:isExp?"rotate(90deg)":"none"}}>▶</span>
+                <span style={{fontSize:13,fontWeight:600,color:"#0F172A"}}>{sec.label}</span>
+                <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{sec.materials.length} materials</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                {secTotal>0&&<span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#0F172A"}}>{secTotal.toFixed(1)} kg</span>}
+                {filledCount>0&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#16A34A",background:"#F0FDF4",padding:"2px 8px",borderRadius:4}}>{filledCount} filled</span>}
+              </div>
+            </div>
+            {isExp&&<div style={{padding:"8px 20px 16px",background:"#F8FAFC"}}>
+              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
+                {sec.materials.map(mat=>
+                  <div key={mat} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",padding:"8px 14px"}}>
+                    <span style={{flex:1,fontSize:12,fontWeight:500,color:"#475569"}}>{mat}</span>
+                    <input type="number" min="0" step="0.1" value={getQty(sec.id,mat)} onChange={e=>setQty(sec.id,mat,e.target.value)} placeholder="kg" style={{width:80,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+                  </div>
+                )}
+              </div>
+              {extraAfter}
+            </div>}
+          </div>;
+        };
+
+        return <>
+          {/* Mixing (Loop) + Pigment */}
+          {renderSection(loopSec,formColor&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,border:"1px solid "+(pigTotal>0?"#7C3AED40":"#E5E7EB"),padding:"10px 14px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Pigment</span>
+                <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{formColor}</span>
+              </div>
+              <input type="number" min="0" step="1" value={getQty("pigment",formColor)} onChange={e=>setQty("pigment",formColor,e.target.value)} placeholder="gm" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+            </div>
+          </div>)}
+
+          {/* Mixing (Glue) */}
+          {renderSection(glueSec,null)}
+
+          {/* Total after Loop + Glue */}
+          {(loopTotal>0||glueTotal>0)&&<div style={{padding:"12px 20px",background:"#0F172A",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+            <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)"}}>Total — Loop + Glue{lots>1?" × "+lots+" lots":""}</span>
+            <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+              {loopTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Loop: <strong style={{color:"#fff"}}>{(loopTotal*lots).toFixed(1)} kg</strong></span>}
+              {pigTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Pigment: <strong style={{color:"#fff"}}>{pigTotal*lots} gm</strong></span>}
+              {glueTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Glue: <strong style={{color:"#fff"}}>{(glueTotal*lots).toFixed(1)} kg</strong></span>}
+              <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#4ade80"}}>{((loopTotal+glueTotal)*lots).toFixed(1)} kg</span>
+            </div>
+          </div>}
+
+          {/* Lots selector */}
+          <div style={{padding:"14px 20px",background:"#F8FAFC",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569"}}>Number of Lots</span>
+              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>Loop + Glue quantities will be multiplied</span>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <button onClick={()=>setLots(l=>Math.max(1,l-1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+              <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#0F172A",minWidth:36,textAlign:"center"}}>{lots}</span>
+              <button onClick={()=>setLots(l=>Math.min(10,l+1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+            </div>
+          </div>
+
+          {/* Mixing (Sheet) — separate colour */}
+          <div>
+            <div className="hv-row" onClick={()=>setExpanded(expanded==="sheet"?null:"sheet")} style={{padding:"14px 20px",borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontFamily:MN,fontSize:12,color:"#94A3B8",transition:"transform 0.2s",transform:expanded==="sheet"?"rotate(90deg)":"none"}}>▶</span>
+                <span style={{fontSize:13,fontWeight:600,color:"#0F172A"}}>Mixing (Sheet)</span>
+                <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{sheetSec.materials.length} materials</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                {(()=>{const st=sheetSec.materials.reduce((s,m)=>s+(parseFloat(getQty("sheet",m))||0),0);return st>0&&<span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#0F172A"}}>{st.toFixed(1)} kg</span>;})()}
+                {(()=>{const fc=sheetSec.materials.filter(m=>parseFloat(getQty("sheet",m))>0).length;return fc>0&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#16A34A",background:"#F0FDF4",padding:"2px 8px",borderRadius:4}}>{fc} filled</span>;})()}
+              </div>
+            </div>
+            {expanded==="sheet"&&<div style={{padding:"8px 20px 16px",background:"#F8FAFC"}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+                <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:sheetColor?"#16A34A":"#D97706"}}>Sheet Colour {sheetColor?"·":"(select)"}</span>
+                <select value={sheetColor} onChange={e=>setSheetColor(e.target.value)} style={{padding:"6px 10px",border:"1px solid "+(sheetColor?"#16A34A":"#D97706"),borderRadius:6,background:"#fff",fontSize:12,fontFamily:MN,fontWeight:600,color:sheetColor?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
+                  <option value="">Select colour...</option>
+                  {PROD_COLORS.map(c=><option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              {sheetColor?<>
+                <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
+                  {sheetSec.materials.map(mat=>
+                    <div key={mat} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",padding:"8px 14px"}}>
+                      <span style={{flex:1,fontSize:12,fontWeight:500,color:"#475569"}}>{mat}</span>
+                      <input type="number" min="0" step="0.1" value={getQty("sheet",mat)} onChange={e=>setQty("sheet",mat,e.target.value)} placeholder="kg" style={{width:80,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+                    </div>
+                  )}
+                </div>
+                <div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,border:"1px solid "+(parseFloat(getQty("sheetcolour",sheetColor))>0?"#7C3AED40":"#E5E7EB"),padding:"10px 14px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Colour</span>
+                      <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{sheetColor}</span>
+                    </div>
+                    <input type="number" min="0" step="1" value={getQty("sheetcolour",sheetColor)} onChange={e=>setQty("sheetcolour",sheetColor,e.target.value)} placeholder="gm" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+                  </div>
+                </div>
+              </>:<div style={{padding:"16px",textAlign:"center",color:"#92400E",fontSize:12}}>Select a sheet colour above</div>}
+            </div>}
+          </div>
+        </>;
+      })()}
+      <div style={{padding:"14px 20px",borderTop:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>{saveMsg&&<span style={{fontFamily:MN,fontSize:11,color:saveMsg.includes("saved")?"#16A34A":"#DC2626"}}>{saveMsg}</span>}</div>
+        <button onClick={handleSave} disabled={saving} className="hv-btn" style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#fff",background:saving?"#94A3B8":"#0F172A",border:"none",borderRadius:8,padding:"10px 24px",cursor:saving?"default":"pointer"}}>{saving?"Saving...":"Save Entry"}</button>
+      </div>
+    </div>}
+
+    {/* Consumption Insights */}
+    {loading?<div style={{padding:40,textAlign:"center",fontFamily:MN,fontSize:12,color:"#94A3B8"}}>Loading production data...</div>:<div>
+
+      {/* Period + Line + Product + Colour Filter */}
+      <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{display:"flex",gap:6}}>
+          {[["today","Today"],["7d","7 Days"],["30d","30 Days"],["all","All Time"]].map(([v,l])=>
+            <div key={v} className={period!==v?"hv-pill":""} onClick={()=>setPeriod(v)} style={{padding:"6px 14px",borderRadius:6,border:period===v?"1px solid #2563EB":"1px solid #E5E7EB",background:period===v?"#EFF6FF":"#F1F5F9",color:period===v?"#2563EB":"#334155",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:period===v?600:500}}>{l}</div>
+          )}
+        </div>
+        {(()=>{const availLines=[...new Set(entries.map(e=>e.line).filter(Boolean))].sort();
+          return availLines.length>0&&<select value={lineFilter} onChange={e=>setLineFilter(e.target.value)} style={{padding:"6px 12px",border:"1px solid "+(lineFilter!=="all"?"#2563EB":"#E5E7EB"),borderRadius:6,background:lineFilter!=="all"?"#EFF6FF":"#F1F5F9",color:lineFilter!=="all"?"#2563EB":"#334155",fontSize:11,fontFamily:MN,fontWeight:lineFilter!=="all"?600:500,cursor:"pointer",outline:"none"}}><option value="all">All lines</option>{availLines.map(l=><option key={l} value={l}>{l}</option>)}</select>;
+        })()}
+        {(()=>{const availProducts=[...new Set(entries.map(e=>e.product).filter(Boolean))].sort();
+          return availProducts.length>0&&<select value={productFilter} onChange={e=>setProductFilter(e.target.value)} style={{padding:"6px 12px",border:"1px solid "+(productFilter!=="all"?"#2563EB":"#E5E7EB"),borderRadius:6,background:productFilter!=="all"?"#EFF6FF":"#F1F5F9",color:productFilter!=="all"?"#2563EB":"#334155",fontSize:11,fontFamily:MN,fontWeight:productFilter!=="all"?600:500,cursor:"pointer",outline:"none"}}><option value="all">All products</option>{availProducts.map(p=><option key={p} value={p}>{p}</option>)}</select>;
+        })()}
+        {(()=>{const availColors=[...new Set(entries.map(e=>e.color).filter(Boolean))].sort();
+          return availColors.length>0&&<select value={colorFilter} onChange={e=>setColorFilter(e.target.value)} style={{padding:"6px 12px",border:"1px solid "+(colorFilter!=="all"?"#2563EB":"#E5E7EB"),borderRadius:6,background:colorFilter!=="all"?"#EFF6FF":"#F1F5F9",color:colorFilter!=="all"?"#2563EB":"#334155",fontSize:11,fontFamily:MN,fontWeight:colorFilter!=="all"?600:500,cursor:"pointer",outline:"none"}}><option value="all">All colours</option>{availColors.map(c=><option key={c} value={c}>{c}</option>)}</select>;
+        })()}
+      </div>
+
+      {/* Summary Cards */}
+      <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:14,marginBottom:28}}>
+        <div className="hv-card" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px"}}>
+          <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>Total Used</div>
+          <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:"#0F172A",lineHeight:1}}>{Math.round(todayTotal).toLocaleString("en-IN")} kg</div>
+          <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:4}}>{filtered.length} entries</div>
+        </div>
+        <div className="hv-card" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px"}}>
+          <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>Materials</div>
+          <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:"#2563EB",lineHeight:1}}>{consumption.length}</div>
+          <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:4}}>types used</div>
+        </div>
+        <div className="hv-card" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px"}}>
+          <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>Top Material</div>
+          <div style={{fontFamily:MN,fontSize:16,fontWeight:700,color:"#0F172A",lineHeight:1.2}}>{consumption[0]?consumption[0][0]:"—"}</div>
+          <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:4}}>{consumption[0]?Math.round(consumption[0][1]).toLocaleString("en-IN")+" kg":"No data"}</div>
+        </div>
+        <div className="hv-card" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px"}}>
+          <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>Sections</div>
+          <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:"#D97706",lineHeight:1}}>{Object.keys(bySection).length}</div>
+          <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:4}}>active</div>
+        </div>
+      </div>
+
+      {/* Consumption by Material */}
+      {consumption.length>0&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:24,overflow:"hidden"}}>
+        <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB"}}>
+          <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Consumption by Material</span>
+        </div>
+        {consumption.map(([mat,qty],i)=>{
+          const maxQty=consumption[0][1];const pct=maxQty>0?qty/maxQty:0;
+          return <div key={mat} className="hv-row" style={{padding:"12px 20px",borderBottom:i<consumption.length-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12}}>
+            <span style={{width:120,fontSize:13,fontWeight:500,color:"#0F172A",flexShrink:0}}>{mat}</span>
+            <div style={{flex:1,height:6,background:"#F1F5F9",borderRadius:3,overflow:"hidden"}}>
+              <div style={{height:"100%",width:Math.max(pct*100,2)+"%",background:i===0?"#0F172A":i<3?"#475569":"#94A3B8",borderRadius:3,transition:"width 0.5s"}}/>
+            </div>
+            <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0F172A",minWidth:80,textAlign:"right"}}>{Math.round(qty).toLocaleString("en-IN")} kg</span>
+          </div>;
+        })}
+      </div>}
+
+      {/* By Section */}
+      {Object.keys(bySection).length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:14,marginBottom:24}}>
+        {MIX_SECTIONS.map(sec=>{
+          const secEntries=filtered.filter(e=>e.section===sec.label);
+          const secTotal=secEntries.reduce((s,e)=>s+e.qty,0);
+          if(secTotal===0)return null;
+          const secMats={};secEntries.forEach(e=>{secMats[e.material]=(secMats[e.material]||0)+e.qty;});
+          return <div key={sec.id} style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px"}}>
+            <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94A3B8",marginBottom:8}}>{sec.label}</div>
+            <div style={{fontFamily:MN,fontSize:20,fontWeight:700,color:"#0F172A",marginBottom:10}}>{Math.round(secTotal).toLocaleString("en-IN")} kg</div>
+            {Object.entries(secMats).sort((a,b)=>b[1]-a[1]).map(([m,q])=>
+              <div key={m} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #F8FAFC"}}>
+                <span style={{fontSize:12,color:"#475569"}}>{m}</span>
+                <span style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>{Math.round(q)} kg</span>
+              </div>
+            )}
+          </div>;
+        })}
+      </div>}
+
+      {/* Recent Entries */}
+      {filtered.length>0&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",overflow:"hidden"}}>
+        <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB"}}>
+          <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Recent Entries</span>
+        </div>
+        <div style={{maxHeight:300,overflowY:"auto"}}>
+          {filtered.slice(0,30).map((e,i)=>
+            <div key={i} className="hv-row" style={{padding:"10px 20px",borderBottom:i<Math.min(filtered.length,30)-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:8,flexWrap:mob?"wrap":"nowrap"}}>
+              <span style={{fontFamily:MN,fontSize:11,color:"#94A3B8",minWidth:70}}>{e.date}</span>
+              <span style={{fontFamily:MN,fontSize:11,color:"#94A3B8",minWidth:45}}>{e.time}</span>
+              {e.line&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#7C3AED",background:"#F3E8FF",padding:"2px 6px",borderRadius:4}}>{e.line}</span>}
+              {e.product&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#D97706",background:"#FEF3C7",padding:"2px 6px",borderRadius:4}}>{e.product}</span>}
+              {e.color&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"2px 6px",borderRadius:4}}>{e.color}</span>}
+              <span style={{fontSize:11,fontWeight:500,color:"#475569",minWidth:80}}>{e.section}</span>
+              <span style={{fontSize:12,fontWeight:600,color:"#0F172A",flex:1,minWidth:80}}>{e.material}</span>
+              <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0F172A"}}>{e.qty} kg</span>
+              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{e.user}</span>
+            </div>
+          )}
+        </div>
+      </div>}
+
+      {filtered.length===0&&!loading&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",padding:40,textAlign:"center"}}>
+        <div style={{fontSize:14,color:"#94A3B8",marginBottom:8}}>No entries for this period</div>
+        <div style={{fontSize:12,color:"#94A3B8"}}>Click "+ Add Entry" to log raw material usage</div>
+      </div>}
+    </div>}
+  </div>;
+}
+
 /* ═══════════════ MAIN APP ═══════════════ */
 /* ═══════ LIVE DATA FETCH ═══════ */
 const SHEET_URL="https://docs.google.com/spreadsheets/d/1CQS5w9VLTjHcZ9Gzw3P6wGgZ0K6YDKuL1Ux42LQeRSQ/gviz/tq?tqx=out:csv&sheet=APP_DATA";
-const REFRESH_MS=15*60*1000;
+const REFRESH_MS=3*60*1000;
 function parseCSV(csv){
   var lines=csv.trim().split("\n");if(lines.length<2)return[];
   var orders=[];
@@ -1004,14 +1564,22 @@ function groupOrders(rawOrders){
 
 export default function Dashboard(){
   const w=useW();const mob=w<768;
+  const {user}=useUser();const {signOut}=useClerk();
   const[tab,setTab]=useState("pending");const[menuOpen,setMenuOpen]=useState(false);
   const[cat,setCat]=useState("all");const[srch,setSrch]=useState("");const[srt,setSrt]=useState("da");const[poc,setPoc]=useState("");
   const[pg,setPg]=useState(1);const[exp,setExp]=useState(null);const[expParties,setExpParties]=useState({});
   const[selP,setSelP]=useState(null);const[pcf,setPcf]=useState("all");const[psrch,setPsrch]=useState("");
-  const[showHist,setShowHist]=useState(false);const[payF,setPayF]=useState("all");const[mpv,setMpv]=useState(false);
+  const[showHist,setShowHist]=useState(false);const[payF,setPayF]=useState("all");const[mpv,setMpv]=useState(false);const[showCats,setShowCats]=useState(false);const[insIdx,setInsIdx]=useState(0);const[actionOpen,setActionOpen]=useState(false);const[doneIds,setDoneIds]=useState(new Set());const[showAllRtd,setShowAllRtd]=useState(false);const[showAllPend,setShowAllPend]=useState(false);const[insPaused,setInsPaused]=useState(false);const insCount=useRef(1);
   const[liveOrders,setLiveOrders]=useState(null);
   const[lastUpdated,setLastUpdated]=useState(null);
   const[fetchStatus,setFetchStatus]=useState("idle");
+  const[agoText,setAgoText]=useState("");const[dataVer,setDataVer]=useState(0);
+  const[newOrderIds,setNewOrderIds]=useState(new Set());
+  const[showNewOnly,setShowNewOnly]=useState(false);
+  const[activityFeed,setActivityFeed]=useState([]);
+  const[insightOpen,setInsightOpen]=useState(false);const[feedExp,setFeedExp]=useState(null);
+  const prevOrderIds=useRef(null);
+  const prevSnap=useRef(null);
 
   useEffect(()=>{
     var doFetch=function(){
@@ -1020,7 +1588,66 @@ export default function Dashboard(){
       .then(function(csv){
         var raw=parseCSV(csv);if(raw.length===0)throw new Error("Empty");
         var grouped=groupOrders(raw);
-        setLiveOrders(grouped);setLastUpdated(new Date());setFetchStatus("ok");
+        var active=grouped.filter(function(o){return!(o.lineCount>0&&o.dispatchedCount>=o.lineCount);});
+        // Track new orders
+        var currentIds=new Set(grouped.map(function(o){return o.party+"||"+o.piDate;}));
+        if(prevOrderIds.current){
+          var added=new Set();
+          currentIds.forEach(function(id){if(!prevOrderIds.current.has(id))added.add(id);});
+          if(added.size>0)setNewOrderIds(added);
+        }
+        prevOrderIds.current=currentIds;
+
+        // --- Activity feed ---
+        try{
+        var now=new Date();
+        var ts=now.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+        var dateStr=now.toISOString().split("T")[0];
+        var rtdA=active.filter(function(o){return o.approvalDate&&o.dispatchedCount<o.lineCount;});
+        var pendA=active.filter(function(o){return!o.approvalDate;});
+        var odA=rtdA.filter(function(o){return daysSince(o.approvalDate)>7;});
+        var totalValA=active.reduce(function(s,o){return s+o.totalValue;},0);
+        var todayStr=now.getDate()+"/"+(now.getMonth()+1<10?"0":"")+(now.getMonth()+1)+"/"+now.getFullYear();
+        var todayAlt=(now.getDate()<10?"0":"")+now.getDate()+"/"+(now.getMonth()+1<10?"0":"")+(now.getMonth()+1)+"/"+now.getFullYear();
+        function isToday(d){var s=(d||"").trim();return s===todayStr||s===todayAlt;}
+
+        var liveDiffs=[];
+        if(prevSnap.current){
+          var ps=prevSnap.current;
+          var prevIds2=new Set(ps.orders.map(function(o){return o.id;}));
+          active.forEach(function(o){if(!prevIds2.has(o.id))liveDiffs.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"+",live:true,oid:o.id,detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate}});});
+          var prevPendIds2=new Set(ps.orders.filter(function(o){return!o.approvalDate;}).map(function(o){return o.id;}));
+          active.forEach(function(o){if(o.approvalDate&&prevPendIds2.has(o.id))liveDiffs.push({type:"approved",text:o.party+" approved — "+fmtVal(o.totalValue)+" ready to ship",time:ts,date:dateStr,icon:"✓",live:true,oid:o.id,detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate,approvalDate:o.approvalDate}});});
+          var curIds2=new Set(active.map(function(o){return o.id;}));
+          ps.orders.forEach(function(o){if(!curIds2.has(o.id))liveDiffs.push({type:"dispatched",text:o.party+" dispatched — "+fmtVal(o.totalValue),time:ts,date:dateStr,icon:"→",live:true,oid:o.id,detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories}});});
+          var prevOD2=ps.orders.filter(function(o){return o.approvalDate&&daysSince(o.approvalDate)>7;}).length;
+          if(odA.length>prevOD2)liveDiffs.push({type:"overdue",text:(odA.length-prevOD2)+" more order"+(odA.length-prevOD2>1?"s":"")+" now overdue",time:ts,date:dateStr,icon:"!",live:true});
+          var prevVal2=ps.orders.reduce(function(s,o){return s+o.totalValue;},0);
+          var diffV=totalValA-prevVal2;
+          if(Math.abs(diffV)>10000)liveDiffs.push({type:diffV>0?"value_up":"value_down",text:"Pipeline "+(diffV>0?"up":"down")+" "+fmtVal(Math.abs(diffV))+" to "+fmtVal(totalValA),time:ts,date:dateStr,icon:diffV>0?"↑":"↓",live:true});
+        }
+
+        // Full day scan + merge
+        setActivityFeed(function(existing){
+          var knownOids=new Set(existing.filter(function(a){return a.oid;}).map(function(a){return a.oid+"|"+a.type;}));
+          liveDiffs.forEach(function(d){if(d.oid)knownOids.add(d.oid+"|"+d.type);});
+          var dayItems=[];
+          rtdA.forEach(function(o){if(!knownOids.has(o.id+"|approved")&&isToday(o.approvalDate)){knownOids.add(o.id+"|approved");dayItems.push({type:"approved",text:o.party+" approved — "+fmtVal(o.totalValue)+" ready to ship",time:"—",date:dateStr,icon:"✓",oid:o.id,detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate,approvalDate:o.approvalDate}});}});
+          active.forEach(function(o){if(!knownOids.has(o.id+"|new_order")&&isToday(o.piDate)){knownOids.add(o.id+"|new_order");dayItems.push({type:"new_order",text:"New order from "+o.party+" — "+fmtVal(o.totalValue),time:"—",date:dateStr,icon:"+",oid:o.id,detail:{party:o.party,id:o.id,value:o.totalValue,qty:o.totalQty,poc:o.salesPOC,cats:o.categories,piDate:o.piDate,approvalDate:o.approvalDate||""}});}});
+
+          var pocSum={};active.forEach(function(o){var p=o.salesPOC||"?";if(!pocSum[p])pocSum[p]={count:0,value:0,rtd:0,pend:0};pocSum[p].count++;pocSum[p].value+=o.totalValue;if(o.approvalDate)pocSum[p].rtd++;else pocSum[p].pend++;});
+          var summaryItems=[{type:"summary",text:active.length+" active orders · "+fmtVal(totalValA),time:ts,date:dateStr,icon:"◆"}];
+          Object.entries(pocSum).sort(function(a,b){return b[1].value-a[1].value;}).forEach(function(e){summaryItems.push({type:"poc_summary",text:e[0]+" — "+e[1].count+" orders · "+fmtVal(e[1].value)+" · "+e[1].rtd+" ready, "+e[1].pend+" pending",time:ts,date:dateStr,icon:"●",poc:e[0]});});
+          if(odA.length>0)summaryItems.push({type:"overdue",text:odA.length+" orders overdue for shipping",time:ts,date:dateStr,icon:"!"});
+
+          var events=existing.filter(function(a){return a.type!=="summary"&&a.type!=="poc_summary"&&!(a.type==="overdue"&&!a.live);});
+          var merged=liveDiffs.concat(events,dayItems,summaryItems).slice(0,60);
+          return merged;
+        });
+
+        prevSnap.current={orders:active};
+        }catch(e){console.error("Activity feed error:",e);}
+        setLiveOrders(grouped);setLastUpdated(new Date());setFetchStatus("ok");setDataVer(v=>v+1);
       }).catch(function(){setFetchStatus(liveOrders?"error_cached":"error");});
     };
     doFetch();
@@ -1028,14 +1655,41 @@ export default function Dashboard(){
     return function(){clearInterval(iv);};
   },[]);
 
+  // Live "updated X ago" ticker
+  useEffect(()=>{
+    const tick=()=>{
+      if(!lastUpdated){setAgoText("");return;}
+      const sec=Math.floor((Date.now()-lastUpdated.getTime())/1000);
+      if(sec<10)setAgoText("just now");
+      else if(sec<60)setAgoText(sec+"s ago");
+      else{const m=Math.floor(sec/60);setAgoText(m+"m ago");}
+    };
+    tick();
+    const iv=setInterval(tick,10000);
+    return()=>clearInterval(iv);
+  },[lastUpdated]);
+
   const ORDERS=(liveOrders||RAW).filter(o=>{const p=(o.party||"").trim().toLowerCase();return p&&p!=="test";});
   const PARTIES=useMemo(()=>{const ob={};ORDERS.forEach(o=>{if(!ob[o.party])ob[o.party]=[];ob[o.party].push(o);});
     return ALL_PARTIES.map(p=>({...p,earliest:pd(p.firstDate||"01/01/2025"),orders:ob[p.name]||[],pendingValue:p.pendingValue||(ob[p.name]||[]).reduce((s,o)=>s+o.totalValue,0),cats:Object.fromEntries((p.cats||[]).map(c=>[c,1]))}));},[ORDERS]);
   const pocs=useMemo(()=>[...new Set(ORDERS.map(o=>o.salesPOC))].sort(),[ORDERS]);
 
+  // Auto-rotate insight carousel every 7s, pause on hover/interaction
+  useEffect(()=>{
+    if(insPaused||tab!=="pending"||insCount.current<=1)return;
+    const iv=setInterval(()=>{setInsIdx(i=>(i+1)%insCount.current);},7000);
+    return()=>clearInterval(iv);
+  },[insPaused,tab]);
+  const pauseCarousel=useCallback(()=>setInsPaused(true),[]);
+  const resumeCarousel=useCallback(()=>setInsPaused(false),[]);
+
+  const isNewOrder=useCallback((o)=>newOrderIds.has(o.party+"||"+o.piDate),[newOrderIds]);
+
+  // (report functions defined after base data below)
   const filtered=useMemo(()=>{
     let r=ORDERS.filter(o=>{
       if(o.lineCount>0&&o.dispatchedCount>=o.lineCount)return false;
+      if(showNewOnly&&!newOrderIds.has(o.party+"||"+o.piDate))return false;
       if(cat!=="all"&&!o.categories.includes(cat))return false;
       if(poc&&o.salesPOC!==poc)return false;
       if(payF!=="all"){const appr=!!o.approvalDate;if(payF==="approved"&&!appr)return false;if(payF==="not_approved"&&appr)return false;}
@@ -1048,19 +1702,26 @@ export default function Dashboard(){
     else if(srt==="qd"){const cq=o=>cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0);r.sort((a,b)=>cq(b)-cq(a));}
     else if(srt==="vd")r.sort((a,b)=>b.totalValue-a.totalValue);
     return r;
-  },[cat,poc,srch,srt,payF,ORDERS]);
+  },[cat,poc,srch,srt,payF,ORDERS,showNewOnly,newOrderIds]);
+
+  // Stable orders for insights & metrics — not affected by search
+  const baseOrders=useMemo(()=>ORDERS.filter(o=>!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)&&(!poc||o.salesPOC===poc)),[ORDERS,poc]);
+  const baseRtd=useMemo(()=>baseOrders.filter(o=>o.approvalDate&&o.dispatchedCount<o.lineCount),[baseOrders]);
+  const basePend=useMemo(()=>baseOrders.filter(o=>!o.approvalDate),[baseOrders]);
+  const baseOverdue=useMemo(()=>baseRtd.filter(o=>daysSince(o.approvalDate)>7),[baseRtd]);
+  const baseLines=useMemo(()=>baseOrders.flatMap(o=>o.lines),[baseOrders]);
 
   const readyToDispatch=filtered.filter(o=>o.approvalDate&&o.dispatchedCount<o.lineCount);const pendingApproval=filtered.filter(o=>!o.approvalDate);const page=filtered.slice((pg-1)*PG,pg*PG);const pages=Math.max(1,Math.ceil(pendingApproval.length/PG));
   const rtdSorted=(()=>{const r=[...readyToDispatch];if(srt==="dd")r.sort((a,b)=>pd(b.approvalDate)-pd(a.approvalDate));else if(srt==="pa")r.sort((a,b)=>a.party.localeCompare(b.party));else if(srt==="qd"){const cq=o=>cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0);r.sort((a,b)=>cq(b)-cq(a));}else if(srt==="vd")r.sort((a,b)=>b.totalValue-a.totalValue);else r.sort((a,b)=>pd(a.approvalDate)-pd(b.approvalDate));return r;})();const rtdOverdue=rtdSorted.filter(o=>daysSince(o.approvalDate)>7);const rtdOnTime=rtdSorted.filter(o=>daysSince(o.approvalDate)<=7);const rtdDetailTbl=(o)=>(<tr key={o.id+"x"}><td colSpan={9} style={{padding:0,borderBottom:"1px solid #86efac"}}><div style={{background:"#f8fafc",padding:"8px 16px 4px 36px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}><span style={{...S.section,fontSize:10}}>{o.lineCount} line items</span><span style={{fontFamily:MN,fontSize:11,color:"#64748b"}}>· {fmtVal(o.totalValue)}</span><span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>PI</span><span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#475569"}}>{o.id}</span><span style={{fontFamily:MN,fontSize:10,color:"#94a3b8"}}>PI Date</span><span style={{fontFamily:MN,fontSize:11,color:"#475569"}}>{o.piDate}</span></div><table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr>{["#","Code","Model","Backing","Colour","Width","Length","Qty","Rate","Value"].map(h=><th key={h} style={{padding:"8px 14px",...S.section,fontSize:9,background:"#f1f5f9",borderBottom:"1px solid #e2e8f0",textAlign:["Qty","Rate","Value"].includes(h)?"right":"left"}}>{h}</th>)}</tr></thead><tbody>{o.lines.map((l,i)=><tr key={l.no||i} style={{background:i%2?"#fafafa":"#fff"}}><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,color:"#94a3b8"}}>{i+1}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:10,fontFamily:MN,fontWeight:600,color:"#64748b"}}>{l.partyCode||"—"}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,fontWeight:600}}>{l.model}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,color:"#64748b"}}>{l.backing}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12}}>{l.colour}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN}}>{l.width}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN,color:"#94a3b8"}}>{l.length}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:14,fontFamily:MN,fontWeight:700,textAlign:"right"}}>{l.qty}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:11,fontFamily:MN,textAlign:"right",color:"#64748b"}}>{l.actualRate||"—"}</td><td style={{padding:"8px 14px",borderBottom:"1px solid #f1f5f9",fontSize:12,fontFamily:MN,fontWeight:600,textAlign:"right"}}>{fmtVal(l.value||0)}</td></tr>)}</tbody></table></td></tr>);
   const rtdRows=[];
   if(readyToDispatch.length>0){
-    const pushOrders=(ords,off=0)=>{ords.forEach((o,oi)=>{const ep=exp===o.id;const ri=off+oi;const dy=daysSince(o.approvalDate);const dC=dy>7?"#dc2626":dy>3?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
-      rtdRows.push(<tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#ecfdf5":ri%2?"#f0fdf4":"#fff",borderLeft:ep?"3px solid #059669":"3px solid transparent",transition:"background 0.15s"}}><td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontFamily:MN,fontSize:10,color:"#059669"}}>{ep?"▾":"▸"}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontFamily:MN,fontSize:11,whiteSpace:"nowrap",color:"#64748b"}}>{o.approvalDate}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5"}}><span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:dC,background:dC+"12",padding:"2px 8px",borderRadius:12}}>{dy}d</span></td><td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontWeight:700,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.party}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5"}}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div></td><td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontFamily:MN,fontSize:13,fontWeight:700,textAlign:"right"}}>{cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0)}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:POC_COLORS[o.salesPOC]||"#64748b",background:(POC_COLORS[o.salesPOC]||"#64748b")+"15",padding:"2px 8px",borderRadius:12}}>{o.salesPOC}</span></td><td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5",fontFamily:MN,fontSize:12,fontWeight:700,textAlign:"right",color:"#059669"}}>{fmtVal(o.totalValue)}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #d1fae5"}}>{ps?<span style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:20,background:ps.bg,color:ps.color}}>{ps.label}</span>:<span style={{fontFamily:MN,fontSize:10,color:"#cbd5e1"}}>—</span>}</td></tr>);
+    const pushOrders=(ords,off=0)=>{ords.forEach((o,oi)=>{const ep=exp===o.id;const ri=off+oi;const dy=daysSince(o.approvalDate);const dC=dy>7?"#DC2626":dy>3?"#D97706":"#16A34A";const ps=payStatus(!!o.approvalDate);const isOD=dy>7;
+      rtdRows.push(<tr className="hv-row" key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:"#fff",borderLeft:ep?"3px solid #16A34A":"3px solid transparent"}}><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB",fontFamily:MN,fontSize:10,color:isOD?"#94a3b8":"#059669"}}>{ep?"▾":"▸"}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB",fontFamily:MN,fontSize:11,whiteSpace:"nowrap",color:"#64748b"}}>{o.approvalDate}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB"}}><span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:dC,background:dC+"12",padding:"2px 8px",borderRadius:12}}>{dy}d</span></td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB",fontWeight:700,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.party}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB"}}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div></td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB",fontFamily:MN,fontSize:13,fontWeight:700,textAlign:"right"}}>{cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0)}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:POC_COLORS[o.salesPOC]||"#64748b",background:(POC_COLORS[o.salesPOC]||"#64748b")+"15",padding:"2px 8px",borderRadius:12}}>{o.salesPOC}</span></td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB",fontFamily:MN,fontSize:12,fontWeight:700,textAlign:"right",color:isOD?"#0f172a":"#059669"}}>{fmtVal(o.totalValue)}</td><td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB"}}>{ps?<span style={{fontFamily:MN,fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:20,background:ps.bg,color:ps.color}}>{ps.label}</span>:<span style={{fontFamily:MN,fontSize:10,color:"#cbd5e1"}}>—</span>}</td></tr>);
       if(ep)rtdRows.push(rtdDetailTbl(o));
     });};
-    if(rtdOverdue.length>0)rtdRows.push(<tr key="rtd_od_h"><td colSpan={9} style={{padding:"6px 14px 6px 20px",background:"#fef2f2",borderBottom:"1px solid #fca5a5"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:700,color:"#dc2626"}}>⚠ Overdue · {rtdOverdue.length} order{rtdOverdue.length!==1?"s":""} · {fmtVal(rtdOverdue.reduce((s,o)=>s+o.totalValue,0))}</span></td></tr>);
+    if(rtdOverdue.length>0)rtdRows.push(<tr key="rtd_od_h"><td colSpan={9} style={{padding:"8px 14px 8px 20px",background:"#F8FAFC",borderBottom:"1px solid #E5E7EB",borderLeft:"3px solid #DC2626"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#DC2626"}}>Overdue · {rtdOverdue.length} order{rtdOverdue.length!==1?"s":""} · {fmtVal(rtdOverdue.reduce((s,o)=>s+o.totalValue,0))}</span></td></tr>);
     pushOrders(rtdOverdue);
-    if(rtdOnTime.length>0&&rtdOverdue.length>0)rtdRows.push(<tr key="rtd_ot_h"><td colSpan={9} style={{padding:"6px 14px 6px 20px",background:"#f0fdf4",borderBottom:"1px solid #86efac"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:700,color:"#059669"}}>✓ On Time · {rtdOnTime.length} order{rtdOnTime.length!==1?"s":""}</span></td></tr>);
+    if(rtdOnTime.length>0&&rtdOverdue.length>0)rtdRows.push(<tr key="rtd_ot_h"><td colSpan={9} style={{padding:"8px 14px 8px 20px",background:"#F8FAFC",borderBottom:"1px solid #E5E7EB",borderLeft:"3px solid #16A34A"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#16A34A"}}>On Time · {rtdOnTime.length} order{rtdOnTime.length!==1?"s":""}</span></td></tr>);
     pushOrders(rtdOnTime,rtdOverdue.length);
   }
   const catCounts=useMemo(()=>{const c={};ORDERS.filter(o=>(!poc||o.salesPOC===poc)&&!(o.lineCount>0&&o.dispatchedCount>=o.lineCount)).forEach(o=>o.categories.forEach(cc=>c[cc]=(c[cc]||0)+1));return c;},[poc,ORDERS]);
@@ -1069,30 +1730,29 @@ export default function Dashboard(){
   const pFilt=PARTIES.filter(p=>!psrch||p.name.toLowerCase().includes(psrch.toLowerCase()));
   const sPObj=selP?PARTIES.find(p=>p.name===selP):null;
 
-  const {user}=useUser();const {signOut}=useClerk();
   const role=user?.publicMetadata?.role||"sales";
-  const ROLE_TABS={admin:["pending","party","stock","dispatch","analytics","calls"],management:["pending","party","analytics"],ops:["pending","stock","dispatch"],sales:["pending","party"]};
+  const ROLE_TABS={admin:["pending","party","stock","dispatch","analytics","calls","production"],management:["pending","party","analytics"],ops:["pending","stock","dispatch","production"],sales:["pending","party"]};
   const allowedTabs=ROLE_TABS[role]||ROLE_TABS["sales"];
-  const allTabs=[{id:"pending",l:"Orders",n:filtered.length},{id:"party",l:"Parties",n:pFilt.length},{id:"stock",l:"Stock",n:""},{id:"dispatch",l:"Dispatch",n:""},{id:"analytics",l:"Analytics",n:""},{id:"calls",l:"Calls",n:Object.keys(REORDER).length}];
+  const allTabs=[{id:"pending",l:"Orders",n:filtered.length},{id:"party",l:"Parties",n:pFilt.length},{id:"stock",l:"Stock",n:""},{id:"dispatch",l:"Dispatch",n:""},{id:"analytics",l:"Analytics",n:""},{id:"calls",l:"Calls",n:Object.keys(REORDER).length},{id:"production",l:"Production",n:""}];
   const tabs=allTabs.filter(t=>allowedTabs.includes(t.id));
 
-  return <div style={{fontFamily:SN,background:"#f1f5f9",minHeight:"100vh",fontSize:13,color:"#1e293b"}}>
+  return <div style={{fontFamily:SN,background:"#F8FAFC",minHeight:"100vh",fontSize:13,color:"#0F172A"}}>
     
     {/* Fonts loaded in layout.js */}
-    <style>{`*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#64748b}input:focus,select:focus{border-color:#d97706!important;box-shadow:0 0 0 3px rgba(217,119,6,0.12)}::selection{background:#d9770633}`}</style>
+    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes flash{0%{background:#E0F2FE}100%{background:#fff}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}.hv-row{transition:background 0.2s}.hv-row:hover{background:#F8FAFC!important}.hv-card{transition:box-shadow 0.2s,border-color 0.2s}.hv-card:hover{box-shadow:0 1px 4px rgba(0,0,0,0.04);border-color:#d1d5db}.hv-pill{transition:background 0.2s,border-color 0.2s}.hv-pill:hover{background:#E5E7EB!important}.hv-btn{transition:background 0.2s,opacity 0.2s}.hv-btn:hover{opacity:0.85}.hv-insight{transition:box-shadow 0.2s}.hv-insight:hover{box-shadow:0 2px 8px rgba(0,0,0,0.04)}.hv-insight-s{transition:background 0.2s}.hv-insight-s:hover{background:#F1F5F9!important}.hv-dark{transition:background 0.2s}.hv-dark:hover{background:rgba(255,255,255,0.04)!important}select{transition:border-color 0.2s}select:hover{border-color:#cbd5e1}`}</style>
 
     {/* Header */}
-    <div style={{background:"linear-gradient(135deg,#0c1222 0%,#1a2744 60%,#2a1f0e 100%)",color:"#fff",padding:mob?"0 16px":"0 28px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:200,borderBottom:"2px solid #d97706"}}>
+    <div style={{background:"#0f172a",color:"#fff",padding:mob?"0 16px":"0 28px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:200,borderBottom:"1px solid #1e293b"}}>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
         <div style={{background:"#fff",borderRadius:6,padding:"3px 8px",display:"flex",alignItems:"center",justifyContent:"center"}}><img src="/logo.png" alt="Comfort Mats" style={{height:28,width:"auto"}}/></div>
         <div><div style={{fontFamily:MN,fontSize:16,fontWeight:700,letterSpacing:"0.12em",wordSpacing:"-0.08em",textTransform:"uppercase"}}>Comfort Cloud</div>{!mob&&<div style={{fontSize:10,opacity:0.4,fontFamily:MN,marginTop:-1,letterSpacing:"0.06em"}}>Dashboard</div>}</div>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(217,119,6,0.12)",border:"1px solid rgba(217,119,6,0.25)",padding:"6px 14px",borderRadius:20,fontSize:11,fontFamily:MN}}>
-          <span style={{width:7,height:7,borderRadius:"50%",background:fetchStatus==="ok"?"#4ade80":fetchStatus==="loading"?"#fbbf24":"#d97706",boxShadow:fetchStatus==="ok"?"0 0 8px #4ade80":"0 0 8px #d97706"}}/>
-          {!mob&&<>{filtered.length} orders · {fmtVal(filtered.reduce((s,o)=>s+o.totalValue,0))}</>}
-          {fetchStatus==="ok"&&lastUpdated&&<span style={{opacity:0.6,marginLeft:4}}>{mob?`Live ${lastUpdated.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}`:` · Live ${lastUpdated.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}`}</span>}
-          {fetchStatus==="loading"&&<span style={{opacity:0.6,marginLeft:4}}>Fetching…</span>}
+        <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",padding:"6px 14px",borderRadius:8,fontSize:11,fontFamily:MN}}>
+          <span style={{width:6,height:6,borderRadius:"50%",background:fetchStatus==="ok"?"#4ade80":fetchStatus==="loading"?"#fbbf24":"#94a3b8",boxShadow:fetchStatus==="ok"?"0 0 6px #4ade8060":"none"}}/>
+          {!mob&&<>{baseOrders.length} orders · {fmtVal(baseOrders.reduce((s,o)=>s+o.totalValue,0))}</>}
+          {fetchStatus==="ok"&&agoText&&<span style={{opacity:0.5,marginLeft:2}}> · {agoText}</span>}
+          {fetchStatus==="loading"&&<span style={{opacity:0.6,marginLeft:4}}>Syncing…</span>}
           {fetchStatus==="error"&&<span style={{opacity:0.6,marginLeft:4}}>Offline</span>}
         </div>
         {user&&<div style={{position:"relative"}}>
@@ -1114,9 +1774,9 @@ export default function Dashboard(){
     </div>
 
     {/* Tabs */}
-    <div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",display:"flex",padding:mob?"0 12px":"0 28px",position:"sticky",top:56,zIndex:99,overflowX:"auto",gap:4}}>
-      {tabs.map(t=><div key={t.id} onClick={()=>{setTab(t.id);if(t.id==="party")setMpv(false);}} style={{padding:mob?"12px 14px":"14px 22px",fontSize:13,fontWeight:tab===t.id?700:500,color:tab===t.id?"#0f172a":"#94a3b8",cursor:"pointer",borderBottom:tab===t.id?"3px solid #d97706":"3px solid transparent",whiteSpace:"nowrap",transition:"all 0.2s"}}>
-        {t.l}{t.n!==""&&<span style={{display:"inline-block",background:tab===t.id?"#fef3c7":"#f1f5f9",borderRadius:20,padding:"1px 8px",fontFamily:MN,fontSize:10,marginLeft:6,color:tab===t.id?"#d97706":"#94a3b8",fontWeight:600}}>{t.n}</span>}
+    <div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",display:"flex",padding:mob?"0 12px":"0 28px",position:"sticky",top:56,zIndex:99,overflowX:"auto",gap:2}}>
+      {tabs.map(t=><div key={t.id} onClick={()=>{setTab(t.id);if(t.id==="party")setMpv(false);}} style={{padding:mob?"12px 14px":"14px 22px",fontSize:13,fontWeight:tab===t.id?600:400,color:tab===t.id?"#0f172a":"#94a3b8",cursor:"pointer",borderBottom:tab===t.id?"2px solid #2563eb":"2px solid transparent",whiteSpace:"nowrap",transition:"all 0.2s"}}>
+        {t.l}{t.n!==""&&<span style={{display:"inline-block",background:tab===t.id?"#eff6ff":"#f8fafc",borderRadius:10,padding:"1px 8px",fontFamily:MN,fontSize:10,marginLeft:6,color:tab===t.id?"#2563eb":"#94a3b8",fontWeight:600}}>{t.n}</span>}
       </div>)}
       {role==="admin"&&<a href="/purchases" style={{padding:mob?"12px 14px":"14px 22px",fontSize:13,fontWeight:500,color:"#94a3b8",cursor:"pointer",borderBottom:"3px solid transparent",whiteSpace:"nowrap",transition:"all 0.2s",textDecoration:"none",display:"flex",alignItems:"center",gap:6}}>Purchases</a>}
     </div>
@@ -1125,8 +1785,122 @@ export default function Dashboard(){
 
       {/* ═══ PENDING ═══ */}
       {tab==="pending"&&<div>
-        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(170px,1fr))",gap:12,marginBottom:24,padding:"16px",borderRadius:20,background:"linear-gradient(135deg,#16254a 0%,#243268 100%)"}}>
-          <StatCard l="Total Orders" v={filtered.length} sub={fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))+" ready · "+fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))+" pending"} accent="#3b82f6"/>
+        {/* Activity Feed — Premium Glass */}
+        <div style={{background:"linear-gradient(135deg,#0c1222 0%,#162036 50%,#0f1a2e 100%)",borderRadius:16,marginBottom:24,overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,0.12)",border:"1px solid rgba(255,255,255,0.06)"}}>
+          <div style={{padding:mob?"16px 18px":"18px 28px",borderBottom:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{width:7,height:7,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 10px #4ade8060",animation:"pulse 3s ease-in-out infinite"}}/>
+              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.12em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)"}}>Live</span>
+              <span style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.25)"}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short"})}</span>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.25)"}}>{activityFeed.length} events</span>
+              {agoText&&<span style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.2)"}}>· {agoText}</span>}
+            </div>
+          </div>
+          <div style={{maxHeight:mob?260:240,overflowY:"auto"}}>
+            {activityFeed.length===0?<div style={{padding:"32px",textAlign:"center",fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.3)"}}>Waiting for first sync...</div>:
+            activityFeed.map((a,i)=>{
+              const colors={new_order:"#60a5fa",approved:"#4ade80",dispatched:"#4ade80",overdue:"#f87171",value_up:"#4ade80",value_down:"#f87171",summary:"rgba(255,255,255,0.6)",ready:"#4ade80",pending:"#fbbf24",poc_summary:"rgba(255,255,255,0.5)"};
+              const c=a.poc?(POC_COLORS[a.poc]||"#94a3b8"):colors[a.type]||"rgba(255,255,255,0.5)";
+              const hasDetail=!!a.detail;const isExp=feedExp===i;
+              return <div key={i}>
+                <div className={hasDetail?"hv-dark":""} onClick={()=>hasDetail&&setFeedExp(isExp?null:i)} style={{padding:mob?"11px 18px":"11px 28px",borderBottom:(!isExp&&i<activityFeed.length-1)?"1px solid rgba(255,255,255,0.04)":"none",display:"flex",alignItems:"center",gap:12,cursor:hasDetail?"pointer":"default",background:isExp?"rgba(255,255,255,0.06)":"transparent"}}>
+                  <span style={{width:22,height:22,borderRadius:8,background:isExp?c+"30":c+"18",border:"1px solid "+(isExp?c+"40":c+"20"),display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:isExp?"#fff":c,fontFamily:MN,fontWeight:700,flexShrink:0}}>{a.icon}</span>
+                  <span style={{flex:1,fontSize:13,color:isExp?"#fff":"rgba(255,255,255,0.85)",lineHeight:1.4,fontWeight:isExp?600:a.type==="summary"?600:400}}>{a.text}</span>
+                  <span style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.2)",flexShrink:0}}>{a.time}</span>
+                </div>
+                {isExp&&a.detail&&<div style={{padding:mob?"8px 18px 12px 52px":"8px 28px 12px 68px",borderBottom:"1px solid rgba(255,255,255,0.04)",background:"rgba(255,255,255,0.02)"}}>
+                  <div style={{display:"flex",gap:mob?8:16,flexWrap:"wrap",fontFamily:MN,fontSize:11}}>
+                    <span style={{color:"rgba(255,255,255,0.3)"}}>#{a.detail.id}</span>
+                    <span style={{fontWeight:700,color:"#fff"}}>{fmtVal(a.detail.value)}</span>
+                    <span style={{color:"rgba(255,255,255,0.5)"}}>{a.detail.qty} qty</span>
+                    {a.detail.poc&&<span style={{fontWeight:600,color:POC_COLORS[a.detail.poc]||"rgba(255,255,255,0.5)"}}>{a.detail.poc}</span>}
+                    {a.detail.cats&&a.detail.cats.map(function(ct){return <span key={ct} style={{color:"rgba(255,255,255,0.3)"}}>{(CC[ct]||CC.Other).l||ct}</span>;})}
+                    {a.detail.piDate&&<span style={{color:"rgba(255,255,255,0.25)"}}>PI: {a.detail.piDate}</span>}
+                    {a.detail.approvalDate&&<span style={{color:"#4ade80"}}>Approved: {a.detail.approvalDate}</span>}
+                  </div>
+                </div>}
+              </div>;
+            })}
+          </div>
+        </div>
+
+        {/* Insight Badge — Compact, expandable */}
+        {(()=>{const allInsights=buildInsight(baseOrders,baseRtd,basePend,baseOverdue,baseLines,cat);
+          const toneStyles={urgent:{accent:"#DC2626",label:"Critical",glow:"#DC262630"},warning:{accent:"#D97706",label:"Attention",glow:"#D9770630"},positive:{accent:"#16A34A",label:"On Track",glow:"#16A34A30"},neutral:{accent:"#2563EB",label:"Info",glow:"#2563EB30"}};
+          const primary=allInsights[0];const secondary=allInsights.slice(1,3);
+          const pts=toneStyles[primary.tone]||toneStyles.neutral;
+          return <div style={{marginBottom:24}}>
+            {/* Badge */}
+            <div onClick={()=>setInsightOpen(o=>!o)} className="hv-row" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:mob?"12px 16px":"14px 20px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
+              <span style={{width:8,height:8,borderRadius:"50%",background:pts.accent,boxShadow:"0 0 8px "+pts.glow,flexShrink:0,animation:"pulse 2s ease-in-out infinite"}}/>
+              <div style={{flex:1}}>
+                <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:pts.accent,marginRight:8}}>{pts.label}</span>
+                <span style={{fontSize:13,fontWeight:600,color:"#0F172A"}}>{primary.headline}</span>
+              </div>
+              <span style={{fontFamily:MN,fontSize:12,color:"#94A3B8",transition:"transform 0.2s",transform:insightOpen?"rotate(180deg)":"none"}}>▾</span>
+            </div>
+
+            {/* Expanded insight content */}
+            {insightOpen&&<div style={{marginTop:8}}>
+              <div style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",borderLeft:"3px solid "+pts.accent,padding:mob?"20px 20px":"24px 28px",marginBottom:secondary.length>0?12:0}}>
+                <div style={{fontSize:mob?13:14,color:"#475569",lineHeight:1.65,maxWidth:580,marginBottom:primary.cta?20:0}}>{primary.body}</div>
+                {primary.cta&&<button className="hv-btn" onClick={(e)=>{e.stopPropagation();setActionOpen(o=>!o);}} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:actionOpen?pts.accent:"#fff",background:actionOpen?"transparent":pts.accent,border:actionOpen?"1px solid "+pts.accent:"none",borderRadius:6,padding:"7px 16px",cursor:"pointer",boxShadow:actionOpen?"none":"0 1px 3px rgba(0,0,0,0.1)"}}>{actionOpen?"Close":primary.cta}</button>}
+              </div>
+              {secondary.length>0&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat("+Math.min(secondary.length,2)+",1fr)",gap:10}}>
+                {secondary.map((ins,si)=>{const sts=toneStyles[ins.tone]||toneStyles.neutral;
+                  return <div key={si} className="hv-insight-s" style={{background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",borderLeft:"2px solid "+sts.accent,padding:mob?"14px 16px":"16px 20px"}}>
+                    <div style={{fontSize:13,fontWeight:600,color:"#0F172A",lineHeight:1.4,marginBottom:4}}>{ins.headline}</div>
+                    <div style={{fontSize:12,color:"#475569",lineHeight:1.5}}>{ins.body}</div>
+                  </div>;
+                })}
+              </div>}
+
+              {/* Priority Orders inline */}
+              {actionOpen&&primary.orders&&primary.orders.length>0&&<div style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",marginTop:12,overflow:"hidden"}}>
+                <div style={{padding:"12px 20px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Priority Orders</span>
+                  <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{primary.orders.length}</span>
+                </div>
+                {primary.orders.slice(0,5).map((o,oi)=>{
+                  const issueText=typeof primary.issue==="function"?primary.issue(o):"";
+                  return <div key={o.id} className="hv-row" style={{padding:mob?"10px 16px":"10px 20px",borderBottom:oi<Math.min(primary.orders.length,5)-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12}}>
+                    <div style={{flex:1}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                        <span style={{fontSize:12,fontWeight:600,color:"#0F172A"}}>{o.party}</span>
+                        <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>#{o.id}</span>
+                      </div>
+                      <div style={{display:"flex",gap:8,fontSize:11,fontFamily:MN,color:"#94A3B8"}}>
+                        <span style={{fontWeight:700,color:"#0F172A"}}>{fmtVal(o.totalValue)}</span>
+                        {issueText&&<span>{issueText}</span>}
+                      </div>
+                    </div>
+                  </div>;
+                })}
+              </div>}
+            </div>}
+          </div>;
+        })()}
+
+        {/* Supporting Metrics */}
+        <div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(4,1fr)",gap:mob?12:14,marginBottom:32}}>
+          {[["Pipeline",fmtVal(baseOrders.reduce((s,o)=>s+o.totalValue,0)),baseOrders.length+" orders","#0F172A"],["Ready",baseRtd.length,fmtVal(baseRtd.reduce((s,o)=>s+o.totalValue,0)),"#16A34A"],["Pending",basePend.length,fmtVal(basePend.reduce((s,o)=>s+o.totalValue,0)),"#D97706"],["Overdue",baseOverdue.length,baseOverdue.length>0?fmtVal(baseOverdue.reduce((s,o)=>s+o.totalValue,0)):"None","#DC2626"]].map(([label,value,sub,color])=>
+            <div key={label+dataVer} className="hv-card" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px",cursor:"default",animation:dataVer>1?"flash 1.5s ease":"none"}}>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>{label}</div>
+              <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:label==="Overdue"&&baseOverdue.length===0?"#94A3B8":color,lineHeight:1,marginBottom:4,transition:"color 0.5s"}}>{value}</div>
+              <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{sub}</div>
+            </div>
+          )}
+        </div>
+
+        {/* Category Breakdown - Collapsible */}
+        <div style={{marginBottom:40}}>
+          <div onClick={()=>setShowCats(c=>!c)} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"8px 0",marginBottom:showCats?12:0,userSelect:"none"}}>
+            <span style={{fontFamily:MN,fontSize:10,color:"#94a3b8",transition:"transform 0.15s",transform:showCats?"rotate(90deg)":"none",display:"inline-block"}}>▶</span>
+            <span style={{...S.section}}>Category Breakdown</span>
+          </div>
+          {showCats&&<div style={{display:"grid",gridTemplateColumns:mob?"repeat(2,1fr)":"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
           {(()=>{
             const ROLL_CATS=["Loop Rolls","TEFNO","Turf","Grass","Wire","Monograss"];
             const rollLines=allLines.filter(l=>ROLL_CATS.includes(l.category));
@@ -1156,45 +1930,54 @@ export default function Dashboard(){
               {fmQty>0&&<StatCard l="Foot Mat" v={fmQty} sub={fmVal} unit="pcs" breakdown={fmBd} accent={(CC["Foot Mat"]||CC.Other).c} span2/>}
             </>);
           })()}
+          </div>}
         </div>
 
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
-          <div style={{...S.section}}>Orders</div>
-          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-            <input value={srch} onChange={e=>{setSrch(e.target.value);setPg(1);}} placeholder="Search party, model..." style={{...S.input,width:mob?150:260}}/>
+        {/* Search & Filters */}
+        {/* New orders banner */}
+        {showNewOnly&&<div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:10,padding:"10px 16px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#2563eb"}}>Showing {newOrderIds.size} new order{newOrderIds.size!==1?"s":""}</span>
+          <button onClick={()=>{setShowNewOnly(false);setNewOrderIds(new Set());}} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#64748b",background:"#fff",border:"1px solid #e2e8f0",borderRadius:6,padding:"4px 12px",cursor:"pointer"}}>Back to all</button>
+        </div>}
+
+        {/* Search & Filters */}
+        <div style={{marginBottom:28}}>
+          <div style={{display:"flex",alignItems:"center",gap:mob?8:12,flexWrap:"wrap",marginBottom:14}}>
+            <div style={{position:"relative",flex:1,minWidth:mob?140:220,maxWidth:320}}>
+              <input value={srch} onChange={e=>{setSrch(e.target.value);setPg(1);setShowAllRtd(false);setShowAllPend(false);}} placeholder="Search by party name, model, or colour..." style={{...S.input,width:"100%",paddingRight:srch?60:14}}/>
+              {srch&&<span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontFamily:MN,fontSize:10,fontWeight:600,color:"#2563eb",background:"#eff6ff",padding:"2px 6px",borderRadius:4}}>{filtered.length} found</span>}
+            </div>
             <select value={srt} onChange={e=>setSrt(e.target.value)} style={S.select}><option value="da">Oldest</option><option value="dd">Newest</option><option value="pa">A→Z</option><option value="qd">Qty ↓</option><option value="vd">Value ↓</option></select>
             <select value={poc} onChange={e=>{setPoc(e.target.value);setPg(1);}} style={S.select}><option value="">All POC</option>{pocs.map(p=><option key={p}>{p}</option>)}</select>
+            {newOrderIds.size>0&&!showNewOnly&&<button onClick={()=>{setShowNewOnly(true);setShowAllRtd(false);setShowAllPend(false);}} style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#2563eb",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:6,padding:"5px 12px",cursor:"pointer",whiteSpace:"nowrap",animation:"pulse 2s ease-in-out infinite"}}>+{newOrderIds.size} new</button>}
+            {(srch||cat!=="all"||poc||showNewOnly)&&<button onClick={()=>{setSrch("");setCat("all");setPoc("");setShowNewOnly(false);setNewOrderIds(new Set());setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8",background:"none",border:"1px solid #e2e8f0",borderRadius:6,padding:"5px 12px",cursor:"pointer",whiteSpace:"nowrap"}}>Clear all</button>}
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {[["all","All orders",filtered.length,null],...Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>[c,(CC[c]||CC.Other).l,n,(CC[c]||CC.Other).c])].map(([val,lbl,n,dotC])=>{
+              const isActive=cat===val;
+              return <div key={val} className={!isActive?"hv-pill":""} onClick={()=>{setCat(val);setPg(1);setShowAllRtd(false);setShowAllPend(false);}} style={{padding:"6px 14px",borderRadius:6,border:isActive?"1px solid #2563EB":"1px solid #E5E7EB",background:isActive?"#EFF6FF":"#F1F5F9",color:isActive?"#2563EB":"#334155",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:isActive?600:500,display:"flex",alignItems:"center",gap:5}}>
+                {val!=="all"&&<Dot c={isActive?"#2563EB":(dotC||"#94A3B8")} s={4}/>}
+                {lbl}
+                <span style={{fontFamily:MN,fontSize:10,color:isActive?"#2563EB":"#94A3B8"}}>{n}</span>
+              </div>;
+            })}
           </div>
         </div>
 
-        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
-          {[["all","All",filtered.length],...Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).map(([c,n])=>[c,(CC[c]||CC.Other).l,n])].map(([val,lbl,n])=>
-            <div key={val} onClick={()=>{setCat(val);setPg(1);}} style={{padding:"6px 14px",borderRadius:20,border:"none",background:cat===val?"#0f172a":"#fff",color:cat===val?"#fff":"#475569",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:600,boxShadow:cat===val?"none":"0 1px 2px rgba(0,0,0,0.05)",display:"flex",alignItems:"center",gap:6}}>
-              {val!=="all"&&<Dot c={cat===val?"#fff":(CC[val]||CC.Other).c}/>}{lbl}<span style={{opacity:0.5,marginLeft:2}}>{n}</span>
-            </div>
-          )}
-        </div>
-
-        {mob?<div style={{display:"flex",flexDirection:"column",gap:16}}>
+        {mob?<div style={{display:"flex",flexDirection:"column",gap:24}}>
           {!pendingApproval.length&&!readyToDispatch.length&&<div style={{...S.card,padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</div>}
-          {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden"}}>
-            <div style={{padding:"12px 16px",background:"linear-gradient(90deg,#1F305F,#2d3f7a)",borderBottom:"2px solid #059669",display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 0 3px #4ade8033"}}/>
+          {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #16A34A"}}>
+            <div style={{padding:"14px 16px",background:"#fff",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:10}}>
               <div style={{flex:1}}>
-                <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#fff"}}>Ready to Dispatch</div>
-                <div style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.45)",marginTop:1}}>Approval date · oldest first</div>
-              </div>
-              <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:16,fontWeight:700,color:"#4ade80"}}>{readyToDispatch.length}</div><div style={{fontFamily:MN,fontSize:8,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:12,fontWeight:700,color:"#fff"}}>{fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:8,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>value</div></div>
+                <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Ready to Dispatch <span style={{color:"#94A3B8",fontWeight:500}}>({readyToDispatch.length}) · {fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</span></div>
               </div>
             </div>
-            {rtdSorted.map((o,oi)=>{const ep=exp===o.id;const dy=daysSince(o.approvalDate);const dC=dy>7?"#dc2626":dy>3?"#ea580c":"#059669";
-              return <div key={o.id} style={{borderBottom:"1px solid #f1f5f9"}}>
-                <div onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#ecfdf5":oi%2?"#f0fdf4":"#fff",borderLeft:ep?"3px solid #059669":"3px solid transparent",transition:"background 0.15s"}}>
+            {(showAllRtd?rtdSorted:rtdSorted.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const dy=daysSince(o.approvalDate);const isOD=dy>7;
+              return <div key={o.id} style={{borderBottom:"1px solid #E5E7EB"}}>
+                <div className="hv-row" onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:"#fff",borderLeft:ep?"3px solid #16A34A":"3px solid transparent"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                    <span style={{fontWeight:700,fontSize:13}}>{o.party}</span>
-                    <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:dC,background:dC+"15",padding:"2px 7px",borderRadius:10}}>{dy}d</span>
+                    <span style={{fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:6,color:"#0F172A"}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
+                    <span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:isOD?"#DC2626":dy>3?"#D97706":"#16A34A"}}>{dy}d</span>
                   </div>
                   <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:4}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div>
                   <div style={{display:"flex",gap:10,fontSize:10,fontFamily:MN,color:"#64748b",flexWrap:"wrap"}}>
@@ -1224,25 +2007,25 @@ export default function Dashboard(){
                 </div>}
               </div>;
             })}
+            {!showAllRtd&&rtdSorted.length>5&&<div onClick={()=>setShowAllRtd(true)} style={{padding:"12px 16px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#059669"}}>View all {rtdSorted.length} orders</span>
+            </div>}
+            {showAllRtd&&rtdSorted.length>5&&<div onClick={()=>setShowAllRtd(false)} style={{padding:"12px 16px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8"}}>Show less</span>
+            </div>}
           </div>}
-          {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden"}}>
-            <div style={{padding:"12px 16px",background:"linear-gradient(90deg,#1F305F,#2d3f7a)",borderBottom:"2px solid #ea580c",display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:"#fb923c",boxShadow:"0 0 0 3px #fb923c33"}}/>
+          {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #D97706"}}>
+            <div style={{padding:"14px 16px",background:"#fff",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:10}}>
               <div style={{flex:1}}>
-                <div style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#fff"}}>Pending Approval</div>
-                <div style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.45)",marginTop:1}}>PI date · awaiting sign-off</div>
-              </div>
-              <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:16,fontWeight:700,color:"#fb923c"}}>{pendingApproval.length}</div><div style={{fontFamily:MN,fontSize:8,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:12,fontWeight:700,color:"#fff"}}>{fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:8,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>value</div></div>
+                <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Pending Approval <span style={{color:"#94A3B8",fontWeight:500}}>({pendingApproval.length}) · {fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</span></div>
               </div>
             </div>
-            {pendingApproval.slice((pg-1)*PG,pg*PG).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
-              return <div key={o.id} style={{borderBottom:"1px solid #f1f5f9"}}>
-                <div onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:ep?"#fffbeb":oi%2?"#f8fafc":"#fff",borderLeft:ep?"3px solid #d97706":"3px solid transparent",transition:"background 0.15s"}}>
+            {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const ps=payStatus(!!o.approvalDate);
+              return <div key={o.id} style={{borderBottom:"1px solid #E5E7EB"}}>
+                <div className="hv-row" onClick={()=>setExp(ep?null:o.id)} style={{padding:"12px 14px",cursor:"pointer",background:"#fff",borderLeft:ep?"3px solid #D97706":"3px solid transparent"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                    <span style={{fontWeight:700,fontSize:13}}>{o.party}</span>
-                    <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:dc,background:dc+"15",padding:"2px 7px",borderRadius:10}}>{days}d</span>
+                    <span style={{fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:6,color:"#0F172A"}}>{o.party}{isNewOrder(o)&&<span style={{fontFamily:MN,fontSize:9,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"1px 6px",borderRadius:4}}>New</span>}</span>
+                    <span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:days>30?"#DC2626":days>14?"#D97706":"#16A34A"}}>{days}d</span>
                   </div>
                   <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:4}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div>
                   <div style={{display:"flex",gap:10,fontSize:10,fontFamily:MN,color:"#64748b",flexWrap:"wrap",alignItems:"center"}}>
@@ -1273,65 +2056,55 @@ export default function Dashboard(){
                 </div>}
               </div>;
             })}
-            {pages>1&&<div style={{padding:"12px 16px",borderTop:"1px solid #e2e8f0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{(pg-1)*PG+1}–{Math.min(pg*PG,pendingApproval.length)} of {pendingApproval.length}</span>
-              <div style={{display:"flex",gap:4}}>{Array.from({length:pages},(_,i)=>i+1).filter(p=>pages<=7||p<=2||p>=pages-1||Math.abs(p-pg)<=1).map(p=>
-                <button key={p} onClick={()=>setPg(p)} style={{padding:"5px 11px",border:"none",borderRadius:6,background:p===pg?"#0f172a":"#f1f5f9",color:p===pg?"#fff":"#64748b",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:600}}>{p}</button>
-              )}</div>
+            {!showAllPend&&pendingApproval.length>5&&<div onClick={()=>setShowAllPend(true)} style={{padding:"12px 16px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#ea580c"}}>View all {pendingApproval.length} orders</span>
+            </div>}
+            {showAllPend&&pendingApproval.length>5&&<div onClick={()=>setShowAllPend(false)} style={{padding:"12px 16px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8"}}>Show less</span>
             </div>}
           </div>}
         </div>:
-        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        <div style={{display:"flex",flexDirection:"column",gap:32}}>
           {!pendingApproval.length&&!readyToDispatch.length&&<div style={{...S.card,padding:48,textAlign:"center",color:"#94a3b8",fontFamily:MN}}>No orders found</div>}
-          {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden"}}>
-            <div style={{padding:"16px 20px",background:"linear-gradient(90deg,#1F305F,#2d3f7a)",borderBottom:"2px solid #059669",display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:10,height:10,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 0 3px #4ade8033"}}/>
-              <div>
-                <div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#fff",letterSpacing:"-0.01em"}}>Ready to Dispatch</div>
-                <div style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.45)",marginTop:1}}>Approval date · oldest first</div>
-              </div>
-              <div style={{marginLeft:"auto",display:"flex",gap:16,alignItems:"center"}}>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#4ade80"}}>{readyToDispatch.length}</div><div style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#fff"}}>{fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>total value</div></div>
-              </div>
+          {readyToDispatch.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #16A34A"}}>
+            <div style={{padding:"14px 22px",background:"#fff",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Ready to Dispatch <span style={{color:"#94A3B8",fontWeight:500}}>({readyToDispatch.length}) · {fmtVal(readyToDispatch.reduce((s,o)=>s+o.totalValue,0))}</span></div>
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
-                <th style={{width:22,background:"#0f172a"}}/>
-                {[["Date ↕",null],["Days",null],["Party",null],["Categories",null],["Qty",null],["POC",null],["Value",null],["DISPATCH",null]].map(([h])=>
-                  <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left"}}>{h}</th>
+                <th style={{width:22,background:"#F8FAFC",borderBottom:"1px solid #E5E7EB"}}/>
+                {[["Date ↕",null],["Days",null],["Party",null],["Categories",null],["Qty",null],["POC",null],["Value",null],["Status",null]].map(([h])=>
+                  <th key={h} style={{background:"#F8FAFC",color:"#94A3B8",fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",padding:"10px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left",borderBottom:"1px solid #E5E7EB"}}>{h}</th>
                 )}
               </tr></thead>
-              <tbody>{rtdRows}</tbody>
+              <tbody>{showAllRtd?rtdRows:rtdRows.slice(0,10)}</tbody>
             </table>
+            {!showAllRtd&&rtdRows.length>10&&<div onClick={()=>setShowAllRtd(true)} style={{padding:"12px 20px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#059669"}}>View all {readyToDispatch.length} orders</span>
+            </div>}
+            {showAllRtd&&rtdRows.length>10&&<div onClick={()=>setShowAllRtd(false)} style={{padding:"12px 20px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8"}}>Show less</span>
+            </div>}
           </div>}
-          {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden"}}>
-            <div style={{padding:"16px 20px",background:"linear-gradient(90deg,#1F305F,#2d3f7a)",borderBottom:"2px solid #ea580c",display:"flex",alignItems:"center",gap:12}}>
-              <div style={{width:10,height:10,borderRadius:"50%",background:"#fb923c",boxShadow:"0 0 0 3px #fb923c33"}}/>
-              <div>
-                <div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#fff",letterSpacing:"-0.01em"}}>Pending Approval</div>
-                <div style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.45)",marginTop:1}}>PI date · awaiting sign-off</div>
-              </div>
-              <div style={{marginLeft:"auto",display:"flex",gap:16,alignItems:"center"}}>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#fb923c"}}>{pendingApproval.length}</div><div style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>orders</div></div>
-                <div style={{textAlign:"right"}}><div style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#fff"}}>{fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</div><div style={{fontFamily:MN,fontSize:9,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.05em"}}>total value</div></div>
-              </div>
+          {pendingApproval.length>0&&<div style={{...S.card,overflow:"hidden",borderLeft:"3px solid #D97706"}}>
+            <div style={{padding:"14px 22px",background:"#fff",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Pending Approval <span style={{color:"#94A3B8",fontWeight:500}}>({pendingApproval.length}) · {fmtVal(pendingApproval.reduce((s,o)=>s+o.totalValue,0))}</span></div>
             </div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr>
-                <th style={{width:22,background:"#0f172a"}}/>
-                {[["Date ↕",null],["Days",null],["Party",null],["Categories",null],["Qty",null],["POC",null],["Value",null],["DISPATCH",null]].map(([h])=>
-                  <th key={h} style={{background:"#0f172a",color:"#94a3b8",fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",padding:"12px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left"}}>{h}</th>
+                <th style={{width:22,background:"#F8FAFC",borderBottom:"1px solid #E5E7EB"}}/>
+                {[["Date ↕",null],["Days",null],["Party",null],["Categories",null],["Qty",null],["POC",null],["Value",null],["Status",null]].map(([h])=>
+                  <th key={h} style={{background:"#F8FAFC",color:"#94A3B8",fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",padding:"10px 14px",textAlign:["Qty","Value"].includes(h)?"right":"left",borderBottom:"1px solid #E5E7EB"}}>{h}</th>
                 )}
               </tr></thead>
               <tbody>
-              {pendingApproval.slice((pg-1)*PG,pg*PG).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#dc2626":days>14?"#ea580c":"#059669";const ps=payStatus(!!o.approvalDate);
+              {(showAllPend?pendingApproval:pendingApproval.slice(0,5)).map((o,oi)=>{const ep=exp===o.id;const days=daysSince(o.piDate);const dc=days>30?"#DC2626":days>14?"#D97706":"#16A34A";const ps=payStatus(!!o.approvalDate);
                 return[
-                  <tr key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:ep?"#fffbeb":oi%2?"#f8fafc":"#fff",borderLeft:ep?"3px solid #d97706":"3px solid transparent",transition:"background 0.15s"}}>
+                  <tr className="hv-row" key={o.id} onClick={()=>setExp(ep?null:o.id)} style={{cursor:"pointer",background:"#fff",borderLeft:ep?"3px solid #D97706":"3px solid transparent"}}>
                     <td style={{padding:"13px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:10,color:"#94a3b8"}}>{ep?"▾":"▸"}</td>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:11,whiteSpace:"nowrap"}}>{o.piDate}</td>
-                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}><span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:dc,background:dc+"12",padding:"2px 8px",borderRadius:12}}>{days}d</span></td>
-                    <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontWeight:600,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.party}</td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB"}}><span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:dc}}>{days}d</span></td>
+                    <td style={{padding:"10px 14px",borderBottom:"1px solid #E5E7EB",fontWeight:600,maxWidth:240,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.party}</td>
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9"}}><div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{o.categories.map(c=><Badge key={c} cat={c}/>)}</div></td>
                     
                     <td style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",fontFamily:MN,fontSize:13,fontWeight:700,textAlign:"right"}}>{cat==="all"?o.totalQty:o.lines.filter(l=>l.category===cat).reduce((s,l)=>s+l.qty,0)}</td>
@@ -1364,12 +2137,12 @@ export default function Dashboard(){
               })}
               </tbody>
             </table>
-            {pages>1&&<div style={{padding:"12px 16px",borderTop:"1px solid #e2e8f0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <span style={{fontFamily:MN,fontSize:11,color:"#94a3b8"}}>{(pg-1)*PG+1}–{Math.min(pg*PG,pendingApproval.length)} of {pendingApproval.length}</span>
-            <div style={{display:"flex",gap:4}}>{Array.from({length:pages},(_,i)=>i+1).filter(p=>pages<=7||p<=2||p>=pages-1||Math.abs(p-pg)<=1).map(p=>
-              <button key={p} onClick={()=>setPg(p)} style={{padding:"5px 11px",border:"none",borderRadius:6,background:p===pg?"#0f172a":"#f1f5f9",color:p===pg?"#fff":"#64748b",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:600}}>{p}</button>
-            )}</div>
-          </div>}
+            {!showAllPend&&pendingApproval.length>5&&<div onClick={()=>setShowAllPend(true)} style={{padding:"12px 20px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#ea580c"}}>View all {pendingApproval.length} orders</span>
+            </div>}
+            {showAllPend&&pendingApproval.length>5&&<div onClick={()=>setShowAllPend(false)} style={{padding:"12px 20px",textAlign:"center",cursor:"pointer",borderTop:"1px solid #f1f5f9"}}>
+              <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#94a3b8"}}>Show less</span>
+            </div>}
           </div>}
         </div>
       }
@@ -1423,6 +2196,7 @@ export default function Dashboard(){
       {tab==="dispatch"&&<DispatchTab mob={mob}/>}
       {tab==="analytics"&&<AnalyticsTab mob={mob}/>}
       {tab==="calls"&&<CallSchedule mob={mob}/>}
+      {tab==="production"&&<ProductionTab mob={mob} user={user}/>}
     </div>
   </div>;
 }
