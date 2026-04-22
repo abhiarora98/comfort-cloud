@@ -1499,13 +1499,14 @@ function ProductionTab({mob,user,role}){
       </div>
 
       {/* Lots by Colour */}
-      {(()=>{const lotsByColor={};filtered.filter(e=>e.lots&&e.lots>0&&e.section==="Mixing").forEach(e=>{
-        if(!lotsByColor[e.color])lotsByColor[e.color]=new Set();
-        lotsByColor[e.color].add(e.date+"|"+e.time+"|"+e.lots);
+      {(()=>{const lotsByColor={};const seen=new Set();
+      filtered.filter(e=>e.lots&&e.lots>0&&e.section==="Mixing").forEach(e=>{
+        const batchKey=e.date+"|"+e.time+"|"+e.color;
+        if(seen.has(batchKey))return;
+        seen.add(batchKey);
+        lotsByColor[e.color]=(lotsByColor[e.color]||0)+e.lots;
       });
-      const lotData=Object.entries(lotsByColor).map(([c,s])=>{
-        let total=0;s.forEach(k=>{total+=parseInt(k.split("|")[2])||1;});return[c,total];
-      }).sort((a,b)=>b[1]-a[1]);
+      const lotData=Object.entries(lotsByColor).sort((a,b)=>b[1]-a[1]);
       const totalLots=lotData.reduce((s,d)=>s+d[1],0);
       return lotData.length>0&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:24,overflow:"hidden"}}>
         <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
