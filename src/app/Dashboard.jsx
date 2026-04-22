@@ -1167,7 +1167,7 @@ function ProductionTab({mob,user,role}){
   const isAdmin=role==="admin";
   const[entries,setEntries]=useState([]);const[loading,setLoading]=useState(true);
   const[formOpen,setFormOpen]=useState(false);const[saving,setSaving]=useState(false);
-  const[expanded,setExpanded]=useState("all");const[formData,setFormData]=useState({});
+  const[formSection,setFormSection]=useState("");const[formData,setFormData]=useState({});
   const[editIdx,setEditIdx]=useState(null);const[editQty,setEditQty]=useState("");const[deleting,setDeleting]=useState(null);
   const[period,setPeriod]=useState("today");const[saveMsg,setSaveMsg]=useState("");
   const[formColor,setFormColor]=useState("");const[colorFilter,setColorFilter]=useState("all");
@@ -1220,47 +1220,45 @@ function ProductionTab({mob,user,role}){
 
   // Save
   const handleSave=async()=>{
+    if(!formSection){setSaveMsg("Please select a section first");return;}
     if(!formLine){setSaveMsg("Please select a line first");return;}
     if(!formProduct){setSaveMsg("Please select a product first");return;}
-    if(!formColor){setSaveMsg("Please select a colour first");return;}
+    const needsColor=formSection!=="glue";
+    if(needsColor&&!formColor){setSaveMsg("Please select a colour first");return;}
     setSaving(true);setSaveMsg("");
     const ents=[];
-    // Mixing — multiplied by lots
-    MIX_SECTIONS.filter(s=>s.id==="all").forEach(sec=>{
+    const sec=MIX_SECTIONS.find(s=>s.id===formSection);
+    if(!sec){setSaving(false);return;}
+    const colorVal=formSection==="sheet"?(sheetColor||formColor):formColor;
+    if(formSection==="all"){
+      // Mixing — multiplied by lots
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty(sec.id,mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:formColor,line:formLine,product:formProduct,shift:formShift,lots:lots});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:colorVal,line:formLine,product:formProduct,shift:formShift,lots:lots});
       });
-    });
-    // Glue — NOT multiplied by lots
-    MIX_SECTIONS.filter(s=>s.id==="glue").forEach(sec=>{
+      const pigQty=parseFloat(getQty("pigment",formColor));
+      if(pigQty>0)ents.push({section:"Mixing",material:"PIGMENT",qty:pigQty*lots,color:colorVal,line:formLine,product:formProduct,shift:formShift});
+    } else if(formSection==="glue"){
+      // Glue — no lots, colour optional
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty(sec.id,mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:formColor,line:formLine,product:formProduct,shift:formShift});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:formColor||"",line:formLine,product:formProduct,shift:formShift});
       });
-    });
-    // Pigment — also multiplied by lots
-    const pigQty=parseFloat(getQty("pigment",formColor));
-    if(pigQty>0)ents.push({section:"Mixing",material:"PIGMENT",qty:pigQty*lots,color:formColor,line:formLine,product:formProduct,shift:formShift});
-    // Sheet uses its own sheetColor
-    const sheetSec=MIX_SECTIONS.find(s=>s.id==="sheet");
-    if(sheetSec&&sheetColor){
-      sheetSec.materials.forEach(mat=>{
+    } else if(formSection==="sheet"){
+      // Sheet — uses sheetColor
+      const sc=sheetColor||formColor;
+      sec.materials.forEach(mat=>{
         const q=parseFloat(getQty("sheet",mat));
-        if(q>0)ents.push({section:sheetSec.label,material:mat,qty:q,color:sheetColor,line:formLine,product:formProduct,shift:formShift});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:sc,line:formLine,product:formProduct,shift:formShift});
       });
-      // Sheet colour (grams)
-      const sheetColQty=parseFloat(getQty("sheetcolour",sheetColor));
-      if(sheetColQty>0)ents.push({section:"Mixing (Sheet)",material:"COLOUR",qty:sheetColQty,color:sheetColor,line:formLine,product:formProduct,shift:formShift});
+      const sheetColQty=parseFloat(getQty("sheetcolour",sc));
+      if(sheetColQty>0)ents.push({section:"Mixing (Sheet)",material:"COLOUR",qty:sheetColQty,color:sc,line:formLine,product:formProduct,shift:formShift});
     }
     if(ents.length===0){setSaving(false);setSaveMsg("No quantities entered");return;}
-    console.log("Saving entries:",JSON.stringify(ents.map(e=>({s:e.section,m:e.material,q:e.qty}))),"date:",formDate);
     try{
       const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown",date:formDate})});
       const data=await res.json();
-      console.log("Save response:",data);
-      if(data.ok){const wasBackdated=formDate!==new Date().toISOString().split("T")[0];setSaveMsg(data.saved+" entries saved for "+formLine+" · "+formProduct+" · "+formColor+(lots>1?" × "+lots+" lots":"")+(wasBackdated?" ("+formDate+")":""));if(wasBackdated)setPeriod("30d");setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setSheetColor("");setFormShift(detectShift());setFormDate(new Date().toISOString().split("T")[0]);
-        // Refresh
+      if(data.ok){const wasBackdated=formDate!==new Date().toISOString().split("T")[0];setSaveMsg(data.saved+" entries saved"+(wasBackdated?" ("+formDate+")":""));if(wasBackdated)setPeriod("30d");setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setSheetColor("");setFormShift(detectShift());setFormDate(new Date().toISOString().split("T")[0]);setFormSection("");
         const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
       }else{setSaveMsg(data.error||"Failed to save");}
     }catch{setSaveMsg("Error saving");}
@@ -1280,177 +1278,113 @@ function ProductionTab({mob,user,role}){
     {/* Entry Form */}
     {formOpen&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:24,overflow:"hidden"}}>
       <div style={{padding:"16px 20px",borderBottom:"1px solid #E5E7EB"}}>
-        <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Enter today's raw material usage</div>
-        <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:2}}>Select date, line, product, shift, colour — then enter quantities in kg.</div>
+        <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Enter raw material usage</div>
+        <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:2}}>Select section, then fill in details.</div>
       </div>
+
+      {/* Date */}
       <div style={{padding:"12px 20px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:12}}>
         <span style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#16A34A"}}>Date ·</span>
         <input type="date" value={formDate} onChange={e=>setFormDate(e.target.value)} style={{padding:"8px 12px",border:"1px solid #16A34A",borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:"#0F172A",outline:"none",cursor:"pointer"}}/>
         {formDate!==new Date().toISOString().split("T")[0]&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#D97706",background:"#FEF3C7",padding:"2px 8px",borderRadius:4}}>Backdated entry</span>}
       </div>
-      <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:(formLine&&formProduct&&formColor)?"#F0FDF4":"#FFFBEB"}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(4,1fr)",gap:12}}>
+
+      {/* Section selector */}
+      <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB"}}>
+        <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formSection?"#16A34A":"#D97706",marginBottom:8}}>Section {formSection?"·":"(required)"}</div>
+        <div style={{display:"flex",gap:8}}>
+          {MIX_SECTIONS.map(sec=>
+            <div key={sec.id} className={formSection!==sec.id?"hv-pill":""} onClick={()=>{setFormSection(sec.id);setFormData({});setFormColor("");setSheetColor("");setLots(1);}} style={{flex:1,padding:"12px",borderRadius:8,border:formSection===sec.id?"2px solid #2563EB":"1px solid #E5E7EB",background:formSection===sec.id?"#EFF6FF":"#F8FAFC",color:formSection===sec.id?"#2563EB":"#475569",fontSize:12,fontFamily:MN,fontWeight:formSection===sec.id?700:500,cursor:"pointer",textAlign:"center"}}>{sec.label}</div>
+          )}
+        </div>
+      </div>
+
+      {/* Line + Product + Shift + Colour (shown after section selected) */}
+      {formSection&&<div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:(formLine&&formProduct&&(formSection==="glue"||formColor))?"#F0FDF4":"#FFFBEB"}}>
+        <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat("+(formSection==="glue"?3:4)+",1fr)",gap:12}}>
           <div>
-            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formLine?"#16A34A":"#D97706",marginBottom:5}}>Line {formLine?"·":"(required)"}</div>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formLine?"#16A34A":"#D97706",marginBottom:5}}>Line</div>
             <select value={formLine} onChange={e=>setFormLine(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formLine?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formLine?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
-              <option value="">Select line...</option>
+              <option value="">Select...</option>
               {PROD_LINES.map(l=><option key={l} value={l}>{l}</option>)}
             </select>
           </div>
           <div>
-            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:!formLine?"#D4D4D8":formProduct?"#16A34A":"#D97706",marginBottom:5}}>Product {!formLine?"":formProduct?"·":"(required)"}</div>
-            <select value={formProduct} onChange={e=>setFormProduct(e.target.value)} disabled={!formLine} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(!formLine?"#E5E7EB":formProduct?"#16A34A":"#D97706"),borderRadius:8,background:!formLine?"#F8FAFC":"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:!formLine?"#D4D4D8":formProduct?"#0F172A":"#94A3B8",outline:"none",cursor:!formLine?"not-allowed":"pointer"}}>
-              <option value="">Select product...</option>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formProduct?"#16A34A":"#D97706",marginBottom:5}}>Product</div>
+            <select value={formProduct} onChange={e=>setFormProduct(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formProduct?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formProduct?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
+              <option value="">Select...</option>
               {PROD_PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}
             </select>
           </div>
           <div>
-            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:!formProduct?"#D4D4D8":"#16A34A",marginBottom:5}}>Shift {!formProduct?"":"·"}</div>
-            <select value={formShift} onChange={e=>setFormShift(e.target.value)} disabled={!formProduct} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(!formProduct?"#E5E7EB":"#16A34A"),borderRadius:8,background:!formProduct?"#F8FAFC":"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:!formProduct?"#D4D4D8":"#0F172A",outline:"none",cursor:!formProduct?"not-allowed":"pointer"}}>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#16A34A",marginBottom:5}}>Shift</div>
+            <select value={formShift} onChange={e=>setFormShift(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid #16A34A",borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:"#0F172A",outline:"none",cursor:"pointer"}}>
               {PROD_SHIFTS.map(s=><option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <div>
-            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:!formProduct?"#D4D4D8":formColor?"#16A34A":"#D97706",marginBottom:5}}>Colour {!formProduct?"":formColor?"·":"(required)"}</div>
-            <select value={formColor} onChange={e=>setFormColor(e.target.value)} disabled={!formProduct} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(!formProduct?"#E5E7EB":formColor?"#16A34A":"#D97706"),borderRadius:8,background:!formProduct?"#F8FAFC":"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:!formProduct?"#D4D4D8":formColor?"#0F172A":"#94A3B8",outline:"none",cursor:!formProduct?"not-allowed":"pointer"}}>
-              <option value="">Select colour...</option>
+          {formSection!=="glue"&&<div>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formColor?"#16A34A":"#D97706",marginBottom:5}}>Colour</div>
+            <select value={formSection==="sheet"?sheetColor:formColor} onChange={e=>formSection==="sheet"?setSheetColor(e.target.value):setFormColor(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(((formSection==="sheet"?sheetColor:formColor))?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:((formSection==="sheet"?sheetColor:formColor))?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
+              <option value="">Select...</option>
               {PROD_COLORS.map(c=><option key={c} value={c}>{c}</option>)}
             </select>
-          </div>
-        </div>
-      </div>
-      {!(formLine&&formProduct&&formColor)&&<div style={{padding:"32px 20px",textAlign:"center",background:"#FFFBEB"}}>
-        <div style={{fontSize:13,color:"#92400E",fontWeight:500}}>Complete line, product and colour above to start entering material quantities</div>
-      </div>}
-      {formLine&&formProduct&&formColor&&(()=>{
-        // Compute totals for Loop and Glue
-        const loopSec=MIX_SECTIONS.find(s=>s.id==="all");
-        const glueSec=MIX_SECTIONS.find(s=>s.id==="glue");
-        const sheetSec=MIX_SECTIONS.find(s=>s.id==="sheet");
-        const loopTotal=loopSec?loopSec.materials.reduce((s,m)=>s+(parseFloat(getQty("all",m))||0),0):0;
-        const pigTotal=parseFloat(getQty("pigment",formColor))||0;
-        const glueTotal=glueSec?glueSec.materials.reduce((s,m)=>s+(parseFloat(getQty("glue",m))||0),0):0;
-
-        const renderSection=(sec,extraAfter)=>{
-          const isExp=expanded===sec.id;
-          const filledCount=sec.materials.filter(m=>parseFloat(getQty(sec.id,m))>0).length;
-          const secTotal=sec.materials.reduce((s,m)=>s+(parseFloat(getQty(sec.id,m))||0),0);
-          return <div key={sec.id}>
-            <div className="hv-row" onClick={()=>setExpanded(isExp?null:sec.id)} style={{padding:"14px 20px",borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontFamily:MN,fontSize:12,color:"#94A3B8",transition:"transform 0.2s",transform:isExp?"rotate(90deg)":"none"}}>▶</span>
-                <span style={{fontSize:13,fontWeight:600,color:"#0F172A"}}>{sec.label}</span>
-                <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{sec.materials.length} materials</span>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                {secTotal>0&&<span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#0F172A"}}>{secTotal.toFixed(1)} kg</span>}
-                {filledCount>0&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#16A34A",background:"#F0FDF4",padding:"2px 8px",borderRadius:4}}>{filledCount} filled</span>}
-              </div>
-            </div>
-            {isExp&&<div style={{padding:"8px 20px 16px",background:"#F8FAFC"}}>
-              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
-                {sec.materials.map(mat=>
-                  <div key={mat} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",padding:"8px 14px"}}>
-                    <span style={{flex:1,fontSize:12,fontWeight:500,color:"#475569"}}>{mat}</span>
-                    <input type="number" min="0" step="0.1" value={getQty(sec.id,mat)} onChange={e=>setQty(sec.id,mat,e.target.value)} placeholder="kg" style={{width:80,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
-                  </div>
-                )}
-              </div>
-              {extraAfter}
-            </div>}
-          </div>;
-        };
-
-        return <>
-          {/* Mixing + Pigment */}
-          {renderSection(loopSec,formColor&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,border:"1px solid "+(pigTotal>0?"#7C3AED40":"#E5E7EB"),padding:"10px 14px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Pigment</span>
-                <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{formColor}</span>
-              </div>
-              <input type="number" min="0" step="0.001" value={getQty("pigment",formColor)} onChange={e=>setQty("pigment",formColor,e.target.value)} placeholder="kg" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
-            </div>
-          </div>)}
-
-          {/* Lots selector — right after Mixing */}
-          <div style={{padding:"14px 20px",background:"#F8FAFC",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569"}}>Number of Lots</span>
-              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>Mixing quantities will be multiplied</span>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <button onClick={()=>setLots(l=>Math.max(1,l-1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-              <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#0F172A",minWidth:36,textAlign:"center"}}>{lots}</span>
-              <button onClick={()=>setLots(l=>Math.min(20,l+1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-            </div>
-          </div>
-
-          {/* Mixing (Glue) */}
-          <div style={{height:16}}/>
-          {renderSection(glueSec,null)}
-
-          {/* Total after Mixing + Glue */}
-          {(loopTotal>0||glueTotal>0)&&<div style={{padding:"12px 20px",background:"#0F172A",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-            <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)"}}>Total — Mixing{lots>1?" × "+lots+" lots":""} + Glue</span>
-            <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-              {loopTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Mixing: <strong style={{color:"#fff"}}>{(loopTotal*lots).toFixed(1)} kg</strong></span>}
-              {pigTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Pigment: <strong style={{color:"#fff"}}>{(pigTotal*lots).toFixed(3)} kg</strong></span>}
-              {glueTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Glue: <strong style={{color:"#fff"}}>{glueTotal.toFixed(1)} kg</strong></span>}
-              <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#4ade80"}}>{(loopTotal*lots+glueTotal).toFixed(1)} kg</span>
-            </div>
           </div>}
+        </div>
+      </div>}
 
-          {/* Mixing (Sheet) — separate colour */}
-          <div style={{height:16}}/>
-          <div>
-            <div className="hv-row" onClick={()=>setExpanded(expanded==="sheet"?null:"sheet")} style={{padding:"14px 20px",borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontFamily:MN,fontSize:12,color:"#94A3B8",transition:"transform 0.2s",transform:expanded==="sheet"?"rotate(90deg)":"none"}}>▶</span>
-                <span style={{fontSize:13,fontWeight:600,color:"#0F172A"}}>Mixing (Sheet)</span>
-                <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{sheetSec.materials.length} materials</span>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                {(()=>{const st=sheetSec.materials.reduce((s,m)=>s+(parseFloat(getQty("sheet",m))||0),0);return st>0&&<span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#0F172A"}}>{st.toFixed(1)} kg</span>;})()}
-                {(()=>{const fc=sheetSec.materials.filter(m=>parseFloat(getQty("sheet",m))>0).length;return fc>0&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#16A34A",background:"#F0FDF4",padding:"2px 8px",borderRadius:4}}>{fc} filled</span>;})()}
-              </div>
+      {/* Materials — shown when all required fields are filled */}
+      {formSection&&formLine&&formProduct&&(formSection==="glue"||formColor||(formSection==="sheet"&&sheetColor))&&<div style={{padding:"12px 20px 16px",background:"#F8FAFC"}}>
+        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
+          {(MIX_SECTIONS.find(s=>s.id===formSection)||{materials:[]}).materials.map(mat=>
+            <div key={mat} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",padding:"8px 14px"}}>
+              <span style={{flex:1,fontSize:12,fontWeight:500,color:"#475569"}}>{mat}</span>
+              <input type="number" min="0" step="0.1" value={getQty(formSection==="sheet"?"sheet":formSection,mat)} onChange={e=>setQty(formSection==="sheet"?"sheet":formSection,mat,e.target.value)} placeholder="kg" style={{width:80,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
             </div>
-            {expanded==="sheet"&&<div style={{padding:"8px 20px 16px",background:"#F8FAFC"}}>
-              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
-                <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:sheetColor?"#16A34A":"#D97706"}}>Sheet Colour {sheetColor?"·":"(select)"}</span>
-                <select value={sheetColor} onChange={e=>setSheetColor(e.target.value)} style={{padding:"6px 10px",border:"1px solid "+(sheetColor?"#16A34A":"#D97706"),borderRadius:6,background:"#fff",fontSize:12,fontFamily:MN,fontWeight:600,color:sheetColor?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
-                  <option value="">Select colour...</option>
-                  {PROD_COLORS.map(c=><option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              {sheetColor?<>
-                <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
-                  {sheetSec.materials.map(mat=>
-                    <div key={mat} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",padding:"8px 14px"}}>
-                      <span style={{flex:1,fontSize:12,fontWeight:500,color:"#475569"}}>{mat}</span>
-                      <input type="number" min="0" step="0.1" value={getQty("sheet",mat)} onChange={e=>setQty("sheet",mat,e.target.value)} placeholder="kg" style={{width:80,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
-                    </div>
-                  )}
-                </div>
-                <div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,border:"1px solid "+(parseFloat(getQty("sheetcolour",sheetColor))>0?"#7C3AED40":"#E5E7EB"),padding:"10px 14px"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10}}>
-                      <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Colour</span>
-                      <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{sheetColor}</span>
-                    </div>
-                    <input type="number" min="0" step="0.001" value={getQty("sheetcolour",sheetColor)} onChange={e=>setQty("sheetcolour",sheetColor,e.target.value)} placeholder="kg" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
-                  </div>
-                </div>
-              </>:<div style={{padding:"16px",textAlign:"center",color:"#92400E",fontSize:12}}>Select a sheet colour above</div>}
-            </div>}
+          )}
+        </div>
+
+        {/* Pigment — only for Mixing */}
+        {formSection==="all"&&formColor&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,border:"1px solid "+(parseFloat(getQty("pigment",formColor))>0?"#7C3AED40":"#E5E7EB"),padding:"10px 14px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Pigment</span>
+              <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{formColor}</span>
+            </div>
+            <input type="number" min="0" step="0.001" value={getQty("pigment",formColor)} onChange={e=>setQty("pigment",formColor,e.target.value)} placeholder="kg" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
           </div>
-        </>;
-      })()}
+        </div>}
+
+        {/* Lots — only for Mixing */}
+        {formSection==="all"&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569"}}>Number of Lots</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <button onClick={()=>setLots(l=>Math.max(1,l-1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+            <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#0F172A",minWidth:36,textAlign:"center"}}>{lots}</span>
+            <button onClick={()=>setLots(l=>Math.min(20,l+1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+          </div>
+        </div>}
+
+        {/* Colour — only for Sheet */}
+        {formSection==="sheet"&&sheetColor&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,border:"1px solid "+(parseFloat(getQty("sheetcolour",sheetColor))>0?"#7C3AED40":"#E5E7EB"),padding:"10px 14px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Colour</span>
+              <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{sheetColor}</span>
+            </div>
+            <input type="number" min="0" step="0.001" value={getQty("sheetcolour",sheetColor)} onChange={e=>setQty("sheetcolour",sheetColor,e.target.value)} placeholder="kg" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+          </div>
+        </div>}
+      </div>}
+
+      {/* Save */}
       <div style={{padding:"14px 20px",borderTop:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div>{saveMsg&&<span style={{fontFamily:MN,fontSize:11,color:saveMsg.includes("saved")?"#16A34A":"#DC2626"}}>{saveMsg}</span>}</div>
         <button onClick={handleSave} disabled={saving} className="hv-btn" style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#fff",background:saving?"#94A3B8":"#0F172A",border:"none",borderRadius:8,padding:"10px 24px",cursor:saving?"default":"pointer"}}>{saving?"Saving...":"Save Entry"}</button>
       </div>
     </div>}
+
 
     {/* Consumption Insights */}
     {loading?<div style={{padding:40,textAlign:"center",fontFamily:MN,fontSize:12,color:"#94A3B8"}}>Loading production data...</div>:<div>
