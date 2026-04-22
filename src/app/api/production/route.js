@@ -52,7 +52,7 @@ export async function POST(req) {
     const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     const userName = user || 'unknown';
 
-    const valid = entries.filter(e => e.qty > 0);
+    const valid = entries.filter(e => e.qty > 0 && !isNaN(e.qty));
     if (valid.length === 0) {
       return Response.json({ error: 'No quantities entered' }, { status: 400 });
     }
@@ -63,10 +63,11 @@ export async function POST(req) {
       const sheetName = SECTION_SHEETS[e.section];
       if (!sheetName) return;
       if (!bySheet[sheetName]) bySheet[sheetName] = [];
-      bySheet[sheetName].push([date, time, e.line || '', e.product || '', e.shift || '', e.color || '', e.material, e.qty, userName, e.lots || 1]);
+      bySheet[sheetName].push([date, time, e.line || '', e.product || '', e.shift || '', e.color || '', e.material, Math.round(e.qty * 1000) / 1000, userName, e.lots || 1]);
     });
 
     let totalSaved = 0;
+    console.log('Saving to sheets:', Object.entries(bySheet).map(([s, r]) => s + ': ' + r.length + ' rows'));
     for (const [sheetName, rows] of Object.entries(bySheet)) {
       await ensureHeaders(sheets, sheetName);
       await sheets.spreadsheets.values.append({
