@@ -1234,7 +1234,7 @@ function ProductionTab({mob,user,role}){
     });
     // Pigment — also multiplied by lots
     const pigQty=parseFloat(getQty("pigment",formColor));
-    if(pigQty>0)ents.push({section:"Mixing",material:"PIGMENT",qty:pigQty*lots,color:formColor,line:formLine,product:formProduct,shift:formShift,unit:"gm"});
+    if(pigQty>0)ents.push({section:"Mixing",material:"PIGMENT",qty:pigQty*lots,color:formColor,line:formLine,product:formProduct,shift:formShift});
     // Sheet uses its own sheetColor
     const sheetSec=MIX_SECTIONS.find(s=>s.id==="sheet");
     if(sheetSec&&sheetColor){
@@ -1244,7 +1244,7 @@ function ProductionTab({mob,user,role}){
       });
       // Sheet colour (grams)
       const sheetColQty=parseFloat(getQty("sheetcolour",sheetColor));
-      if(sheetColQty>0)ents.push({section:"Mixing (Sheet)",material:"COLOUR",qty:sheetColQty,color:sheetColor,line:formLine,product:formProduct,shift:formShift,unit:"gm"});
+      if(sheetColQty>0)ents.push({section:"Mixing (Sheet)",material:"COLOUR",qty:sheetColQty,color:sheetColor,line:formLine,product:formProduct,shift:formShift});
     }
     if(ents.length===0){setSaving(false);setSaveMsg("No quantities entered");return;}
     try{
@@ -1360,7 +1360,7 @@ function ProductionTab({mob,user,role}){
                 <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Pigment</span>
                 <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{formColor}</span>
               </div>
-              <input type="number" min="0" step="1" value={getQty("pigment",formColor)} onChange={e=>setQty("pigment",formColor,e.target.value)} placeholder="gm" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+              <input type="number" min="0" step="0.001" value={getQty("pigment",formColor)} onChange={e=>setQty("pigment",formColor,e.target.value)} placeholder="kg" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
             </div>
           </div>)}
 
@@ -1427,7 +1427,7 @@ function ProductionTab({mob,user,role}){
                       <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Colour</span>
                       <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{sheetColor}</span>
                     </div>
-                    <input type="number" min="0" step="1" value={getQty("sheetcolour",sheetColor)} onChange={e=>setQty("sheetcolour",sheetColor,e.target.value)} placeholder="gm" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+                    <input type="number" min="0" step="0.001" value={getQty("sheetcolour",sheetColor)} onChange={e=>setQty("sheetcolour",sheetColor,e.target.value)} placeholder="kg" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
                   </div>
                 </div>
               </>:<div style={{padding:"16px",textAlign:"center",color:"#92400E",fontSize:12}}>Select a sheet colour above</div>}
