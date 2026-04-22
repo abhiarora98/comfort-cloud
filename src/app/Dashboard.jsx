@@ -1229,7 +1229,7 @@ function ProductionTab({mob,user,role}){
     MIX_SECTIONS.filter(s=>s.id==="all").forEach(sec=>{
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty(sec.id,mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:formColor,line:formLine,product:formProduct,shift:formShift});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:formColor,line:formLine,product:formProduct,shift:formShift,lots:lots});
       });
     });
     // Glue — NOT multiplied by lots
@@ -1395,7 +1395,7 @@ function ProductionTab({mob,user,role}){
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <button onClick={()=>setLots(l=>Math.max(1,l-1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
               <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#0F172A",minWidth:36,textAlign:"center"}}>{lots}</span>
-              <button onClick={()=>setLots(l=>Math.min(10,l+1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+              <button onClick={()=>setLots(l=>Math.min(20,l+1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
             </div>
           </div>
 
@@ -1497,6 +1497,31 @@ function ProductionTab({mob,user,role}){
           <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:4}}>active</div>
         </div>
       </div>
+
+      {/* Lots by Colour */}
+      {(()=>{const lotsByColor={};filtered.filter(e=>e.lots&&e.lots>0&&e.section==="Mixing").forEach(e=>{
+        if(!lotsByColor[e.color])lotsByColor[e.color]=new Set();
+        lotsByColor[e.color].add(e.date+"|"+e.time+"|"+e.lots);
+      });
+      const lotData=Object.entries(lotsByColor).map(([c,s])=>{
+        let total=0;s.forEach(k=>{total+=parseInt(k.split("|")[2])||1;});return[c,total];
+      }).sort((a,b)=>b[1]-a[1]);
+      const totalLots=lotData.reduce((s,d)=>s+d[1],0);
+      return lotData.length>0&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:24,overflow:"hidden"}}>
+        <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Lots by Colour</span>
+          <span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:"#0F172A"}}>{totalLots} total lots</span>
+        </div>
+        {lotData.map(([color,total],i)=>{const maxL=lotData[0][1];const pct=maxL>0?total/maxL:0;
+          return <div key={color} className="hv-row" style={{padding:"10px 20px",borderBottom:i<lotData.length-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12}}>
+            <span style={{width:120,fontSize:13,fontWeight:500,color:"#0F172A",flexShrink:0}}>{color}</span>
+            <div style={{flex:1,height:6,background:"#F1F5F9",borderRadius:3,overflow:"hidden"}}>
+              <div style={{height:"100%",width:Math.max(pct*100,2)+"%",background:i===0?"#0F172A":i<3?"#475569":"#94A3B8",borderRadius:3}}/>
+            </div>
+            <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0F172A",minWidth:60,textAlign:"right"}}>{total} lots</span>
+          </div>;
+        })}
+      </div>;})()}
 
       {/* Consumption by Material */}
       {consumption.length>0&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:24,overflow:"hidden"}}>

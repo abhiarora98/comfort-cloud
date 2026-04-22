@@ -63,7 +63,7 @@ export async function POST(req) {
       const sheetName = SECTION_SHEETS[e.section];
       if (!sheetName) return;
       if (!bySheet[sheetName]) bySheet[sheetName] = [];
-      bySheet[sheetName].push([date, time, e.line || '', e.product || '', e.shift || '', e.color || '', e.material, e.qty, userName]);
+      bySheet[sheetName].push([date, time, e.line || '', e.product || '', e.shift || '', e.color || '', e.material, e.qty, userName, e.lots || 1]);
     });
 
     let totalSaved = 0;
@@ -95,7 +95,7 @@ export async function GET() {
       try {
         const res = await sheets.spreadsheets.values.get({
           spreadsheetId: PROD_SHEET_ID,
-          range: `'${sheetName}'!A:I`,
+          range: `'${sheetName}'!A:J`,
         });
         const rows = res.data.values || [];
         if (rows.length === 0) continue;
@@ -108,12 +108,14 @@ export async function GET() {
           const colE = (r[4] || '').trim();
           const isNewFormat = colE.startsWith('Day') || colE.startsWith('Night');
           let shift = '', color = '', material = '', qty = 0, user = '';
+          let lots = 1;
           if (isNewFormat) {
             shift = colE;
             color = (r[5] || '').trim();
             material = (r[6] || '').trim();
             qty = parseFloat(r[7]) || 0;
             user = (r[8] || '').trim();
+            lots = parseInt(r[9]) || 1;
           } else {
             color = colE;
             material = (r[5] || '').trim();
@@ -132,6 +134,7 @@ export async function GET() {
             material: material,
             qty: qty,
             user: user,
+            lots: lots,
           });
         });
       } catch {}
