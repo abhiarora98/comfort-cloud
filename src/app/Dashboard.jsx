@@ -1225,11 +1225,18 @@ function ProductionTab({mob,user,role}){
     if(!formColor){setSaveMsg("Please select a colour first");return;}
     setSaving(true);setSaveMsg("");
     const ents=[];
-    // Loop and Glue use the main formColor — multiplied by lots
-    MIX_SECTIONS.filter(s=>s.id!=="sheet").forEach(sec=>{
+    // Mixing — multiplied by lots
+    MIX_SECTIONS.filter(s=>s.id==="all").forEach(sec=>{
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty(sec.id,mat));
         if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:formColor,line:formLine,product:formProduct,shift:formShift});
+      });
+    });
+    // Glue — NOT multiplied by lots
+    MIX_SECTIONS.filter(s=>s.id==="glue").forEach(sec=>{
+      sec.materials.forEach(mat=>{
+        const q=parseFloat(getQty(sec.id,mat));
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:formColor,line:formLine,product:formProduct,shift:formShift});
       });
     });
     // Pigment — also multiplied by lots
@@ -1365,16 +1372,17 @@ function ProductionTab({mob,user,role}){
           </div>)}
 
           {/* Mixing (Glue) */}
+          <div style={{height:16}}/>
           {renderSection(glueSec,null)}
 
           {/* Total after Loop + Glue */}
           {(loopTotal>0||glueTotal>0)&&<div style={{padding:"12px 20px",background:"#0F172A",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-            <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)"}}>Total — Loop + Glue{lots>1?" × "+lots+" lots":""}</span>
+            <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)"}}>Total — Mixing{lots>1?" × "+lots+" lots":""} + Glue</span>
             <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-              {loopTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Loop: <strong style={{color:"#fff"}}>{(loopTotal*lots).toFixed(1)} kg</strong></span>}
-              {pigTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Pigment: <strong style={{color:"#fff"}}>{pigTotal*lots} gm</strong></span>}
-              {glueTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Glue: <strong style={{color:"#fff"}}>{(glueTotal*lots).toFixed(1)} kg</strong></span>}
-              <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#4ade80"}}>{((loopTotal+glueTotal)*lots).toFixed(1)} kg</span>
+              {loopTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Mixing: <strong style={{color:"#fff"}}>{(loopTotal*lots).toFixed(1)} kg</strong></span>}
+              {pigTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Pigment: <strong style={{color:"#fff"}}>{(pigTotal*lots).toFixed(3)} kg</strong></span>}
+              {glueTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Glue: <strong style={{color:"#fff"}}>{glueTotal.toFixed(1)} kg</strong></span>}
+              <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#4ade80"}}>{(loopTotal*lots+glueTotal).toFixed(1)} kg</span>
             </div>
           </div>}
 
@@ -1382,7 +1390,7 @@ function ProductionTab({mob,user,role}){
           <div style={{padding:"14px 20px",background:"#F8FAFC",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569"}}>Number of Lots</span>
-              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>Loop + Glue quantities will be multiplied</span>
+              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>Mixing quantities will be multiplied</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <button onClick={()=>setLots(l=>Math.max(1,l-1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
@@ -1392,6 +1400,7 @@ function ProductionTab({mob,user,role}){
           </div>
 
           {/* Mixing (Sheet) — separate colour */}
+          <div style={{height:16}}/>
           <div>
             <div className="hv-row" onClick={()=>setExpanded(expanded==="sheet"?null:"sheet")} style={{padding:"14px 20px",borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -1777,7 +1786,7 @@ export default function Dashboard(){
   return <div style={{fontFamily:SN,background:"#F8FAFC",minHeight:"100vh",fontSize:13,color:"#0F172A"}}>
     
     {/* Fonts loaded in layout.js */}
-    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes flash{0%{background:#E0F2FE}100%{background:#fff}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}.hv-row{transition:background 0.2s}.hv-row:hover{background:#F8FAFC!important}.hv-card{transition:box-shadow 0.2s,border-color 0.2s}.hv-card:hover{box-shadow:0 1px 4px rgba(0,0,0,0.04);border-color:#d1d5db}.hv-pill{transition:background 0.2s,border-color 0.2s}.hv-pill:hover{background:#E5E7EB!important}.hv-btn{transition:background 0.2s,opacity 0.2s}.hv-btn:hover{opacity:0.85}.hv-insight{transition:box-shadow 0.2s}.hv-insight:hover{box-shadow:0 2px 8px rgba(0,0,0,0.04)}.hv-insight-s{transition:background 0.2s}.hv-insight-s:hover{background:#F1F5F9!important}.hv-dark{transition:background 0.2s}.hv-dark:hover{background:rgba(255,255,255,0.04)!important}select{transition:border-color 0.2s}select:hover{border-color:#cbd5e1}`}</style>
+    <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes flash{0%{background:#E0F2FE}100%{background:#fff}}input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield}*{box-sizing:border-box}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}input:focus,select:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.08)}::selection{background:#2563eb22}.hv-row{transition:background 0.2s}.hv-row:hover{background:#F8FAFC!important}.hv-card{transition:box-shadow 0.2s,border-color 0.2s}.hv-card:hover{box-shadow:0 1px 4px rgba(0,0,0,0.04);border-color:#d1d5db}.hv-pill{transition:background 0.2s,border-color 0.2s}.hv-pill:hover{background:#E5E7EB!important}.hv-btn{transition:background 0.2s,opacity 0.2s}.hv-btn:hover{opacity:0.85}.hv-insight{transition:box-shadow 0.2s}.hv-insight:hover{box-shadow:0 2px 8px rgba(0,0,0,0.04)}.hv-insight-s{transition:background 0.2s}.hv-insight-s:hover{background:#F1F5F9!important}.hv-dark{transition:background 0.2s}.hv-dark:hover{background:rgba(255,255,255,0.04)!important}select{transition:border-color 0.2s}select:hover{border-color:#cbd5e1}`}</style>
 
     {/* Header */}
     <div style={{background:"#0f172a",color:"#fff",padding:mob?"0 16px":"0 28px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:200,borderBottom:"1px solid #1e293b"}}>
