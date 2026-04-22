@@ -1767,10 +1767,12 @@ export default function Dashboard(){
   const sPObj=selP?PARTIES.find(p=>p.name===selP):null;
 
   const role=user?.publicMetadata?.role||"sales";
-  const ROLE_TABS={admin:["pending","party","stock","dispatch","analytics","calls","production"],management:["pending","party","analytics"],ops:["pending","stock","dispatch","production"],sales:["pending","party"]};
+  const ROLE_TABS={admin:["pending","party","stock","dispatch","analytics","calls","production"],management:["pending","party","analytics"],ops:["pending","stock","dispatch","production"],production:["production"],sales:["pending","party"]};
   const allowedTabs=ROLE_TABS[role]||ROLE_TABS["sales"];
   const allTabs=[{id:"pending",l:"Orders",n:filtered.length},{id:"party",l:"Parties",n:pFilt.length},{id:"stock",l:"Stock",n:""},{id:"dispatch",l:"Dispatch",n:""},{id:"analytics",l:"Analytics",n:""},{id:"calls",l:"Calls",n:Object.keys(REORDER).length},{id:"production",l:"Production",n:""}];
   const tabs=allTabs.filter(t=>allowedTabs.includes(t.id));
+  // Auto-switch to first allowed tab if current tab isn't accessible
+  useEffect(()=>{if(!allowedTabs.includes(tab)&&allowedTabs.length>0)setTab(allowedTabs[0]);},[role]);
 
   return <div style={{fontFamily:SN,background:"#F8FAFC",minHeight:"100vh",fontSize:13,color:"#0F172A"}}>
     
