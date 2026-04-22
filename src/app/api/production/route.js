@@ -33,7 +33,7 @@ async function ensureHeaders(sheets, sheetName) {
 // POST — save entries
 export async function POST(req) {
   try {
-    const { entries, user } = await req.json();
+    const { entries, user, date: customDate } = await req.json();
     if (!entries || !entries.length) {
       return Response.json({ error: 'No entries' }, { status: 400 });
     }
@@ -41,7 +41,14 @@ export async function POST(req) {
     const sheets = await getSheets();
 
     const now = new Date();
-    const date = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    let date;
+    if (customDate) {
+      // Convert YYYY-MM-DD to DD/MM/YYYY
+      const [y, m, d] = customDate.split('-');
+      date = `${d}/${m}/${y}`;
+    } else {
+      date = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
     const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     const userName = user || 'unknown';
 

@@ -1173,6 +1173,7 @@ function ProductionTab({mob,user,role}){
   const[formColor,setFormColor]=useState("");const[colorFilter,setColorFilter]=useState("all");
   const[formLine,setFormLine]=useState("");const[formProduct,setFormProduct]=useState("");
   const[formShift,setFormShift]=useState(detectShift());
+  const[formDate,setFormDate]=useState(new Date().toISOString().split("T")[0]);
   const[lineFilter,setLineFilter]=useState("all");const[productFilter,setProductFilter]=useState("all");const[shiftFilter,setShiftFilter]=useState("all");
   const[lots,setLots]=useState(1);
   const[sheetColor,setSheetColor]=useState("");
@@ -1247,9 +1248,9 @@ function ProductionTab({mob,user,role}){
     }
     if(ents.length===0){setSaving(false);setSaveMsg("No quantities entered");return;}
     try{
-      const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown"})});
+      const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown",date:formDate})});
       const data=await res.json();
-      if(data.ok){setSaveMsg(data.saved+" entries saved for "+formLine+" · "+formProduct+" · "+formColor+(lots>1?" × "+lots+" lots":""));setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setSheetColor("");setFormShift(detectShift());
+      if(data.ok){setSaveMsg(data.saved+" entries saved for "+formLine+" · "+formProduct+" · "+formColor+(lots>1?" × "+lots+" lots":""));setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setSheetColor("");setFormShift(detectShift());setFormDate(new Date().toISOString().split("T")[0]);
         // Refresh
         const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
       }else{setSaveMsg(data.error||"Failed to save");}
@@ -1271,7 +1272,12 @@ function ProductionTab({mob,user,role}){
     {formOpen&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:24,overflow:"hidden"}}>
       <div style={{padding:"16px 20px",borderBottom:"1px solid #E5E7EB"}}>
         <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>Enter today's raw material usage</div>
-        <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:2}}>Select Line → Product → Colour, then enter quantities in kg.</div>
+        <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:2}}>Select date, line, product, shift, colour — then enter quantities in kg.</div>
+      </div>
+      <div style={{padding:"12px 20px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:12}}>
+        <span style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#16A34A"}}>Date ·</span>
+        <input type="date" value={formDate} onChange={e=>setFormDate(e.target.value)} style={{padding:"8px 12px",border:"1px solid #16A34A",borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:"#0F172A",outline:"none",cursor:"pointer"}}/>
+        {formDate!==new Date().toISOString().split("T")[0]&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#D97706",background:"#FEF3C7",padding:"2px 8px",borderRadius:4}}>Backdated entry</span>}
       </div>
       <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:(formLine&&formProduct&&formColor)?"#F0FDF4":"#FFFBEB"}}>
         <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(4,1fr)",gap:12}}>
