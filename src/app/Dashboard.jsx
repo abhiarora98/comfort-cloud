@@ -1371,22 +1371,7 @@ function ProductionTab({mob,user,role}){
             </div>
           </div>)}
 
-          {/* Mixing (Glue) */}
-          <div style={{height:16}}/>
-          {renderSection(glueSec,null)}
-
-          {/* Total after Loop + Glue */}
-          {(loopTotal>0||glueTotal>0)&&<div style={{padding:"12px 20px",background:"#0F172A",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-            <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)"}}>Total — Mixing{lots>1?" × "+lots+" lots":""} + Glue</span>
-            <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-              {loopTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Mixing: <strong style={{color:"#fff"}}>{(loopTotal*lots).toFixed(1)} kg</strong></span>}
-              {pigTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Pigment: <strong style={{color:"#fff"}}>{(pigTotal*lots).toFixed(3)} kg</strong></span>}
-              {glueTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Glue: <strong style={{color:"#fff"}}>{glueTotal.toFixed(1)} kg</strong></span>}
-              <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#4ade80"}}>{(loopTotal*lots+glueTotal).toFixed(1)} kg</span>
-            </div>
-          </div>}
-
-          {/* Lots selector */}
+          {/* Lots selector — right after Mixing */}
           <div style={{padding:"14px 20px",background:"#F8FAFC",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569"}}>Number of Lots</span>
@@ -1398,6 +1383,21 @@ function ProductionTab({mob,user,role}){
               <button onClick={()=>setLots(l=>Math.min(20,l+1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
             </div>
           </div>
+
+          {/* Mixing (Glue) */}
+          <div style={{height:16}}/>
+          {renderSection(glueSec,null)}
+
+          {/* Total after Mixing + Glue */}
+          {(loopTotal>0||glueTotal>0)&&<div style={{padding:"12px 20px",background:"#0F172A",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+            <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)"}}>Total — Mixing{lots>1?" × "+lots+" lots":""} + Glue</span>
+            <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+              {loopTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Mixing: <strong style={{color:"#fff"}}>{(loopTotal*lots).toFixed(1)} kg</strong></span>}
+              {pigTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Pigment: <strong style={{color:"#fff"}}>{(pigTotal*lots).toFixed(3)} kg</strong></span>}
+              {glueTotal>0&&<span style={{fontFamily:MN,fontSize:12,color:"rgba(255,255,255,0.7)"}}>Glue: <strong style={{color:"#fff"}}>{glueTotal.toFixed(1)} kg</strong></span>}
+              <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#4ade80"}}>{(loopTotal*lots+glueTotal).toFixed(1)} kg</span>
+            </div>
+          </div>}
 
           {/* Mixing (Sheet) — separate colour */}
           <div style={{height:16}}/>
