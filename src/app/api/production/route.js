@@ -27,20 +27,7 @@ async function getSheets() {
 }
 
 async function ensureHeaders(sheets, sheetName) {
-  try {
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: PROD_SHEET_ID,
-      range: `'${sheetName}'!A1:H1`,
-    });
-    if (!res.data.values || res.data.values.length === 0) {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: PROD_SHEET_ID,
-        range: `'${sheetName}'!A1`,
-        valueInputOption: 'RAW',
-        requestBody: { values: [['Date', 'Time', 'Line', 'Product', 'Colour', 'Material', 'Quantity (kg)', 'Entered By']] },
-      });
-    }
-  } catch {}
+  // No headers needed — sheet has material names in rows 1-11, data appends after
 }
 
 // POST — save entries
@@ -105,32 +92,24 @@ export async function GET() {
         });
         const rows = res.data.values || [];
         if (rows.length === 0) continue;
-        const header = (rows[0] || []).map(h => (h || '').toLowerCase().trim());
-        // Find column indices by header name
-        const colMap = {};
-        header.forEach((h, i) => {
-          if (h.includes('date')) colMap.date = i;
-          else if (h.includes('time')) colMap.time = i;
-          else if (h.includes('line')) colMap.line = i;
-          else if (h.includes('product')) colMap.product = i;
-          else if (h.includes('colour') || h.includes('color')) colMap.color = i;
-          else if (h.includes('material')) colMap.material = i;
-          else if (h.includes('quantity') || h.includes('qty')) colMap.qty = i;
-          else if (h.includes('entered') || h.includes('user')) colMap.user = i;
-        });
-        rows.slice(1).forEach(r => {
-          const material = r[colMap.material] || '';
+        // Data rows: A=Date, B=Time, C=Line, D=Product, E=Colour, F=Material, G=Qty, H=User
+        // Skip rows that don't have a date in column A (e.g. material name rows at top)
+        rows.forEach(r => {
+          const dateVal = (r[0] || '').trim();
+          // A date looks like DD/MM/YYYY — skip if it doesn't match
+          if (!dateVal || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateVal)) return;
+          const material = (r[5] || '').trim();
           if (!material) return;
           allEntries.push({
-            date: r[colMap.date] || '',
-            time: r[colMap.time] || '',
+            date: dateVal,
+            time: (r[1] || '').trim(),
             section: section,
-            line: colMap.line != null ? (r[colMap.line] || '') : '',
-            product: colMap.product != null ? (r[colMap.product] || '') : '',
-            color: colMap.color != null ? (r[colMap.color] || '') : '',
+            line: (r[2] || '').trim(),
+            product: (r[3] || '').trim(),
+            color: (r[4] || '').trim(),
             material: material,
-            qty: parseFloat(r[colMap.qty]) || 0,
-            user: colMap.user != null ? (r[colMap.user] || '') : '',
+            qty: parseFloat(r[6]) || 0,
+            user: (r[7] || '').trim(),
           });
         });
       } catch {}
