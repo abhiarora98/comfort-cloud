@@ -1177,6 +1177,7 @@ function ProductionTab({mob,user,role}){
   const[formDate,setFormDate]=useState(new Date().toISOString().split("T")[0]);
   const[lineFilter,setLineFilter]=useState("all");const[productFilter,setProductFilter]=useState("all");const[shiftFilter,setShiftFilter]=useState("all");
   const[lots,setLots]=useState(1);
+  const[glueProduced,setGlueProduced]=useState(1);const[glueUsed,setGlueUsed]=useState(1);
   const[sheetColor,setSheetColor]=useState("");
 
   // Fetch entries
@@ -1241,10 +1242,10 @@ function ProductionTab({mob,user,role}){
       const pigQty=parseFloat(getQty("pigment",formColor));
       if(pigQty>0)ents.push({section:"Mixing",material:"PIGMENT",qty:pigQty*lots,color:colorVal,line:formLine,product:formProduct,shift:formShift});
     } else if(formSection==="glue"){
-      // Glue — no lots, colour optional
+      // Glue — qty × glueUsed, track produced and used
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty(sec.id,mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:formColor||"",line:formLine,product:formProduct,shift:formShift});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q*glueUsed,color:formColor||"",line:formLine,product:formProduct,shift:formShift,lotsProduced:glueProduced,lotsUsed:glueUsed});
       });
     } else if(formSection==="sheet"){
       // Sheet — uses sheetColor
@@ -1260,7 +1261,7 @@ function ProductionTab({mob,user,role}){
     try{
       const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown",date:formDate})});
       const data=await res.json();
-      if(data.ok){const wasBackdated=formDate!==new Date().toISOString().split("T")[0];setSaveMsg(data.saved+" entries saved"+(wasBackdated?" ("+formDate+")":""));if(wasBackdated)setPeriod("30d");setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setSheetColor("");setFormShift(detectShift());setFormDate(new Date().toISOString().split("T")[0]);setFormSection("");
+      if(data.ok){const wasBackdated=formDate!==new Date().toISOString().split("T")[0];setSaveMsg(data.saved+" entries saved"+(wasBackdated?" ("+formDate+")":""));if(wasBackdated)setPeriod("30d");setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setGlueProduced(1);setGlueUsed(1);setSheetColor("");setFormShift(detectShift());setFormDate(new Date().toISOString().split("T")[0]);setFormSection("");
         const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
       }else{setSaveMsg(data.error||"Failed to save");}
     }catch{setSaveMsg("Error saving");}
@@ -1356,6 +1357,33 @@ function ProductionTab({mob,user,role}){
           </div>
         </div>}
 
+        {/* Glue — Produced & Used */}
+        {formSection==="glue"&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,alignItems:"center"}}>
+            <div>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569",marginBottom:6}}>Lots Produced</div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <button onClick={()=>setGlueProduced(l=>Math.max(1,l-1))} style={{width:28,height:28,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+                <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#0F172A",minWidth:30,textAlign:"center"}}>{glueProduced}</span>
+                <button onClick={()=>setGlueProduced(l=>Math.min(20,l+1))} style={{width:28,height:28,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+              </div>
+            </div>
+            <div>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569",marginBottom:6}}>Lots Used</div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <button onClick={()=>setGlueUsed(l=>Math.max(0,l-1))} style={{width:28,height:28,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+                <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:glueUsed>glueProduced?"#DC2626":"#0F172A",minWidth:30,textAlign:"center"}}>{glueUsed}</span>
+                <button onClick={()=>setGlueUsed(l=>Math.min(glueProduced,l+1))} style={{width:28,height:28,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+              </div>
+            </div>
+            <div>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>Balance</div>
+              <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:glueProduced-glueUsed>0?"#16A34A":"#94A3B8"}}>{glueProduced-glueUsed} lot{glueProduced-glueUsed!==1?"s":""}</span>
+            </div>
+          </div>
+          <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:8}}>Material quantities will be multiplied by lots used ({glueUsed})</div>
+        </div>}
+
         {/* Lots — only for Mixing */}
         {formSection==="all"&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -1436,6 +1464,28 @@ function ProductionTab({mob,user,role}){
           <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:4}}>active</div>
         </div>
       </div>
+
+      {/* Glue Summary */}
+      {(()=>{const glueEntries=filtered.filter(e=>e.section==="Mixing (Glue)"&&e.lotsProduced>0);
+        if(glueEntries.length===0)return null;
+        const seen=new Set();let totalProd=0,totalUsed=0;
+        glueEntries.forEach(e=>{const k=e.date+"|"+e.time;if(seen.has(k))return;seen.add(k);totalProd+=e.lotsProduced;totalUsed+=e.lotsUsed;});
+        const balance=totalProd-totalUsed;
+        return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:14,marginBottom:24}}>
+          <div className="hv-card" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px"}}>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>Glue Produced</div>
+            <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:"#0F172A",lineHeight:1}}>{totalProd} lots</div>
+          </div>
+          <div className="hv-card" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px"}}>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>Glue Used</div>
+            <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:"#D97706",lineHeight:1}}>{totalUsed} lots</div>
+          </div>
+          <div className="hv-card" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px"}}>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>Glue Balance</div>
+            <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:balance>0?"#16A34A":"#DC2626",lineHeight:1}}>{balance} lots</div>
+          </div>
+        </div>;
+      })()}
 
       {/* Lots by Colour */}
       {(()=>{const lotsByColor={};const seen=new Set();
