@@ -139,3 +139,87 @@ export async function GET() {
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
+
+// Helper: find row in sheet matching entry data
+async function findRow(sheets, sheetName, rowData) {
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: PROD_SHEET_ID,
+    range: `'${sheetName}'!A:I`,
+  });
+  const rows = res.data.values || [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const dateVal = (r[0] || '').trim();
+    if (dateVal !== rowData.date) continue;
+    const time = (r[1] || '').trim();
+    if (time !== rowData.time) continue;
+    // Check material and qty in either old or new format
+    const colE = (r[4] || '').trim();
+    const isNew = colE.startsWith('Day') || colE.startsWith('Night');
+    const material = isNew ? (r[6] || '').trim() : (r[5] || '').trim();
+    const qty = isNew ? parseFloat(r[7]) : parseFloat(r[6]);
+    if (material === rowData.material && qty === rowData.qty) {
+      return { rowIndex: i, isNew };
+    }
+  }
+  return null;
+}
+
+// DELETE — remove an entry
+export async function DELETE(req) {
+  try {
+    const { section, rowData } = await req.json();
+    const sheetName = SECTION_SHEETS[section];
+    if (!sheetName) return Response.json({ error: 'Unknown section' }, { status: 400 });
+
+    const sheets = await getSheets();
+    const found = await findRow(sheets, sheetName, rowData);
+    if (!found) return Response.json({ error: 'Row not found' }, { status: 404 });
+
+    // Get sheet ID for batchUpdate
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: PROD_SHEET_ID });
+    const sheetMeta = meta.data.sheets.find(s => s.properties.title === sheetName);
+    if (!sheetMeta) return Response.json({ error: 'Sheet not found' }, { status: 404 });
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: PROD_SHEET_ID,
+      requestBody: {
+        requests: [{ deleteDimension: { range: { sheetId: sheetMeta.properties.sheetId, dimension: 'ROWS', startIndex: found.rowIndex, endIndex: found.rowIndex + 1 } } }],
+      },
+    });
+
+    return Response.json({ ok: true });
+  } catch (err) {
+    console.error('Production delete error:', err);
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}
+
+// PATCH — edit quantity of an entry
+export async function PATCH(req) {
+  try {
+    const { section, rowData, newQty } = await req.json();
+    const sheetName = SECTION_SHEETS[section];
+    if (!sheetName) return Response.json({ error: 'Unknown section' }, { status: 400 });
+
+    const sheets = await getSheets();
+    const found = await findRow(sheets, sheetName, rowData);
+    if (!found) return Response.json({ error: 'Row not found' }, { status: 404 });
+
+    const qtyCol = found.isNew ? 7 : 6; // Column index for quantity
+    const colLetter = String.fromCharCode(65 + qtyCol); // A=0, H=7 or G=6
+    const cell = `'${sheetName}'!${colLetter}${found.rowIndex + 1}`;
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: PROD_SHEET_ID,
+      range: cell,
+      valueInputOption: 'RAW',
+      requestBody: { values: [[newQty]] },
+    });
+
+    return Response.json({ ok: true });
+  } catch (err) {
+    console.error('Production edit error:', err);
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}

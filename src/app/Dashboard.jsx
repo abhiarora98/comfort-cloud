@@ -1163,10 +1163,12 @@ const PROD_PRODUCTS=["LOOP","S-MAT","TURF"];
 const PROD_SHIFTS=["Day (8 AM - 8 PM)","Night (8 PM - 8 AM)"];
 function detectShift(){const h=new Date().getHours();return (h>=8&&h<20)?PROD_SHIFTS[0]:PROD_SHIFTS[1];}
 
-function ProductionTab({mob,user}){
+function ProductionTab({mob,user,role}){
+  const isAdmin=role==="admin";
   const[entries,setEntries]=useState([]);const[loading,setLoading]=useState(true);
   const[formOpen,setFormOpen]=useState(false);const[saving,setSaving]=useState(false);
   const[expanded,setExpanded]=useState("all");const[formData,setFormData]=useState({});
+  const[editIdx,setEditIdx]=useState(null);const[editQty,setEditQty]=useState("");const[deleting,setDeleting]=useState(null);
   const[period,setPeriod]=useState("today");const[saveMsg,setSaveMsg]=useState("");
   const[formColor,setFormColor]=useState("");const[colorFilter,setColorFilter]=useState("all");
   const[formLine,setFormLine]=useState("");const[formProduct,setFormProduct]=useState("");
@@ -1524,19 +1526,33 @@ function ProductionTab({mob,user}){
           <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Recent Entries</span>
         </div>
         <div style={{maxHeight:300,overflowY:"auto"}}>
-          {filtered.slice(0,30).map((e,i)=>
-            <div key={i} className="hv-row" style={{padding:"10px 20px",borderBottom:i<Math.min(filtered.length,30)-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:8,flexWrap:mob?"wrap":"nowrap"}}>
-              <span style={{fontFamily:MN,fontSize:11,color:"#94A3B8",minWidth:70}}>{e.date}</span>
-              <span style={{fontFamily:MN,fontSize:11,color:"#94A3B8",minWidth:45}}>{e.time}</span>
-              {e.line&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#7C3AED",background:"#F3E8FF",padding:"2px 6px",borderRadius:4}}>{e.line}</span>}
-              {e.product&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#D97706",background:"#FEF3C7",padding:"2px 6px",borderRadius:4}}>{e.product}</span>}
-              {e.shift&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:e.shift.startsWith("Day")?"#B45309":"#1E40AF",background:e.shift.startsWith("Day")?"#FEF3C7":"#DBEAFE",padding:"2px 6px",borderRadius:4}}>{e.shift.startsWith("Day")?"☀ Day":"🌙 Night"}</span>}
-              {e.color&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"2px 6px",borderRadius:4}}>{e.color}</span>}
-              <span style={{fontSize:11,fontWeight:500,color:"#475569",minWidth:80}}>{e.section}</span>
-              <span style={{fontSize:12,fontWeight:600,color:"#0F172A",flex:1,minWidth:80}}>{e.material}</span>
-              <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0F172A"}}>{e.qty} kg</span>
-              <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{e.user}</span>
-            </div>
+          {filtered.slice(0,30).map((e,i)=>{
+            const globalIdx=entries.indexOf(e);const isEditing=editIdx===globalIdx;
+            return <div key={i}>
+              <div className="hv-row" style={{padding:"10px 20px",borderBottom:(i<Math.min(filtered.length,30)-1&&!isEditing)?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:8,flexWrap:mob?"wrap":"nowrap"}}>
+                <span style={{fontFamily:MN,fontSize:11,color:"#94A3B8",minWidth:70}}>{e.date}</span>
+                <span style={{fontFamily:MN,fontSize:11,color:"#94A3B8",minWidth:45}}>{e.time}</span>
+                {e.line&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#7C3AED",background:"#F3E8FF",padding:"2px 6px",borderRadius:4}}>{e.line}</span>}
+                {e.product&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#D97706",background:"#FEF3C7",padding:"2px 6px",borderRadius:4}}>{e.product}</span>}
+                {e.shift&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:e.shift.startsWith("Day")?"#B45309":"#1E40AF",background:e.shift.startsWith("Day")?"#FEF3C7":"#DBEAFE",padding:"2px 6px",borderRadius:4}}>{e.shift.startsWith("Day")?"☀ Day":"🌙 Night"}</span>}
+                {e.color&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"2px 6px",borderRadius:4}}>{e.color}</span>}
+                <span style={{fontSize:11,fontWeight:500,color:"#475569",minWidth:80}}>{e.section}</span>
+                <span style={{fontSize:12,fontWeight:600,color:"#0F172A",flex:1,minWidth:80}}>{e.material}</span>
+                <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0F172A"}}>{e.qty} kg</span>
+                <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{e.user}</span>
+                {isAdmin&&<div style={{display:"flex",gap:4,flexShrink:0}}>
+                  <button onClick={()=>{setEditIdx(globalIdx);setEditQty(String(e.qty));}} style={{fontFamily:MN,fontSize:9,color:"#2563EB",background:"none",border:"1px solid #E5E7EB",borderRadius:4,padding:"3px 8px",cursor:"pointer"}}>Edit</button>
+                  <button onClick={async()=>{if(!confirm("Delete this entry?"))return;setDeleting(globalIdx);try{await fetch("/api/production",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({section:e.section,rowData:{date:e.date,time:e.time,material:e.material,qty:e.qty}})});const r=await fetch("/api/production");const d=await r.json();setEntries(d.entries||[]);}catch{}setDeleting(null);}} disabled={deleting===globalIdx} style={{fontFamily:MN,fontSize:9,color:"#DC2626",background:"none",border:"1px solid #E5E7EB",borderRadius:4,padding:"3px 8px",cursor:deleting===globalIdx?"default":"pointer",opacity:deleting===globalIdx?0.5:1}}>Del</button>
+                </div>}
+              </div>
+              {isEditing&&<div style={{padding:"8px 20px 12px",background:"#F8FAFC",borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontFamily:MN,fontSize:11,color:"#475569"}}>New qty:</span>
+                <input type="number" value={editQty} onChange={ev=>setEditQty(ev.target.value)} style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none"}}/>
+                <span style={{fontFamily:MN,fontSize:11,color:"#94A3B8"}}>kg</span>
+                <button onClick={async()=>{const newQ=parseFloat(editQty);if(!newQ||newQ<=0)return;try{await fetch("/api/production",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({section:e.section,rowData:{date:e.date,time:e.time,material:e.material,qty:e.qty},newQty:newQ})});const r=await fetch("/api/production");const d=await r.json();setEntries(d.entries||[]);}catch{}setEditIdx(null);}} style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#fff",background:"#0F172A",border:"none",borderRadius:4,padding:"5px 12px",cursor:"pointer"}}>Save</button>
+                <button onClick={()=>setEditIdx(null)} style={{fontFamily:MN,fontSize:10,color:"#94A3B8",background:"none",border:"1px solid #E5E7EB",borderRadius:4,padding:"5px 12px",cursor:"pointer"}}>Cancel</button>
+              </div>}
+            </div>;})
           )}
         </div>
       </div>}
@@ -2210,7 +2226,7 @@ export default function Dashboard(){
       {tab==="dispatch"&&<DispatchTab mob={mob}/>}
       {tab==="analytics"&&<AnalyticsTab mob={mob}/>}
       {tab==="calls"&&<CallSchedule mob={mob}/>}
-      {tab==="production"&&<ProductionTab mob={mob} user={user}/>}
+      {tab==="production"&&<ProductionTab mob={mob} user={user} role={role}/>}
     </div>
   </div>;
 }
