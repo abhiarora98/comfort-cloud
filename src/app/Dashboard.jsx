@@ -1156,7 +1156,7 @@ function AnalyticsTab({mob}){
 const MIXING_ALL=["PVC","SCRAP","CALCIUM","DOP","CPW","ADIL","EPOXY","STERIC ACID","FINOWAX","TITANIUM","HEAT STB."];
 const MIXING_GLUE=["PVC PASTE","DOP","CPW","MTO","DBP","D80"];
 const MIXING_SHEET=["SCRAP","CALCIUM","DOP","STERIC ACID","CPW"];
-const MIX_SECTIONS=[{id:"all",label:"Mixing (Loop)",materials:MIXING_ALL},{id:"glue",label:"Mixing (Glue)",materials:MIXING_GLUE},{id:"sheet",label:"Mixing (Sheet)",materials:MIXING_SHEET}];
+const MIX_SECTIONS=[{id:"all",label:"Mixing",materials:MIXING_ALL},{id:"glue",label:"Mixing (Glue)",materials:MIXING_GLUE},{id:"sheet",label:"Mixing (Sheet)",materials:MIXING_SHEET}];
 const PROD_COLORS=["P.GREEN","RED","BLUE","GREY","BROWN","MAROON","BEIGE","BLACK","BEIGE-BROWN","LIGHT GREY-BLACK","DARK GREY-BLACK","GREEN-BLACK","RED-BLACK","BLUE-BLACK","GREEN-BLUE","RED-BLUE","TAN-BLACK","WHITE-BLACK","GREEN-YELLOW"];
 const PROD_LINES=["LINE - 1","LINE - 2","LINE - 3"];
 const PROD_PRODUCTS=["LOOP","S-MAT","TURF"];
@@ -1227,7 +1227,7 @@ function ProductionTab({mob,user}){
     });
     // Pigment — also multiplied by lots
     const pigQty=parseFloat(getQty("pigment",formColor));
-    if(pigQty>0)ents.push({section:"Mixing (Loop)",material:"PIGMENT",qty:pigQty*lots,color:formColor,line:formLine,product:formProduct,unit:"gm"});
+    if(pigQty>0)ents.push({section:"Mixing",material:"PIGMENT",qty:pigQty*lots,color:formColor,line:formLine,product:formProduct,unit:"gm"});
     // Sheet uses its own sheetColor
     const sheetSec=MIX_SECTIONS.find(s=>s.id==="sheet");
     if(sheetSec&&sheetColor){
@@ -1335,7 +1335,7 @@ function ProductionTab({mob,user}){
         };
 
         return <>
-          {/* Mixing (Loop) + Pigment */}
+          {/* Mixing + Pigment */}
           {renderSection(loopSec,formColor&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,border:"1px solid "+(pigTotal>0?"#7C3AED40":"#E5E7EB"),padding:"10px 14px"}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>

@@ -4,7 +4,7 @@ export const maxDuration = 15;
 
 const PROD_SHEET_ID = '1mBIQJPWcbs9EpI1-sptKlOGkRIO04GG0aKBLUHMONQg';
 const SECTION_SHEETS = {
-  'Mixing (Loop)': 'Mixing (Loop)',
+  'Mixing': 'Mixing (Loop)',
   'Mixing (Glue)': 'Mixing (Glue)',
   'Mixing (Sheet)': 'Mixing (Sheet)',
 };
