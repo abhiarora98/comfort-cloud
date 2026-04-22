@@ -1170,6 +1170,7 @@ function ProductionTab({mob,user,role}){
   const[formSection,setFormSection]=useState("");const[formData,setFormData]=useState({});
   const[editIdx,setEditIdx]=useState(null);const[editQty,setEditQty]=useState("");const[deleting,setDeleting]=useState(null);
   const[period,setPeriod]=useState("today");const[saveMsg,setSaveMsg]=useState("");
+  const[filterDate,setFilterDate]=useState(new Date().toISOString().split("T")[0]);
   const[formColor,setFormColor]=useState("");const[colorFilter,setColorFilter]=useState("all");
   const[formLine,setFormLine]=useState("");const[formProduct,setFormProduct]=useState("");
   const[formShift,setFormShift]=useState(detectShift());
@@ -1192,10 +1193,11 @@ function ProductionTab({mob,user,role}){
     if(productFilter!=="all")r=r.filter(e=>e.product===productFilter);
     if(shiftFilter!=="all")r=r.filter(e=>e.shift===shiftFilter);
     if(period==="today")return r.filter(e=>e.date===todayStr);
+    if(period==="date"){const[y,m,d]=filterDate.split("-");const ds=d+"/"+m+"/"+y;return r.filter(e=>e.date===ds);}
     if(period==="7d"){const d7=new Date(now-7*86400000);return r.filter(e=>{try{const p=e.date.split("/");const d=new Date(+p[2],+p[1]-1,+p[0]);return d>=d7;}catch{return false;}});}
     if(period==="30d"){const d30=new Date(now-30*86400000);return r.filter(e=>{try{const p=e.date.split("/");const d=new Date(+p[2],+p[1]-1,+p[0]);return d>=d30;}catch{return false;}});}
     return r;
-  },[entries,period,colorFilter,lineFilter,productFilter,shiftFilter]);
+  },[entries,period,filterDate,colorFilter,lineFilter,productFilter,shiftFilter]);
 
   // Consumption totals by material
   const consumption=useMemo(()=>{
@@ -1391,10 +1393,11 @@ function ProductionTab({mob,user,role}){
 
       {/* Period + Line + Product + Colour Filter */}
       <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
-        <div style={{display:"flex",gap:6}}>
-          {[["today","Today"],["7d","7 Days"],["30d","30 Days"],["all","All Time"]].map(([v,l])=>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          {[["today","Today"],["date","Pick date"],["7d","7 Days"],["30d","30 Days"],["all","All Time"]].map(([v,l])=>
             <div key={v} className={period!==v?"hv-pill":""} onClick={()=>setPeriod(v)} style={{padding:"6px 14px",borderRadius:6,border:period===v?"1px solid #2563EB":"1px solid #E5E7EB",background:period===v?"#EFF6FF":"#F1F5F9",color:period===v?"#2563EB":"#334155",fontSize:11,fontFamily:MN,cursor:"pointer",fontWeight:period===v?600:500}}>{l}</div>
           )}
+          {period==="date"&&<input type="date" value={filterDate} onChange={e=>{setFilterDate(e.target.value);}} style={{padding:"5px 10px",border:"1px solid #2563EB",borderRadius:6,background:"#EFF6FF",fontSize:11,fontFamily:MN,fontWeight:600,color:"#2563EB",outline:"none",cursor:"pointer"}}/>}
         </div>
         {(()=>{const availLines=[...new Set(entries.map(e=>e.line).filter(Boolean))].sort();
           return availLines.length>0&&<select value={lineFilter} onChange={e=>setLineFilter(e.target.value)} style={{padding:"6px 12px",border:"1px solid "+(lineFilter!=="all"?"#2563EB":"#E5E7EB"),borderRadius:6,background:lineFilter!=="all"?"#EFF6FF":"#F1F5F9",color:lineFilter!=="all"?"#2563EB":"#334155",fontSize:11,fontFamily:MN,fontWeight:lineFilter!=="all"?600:500,cursor:"pointer",outline:"none"}}><option value="all">All lines</option>{availLines.map(l=><option key={l} value={l}>{l}</option>)}</select>;
