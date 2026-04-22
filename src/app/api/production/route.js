@@ -56,7 +56,7 @@ export async function POST(req) {
       const sheetName = SECTION_SHEETS[e.section];
       if (!sheetName) return;
       if (!bySheet[sheetName]) bySheet[sheetName] = [];
-      bySheet[sheetName].push([date, time, e.line || '', e.product || '', e.color || '', e.material, e.qty, userName]);
+      bySheet[sheetName].push([date, time, e.line || '', e.product || '', e.shift || '', e.color || '', e.material, e.qty, userName]);
     });
 
     let totalSaved = 0;
@@ -88,17 +88,31 @@ export async function GET() {
       try {
         const res = await sheets.spreadsheets.values.get({
           spreadsheetId: PROD_SHEET_ID,
-          range: `'${sheetName}'!A:H`,
+          range: `'${sheetName}'!A:I`,
         });
         const rows = res.data.values || [];
         if (rows.length === 0) continue;
-        // Data rows: A=Date, B=Time, C=Line, D=Product, E=Colour, F=Material, G=Qty, H=User
-        // Skip rows that don't have a date in column A (e.g. material name rows at top)
+        // New format: A=Date B=Time C=Line D=Product E=Shift F=Colour G=Material H=Qty I=User
+        // Old format: A=Date B=Time C=Line D=Product E=Colour F=Material G=Qty H=User
         rows.forEach(r => {
           const dateVal = (r[0] || '').trim();
-          // A date looks like DD/MM/YYYY — skip if it doesn't match
           if (!dateVal || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateVal)) return;
-          const material = (r[5] || '').trim();
+          // Detect format: if column E starts with "Day" or "Night", it's new format
+          const colE = (r[4] || '').trim();
+          const isNewFormat = colE.startsWith('Day') || colE.startsWith('Night');
+          let shift = '', color = '', material = '', qty = 0, user = '';
+          if (isNewFormat) {
+            shift = colE;
+            color = (r[5] || '').trim();
+            material = (r[6] || '').trim();
+            qty = parseFloat(r[7]) || 0;
+            user = (r[8] || '').trim();
+          } else {
+            color = colE;
+            material = (r[5] || '').trim();
+            qty = parseFloat(r[6]) || 0;
+            user = (r[7] || '').trim();
+          }
           if (!material) return;
           allEntries.push({
             date: dateVal,
@@ -106,10 +120,11 @@ export async function GET() {
             section: section,
             line: (r[2] || '').trim(),
             product: (r[3] || '').trim(),
-            color: (r[4] || '').trim(),
+            shift: shift,
+            color: color,
             material: material,
-            qty: parseFloat(r[6]) || 0,
-            user: (r[7] || '').trim(),
+            qty: qty,
+            user: user,
           });
         });
       } catch {}

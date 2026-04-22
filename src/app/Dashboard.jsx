@@ -1160,6 +1160,8 @@ const MIX_SECTIONS=[{id:"all",label:"Mixing",materials:MIXING_ALL},{id:"glue",la
 const PROD_COLORS=["P.GREEN","RED","BLUE","GREY","BROWN","MAROON","BEIGE","BLACK","BEIGE-BROWN","LIGHT GREY-BLACK","DARK GREY-BLACK","GREEN-BLACK","RED-BLACK","BLUE-BLACK","GREEN-BLUE","RED-BLUE","TAN-BLACK","WHITE-BLACK","GREEN-YELLOW"];
 const PROD_LINES=["LINE - 1","LINE - 2","LINE - 3"];
 const PROD_PRODUCTS=["LOOP","S-MAT","TURF"];
+const PROD_SHIFTS=["Day (8 AM - 8 PM)","Night (8 PM - 8 AM)"];
+function detectShift(){const h=new Date().getHours();return (h>=8&&h<20)?PROD_SHIFTS[0]:PROD_SHIFTS[1];}
 
 function ProductionTab({mob,user}){
   const[entries,setEntries]=useState([]);const[loading,setLoading]=useState(true);
@@ -1168,7 +1170,8 @@ function ProductionTab({mob,user}){
   const[period,setPeriod]=useState("today");const[saveMsg,setSaveMsg]=useState("");
   const[formColor,setFormColor]=useState("");const[colorFilter,setColorFilter]=useState("all");
   const[formLine,setFormLine]=useState("");const[formProduct,setFormProduct]=useState("");
-  const[lineFilter,setLineFilter]=useState("all");const[productFilter,setProductFilter]=useState("all");
+  const[formShift,setFormShift]=useState(detectShift());
+  const[lineFilter,setLineFilter]=useState("all");const[productFilter,setProductFilter]=useState("all");const[shiftFilter,setShiftFilter]=useState("all");
   const[lots,setLots]=useState(1);
   const[sheetColor,setSheetColor]=useState("");
 
@@ -1184,11 +1187,12 @@ function ProductionTab({mob,user}){
     if(colorFilter!=="all")r=r.filter(e=>e.color===colorFilter);
     if(lineFilter!=="all")r=r.filter(e=>e.line===lineFilter);
     if(productFilter!=="all")r=r.filter(e=>e.product===productFilter);
+    if(shiftFilter!=="all")r=r.filter(e=>e.shift===shiftFilter);
     if(period==="today")return r.filter(e=>e.date===todayStr);
     if(period==="7d"){const d7=new Date(now-7*86400000);return r.filter(e=>{try{const p=e.date.split("/");const d=new Date(+p[2],+p[1]-1,+p[0]);return d>=d7;}catch{return false;}});}
     if(period==="30d"){const d30=new Date(now-30*86400000);return r.filter(e=>{try{const p=e.date.split("/");const d=new Date(+p[2],+p[1]-1,+p[0]);return d>=d30;}catch{return false;}});}
     return r;
-  },[entries,period,colorFilter,lineFilter,productFilter]);
+  },[entries,period,colorFilter,lineFilter,productFilter,shiftFilter]);
 
   // Consumption totals by material
   const consumption=useMemo(()=>{
@@ -1222,28 +1226,28 @@ function ProductionTab({mob,user}){
     MIX_SECTIONS.filter(s=>s.id!=="sheet").forEach(sec=>{
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty(sec.id,mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:formColor,line:formLine,product:formProduct});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:formColor,line:formLine,product:formProduct,shift:formShift});
       });
     });
     // Pigment — also multiplied by lots
     const pigQty=parseFloat(getQty("pigment",formColor));
-    if(pigQty>0)ents.push({section:"Mixing",material:"PIGMENT",qty:pigQty*lots,color:formColor,line:formLine,product:formProduct,unit:"gm"});
+    if(pigQty>0)ents.push({section:"Mixing",material:"PIGMENT",qty:pigQty*lots,color:formColor,line:formLine,product:formProduct,shift:formShift,unit:"gm"});
     // Sheet uses its own sheetColor
     const sheetSec=MIX_SECTIONS.find(s=>s.id==="sheet");
     if(sheetSec&&sheetColor){
       sheetSec.materials.forEach(mat=>{
         const q=parseFloat(getQty("sheet",mat));
-        if(q>0)ents.push({section:sheetSec.label,material:mat,qty:q,color:sheetColor,line:formLine,product:formProduct});
+        if(q>0)ents.push({section:sheetSec.label,material:mat,qty:q,color:sheetColor,line:formLine,product:formProduct,shift:formShift});
       });
       // Sheet colour (grams)
       const sheetColQty=parseFloat(getQty("sheetcolour",sheetColor));
-      if(sheetColQty>0)ents.push({section:"Mixing (Sheet)",material:"COLOUR",qty:sheetColQty,color:sheetColor,line:formLine,product:formProduct,unit:"gm"});
+      if(sheetColQty>0)ents.push({section:"Mixing (Sheet)",material:"COLOUR",qty:sheetColQty,color:sheetColor,line:formLine,product:formProduct,shift:formShift,unit:"gm"});
     }
     if(ents.length===0){setSaving(false);setSaveMsg("No quantities entered");return;}
     try{
       const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown"})});
       const data=await res.json();
-      if(data.ok){setSaveMsg(data.saved+" entries saved for "+formLine+" · "+formProduct+" · "+formColor+(lots>1?" × "+lots+" lots":""));setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setSheetColor("");
+      if(data.ok){setSaveMsg(data.saved+" entries saved for "+formLine+" · "+formProduct+" · "+formColor+(lots>1?" × "+lots+" lots":""));setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setSheetColor("");setFormShift(detectShift());
         // Refresh
         const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
       }else{setSaveMsg(data.error||"Failed to save");}
@@ -1268,7 +1272,7 @@ function ProductionTab({mob,user}){
         <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:2}}>Select Line → Product → Colour, then enter quantities in kg.</div>
       </div>
       <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:(formLine&&formProduct&&formColor)?"#F0FDF4":"#FFFBEB"}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:12}}>
+        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(4,1fr)",gap:12}}>
           <div>
             <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formLine?"#16A34A":"#D97706",marginBottom:5}}>Line {formLine?"·":"(required)"}</div>
             <select value={formLine} onChange={e=>setFormLine(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formLine?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formLine?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
@@ -1281,6 +1285,12 @@ function ProductionTab({mob,user}){
             <select value={formProduct} onChange={e=>setFormProduct(e.target.value)} disabled={!formLine} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(!formLine?"#E5E7EB":formProduct?"#16A34A":"#D97706"),borderRadius:8,background:!formLine?"#F8FAFC":"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:!formLine?"#D4D4D8":formProduct?"#0F172A":"#94A3B8",outline:"none",cursor:!formLine?"not-allowed":"pointer"}}>
               <option value="">Select product...</option>
               {PROD_PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:!formProduct?"#D4D4D8":"#16A34A",marginBottom:5}}>Shift {!formProduct?"":"·"}</div>
+            <select value={formShift} onChange={e=>setFormShift(e.target.value)} disabled={!formProduct} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(!formProduct?"#E5E7EB":"#16A34A"),borderRadius:8,background:!formProduct?"#F8FAFC":"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:!formProduct?"#D4D4D8":"#0F172A",outline:"none",cursor:!formProduct?"not-allowed":"pointer"}}>
+              {PROD_SHIFTS.map(s=><option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
@@ -1439,6 +1449,9 @@ function ProductionTab({mob,user}){
         {(()=>{const availProducts=[...new Set(entries.map(e=>e.product).filter(Boolean))].sort();
           return availProducts.length>0&&<select value={productFilter} onChange={e=>setProductFilter(e.target.value)} style={{padding:"6px 12px",border:"1px solid "+(productFilter!=="all"?"#2563EB":"#E5E7EB"),borderRadius:6,background:productFilter!=="all"?"#EFF6FF":"#F1F5F9",color:productFilter!=="all"?"#2563EB":"#334155",fontSize:11,fontFamily:MN,fontWeight:productFilter!=="all"?600:500,cursor:"pointer",outline:"none"}}><option value="all">All products</option>{availProducts.map(p=><option key={p} value={p}>{p}</option>)}</select>;
         })()}
+        {(()=>{const availShifts=[...new Set(entries.map(e=>e.shift).filter(Boolean))].sort();
+          return availShifts.length>0&&<select value={shiftFilter} onChange={e=>setShiftFilter(e.target.value)} style={{padding:"6px 12px",border:"1px solid "+(shiftFilter!=="all"?"#2563EB":"#E5E7EB"),borderRadius:6,background:shiftFilter!=="all"?"#EFF6FF":"#F1F5F9",color:shiftFilter!=="all"?"#2563EB":"#334155",fontSize:11,fontFamily:MN,fontWeight:shiftFilter!=="all"?600:500,cursor:"pointer",outline:"none"}}><option value="all">All shifts</option>{availShifts.map(s=><option key={s} value={s}>{s.split(" ")[0]}</option>)}</select>;
+        })()}
         {(()=>{const availColors=[...new Set(entries.map(e=>e.color).filter(Boolean))].sort();
           return availColors.length>0&&<select value={colorFilter} onChange={e=>setColorFilter(e.target.value)} style={{padding:"6px 12px",border:"1px solid "+(colorFilter!=="all"?"#2563EB":"#E5E7EB"),borderRadius:6,background:colorFilter!=="all"?"#EFF6FF":"#F1F5F9",color:colorFilter!=="all"?"#2563EB":"#334155",fontSize:11,fontFamily:MN,fontWeight:colorFilter!=="all"?600:500,cursor:"pointer",outline:"none"}}><option value="all">All colours</option>{availColors.map(c=><option key={c} value={c}>{c}</option>)}</select>;
         })()}
@@ -1517,6 +1530,7 @@ function ProductionTab({mob,user}){
               <span style={{fontFamily:MN,fontSize:11,color:"#94A3B8",minWidth:45}}>{e.time}</span>
               {e.line&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#7C3AED",background:"#F3E8FF",padding:"2px 6px",borderRadius:4}}>{e.line}</span>}
               {e.product&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#D97706",background:"#FEF3C7",padding:"2px 6px",borderRadius:4}}>{e.product}</span>}
+              {e.shift&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:e.shift.startsWith("Day")?"#B45309":"#1E40AF",background:e.shift.startsWith("Day")?"#FEF3C7":"#DBEAFE",padding:"2px 6px",borderRadius:4}}>{e.shift.startsWith("Day")?"☀ Day":"🌙 Night"}</span>}
               {e.color&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"2px 6px",borderRadius:4}}>{e.color}</span>}
               <span style={{fontSize:11,fontWeight:500,color:"#475569",minWidth:80}}>{e.section}</span>
               <span style={{fontSize:12,fontWeight:600,color:"#0F172A",flex:1,minWidth:80}}>{e.material}</span>
