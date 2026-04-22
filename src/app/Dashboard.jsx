@@ -1548,7 +1548,7 @@ function ProductionTab({mob,user,role}){
                 <span style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>{e.user}</span>
                 <div style={{display:"flex",gap:4,flexShrink:0}}>
                   <button onClick={()=>{setEditIdx(globalIdx);setEditQty(String(e.qty));}} style={{fontFamily:MN,fontSize:9,color:"#2563EB",background:"none",border:"1px solid #E5E7EB",borderRadius:4,padding:"3px 8px",cursor:"pointer"}}>Edit</button>
-                  <button onClick={async()=>{if(!confirm("Delete this entry?"))return;setDeleting(globalIdx);try{await fetch("/api/production",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({section:e.section,rowData:{date:e.date,time:e.time,material:e.material,qty:e.qty}})});const r=await fetch("/api/production");const d=await r.json();setEntries(d.entries||[]);}catch{}setDeleting(null);}} disabled={deleting===globalIdx} style={{fontFamily:MN,fontSize:9,color:"#DC2626",background:"none",border:"1px solid #E5E7EB",borderRadius:4,padding:"3px 8px",cursor:deleting===globalIdx?"default":"pointer",opacity:deleting===globalIdx?0.5:1}}>Del</button>
+                  <button onClick={async()=>{if(!window.confirm("Delete this entry?"))return;setDeleting(globalIdx);try{await fetch("/api/production",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({section:e.section,rowData:{date:e.date,time:e.time,material:e.material,qty:e.qty}})});const r=await fetch("/api/production");const d=await r.json();setEntries(d.entries||[]);}catch{}setDeleting(null);}} disabled={deleting===globalIdx} style={{fontFamily:MN,fontSize:9,color:"#DC2626",background:"none",border:"1px solid #E5E7EB",borderRadius:4,padding:"3px 8px",cursor:deleting===globalIdx?"default":"pointer",opacity:deleting===globalIdx?0.5:1}}>Del</button>
                 </div>
               </div>
               {isEditing&&<div style={{padding:"8px 20px 12px",background:"#F8FAFC",borderBottom:"1px solid #F1F5F9",display:"flex",alignItems:"center",gap:10}}>
@@ -1558,8 +1558,7 @@ function ProductionTab({mob,user,role}){
                 <button onClick={async()=>{const newQ=parseFloat(editQty);if(!newQ||newQ<=0)return;try{await fetch("/api/production",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({section:e.section,rowData:{date:e.date,time:e.time,material:e.material,qty:e.qty},newQty:newQ})});const r=await fetch("/api/production");const d=await r.json();setEntries(d.entries||[]);}catch{}setEditIdx(null);}} style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#fff",background:"#0F172A",border:"none",borderRadius:4,padding:"5px 12px",cursor:"pointer"}}>Save</button>
                 <button onClick={()=>setEditIdx(null)} style={{fontFamily:MN,fontSize:10,color:"#94A3B8",background:"none",border:"1px solid #E5E7EB",borderRadius:4,padding:"5px 12px",cursor:"pointer"}}>Cancel</button>
               </div>}
-            </div>;})
-          )}
+            </div>;})}
         </div>
       </div>}
 
