@@ -1225,7 +1225,7 @@ function ProductionTab({mob,user,role}){
   const handleSave=async()=>{
     if(!formSection){setSaveMsg("Please select a section first");return;}
     if(!formLine){setSaveMsg("Please select a line first");return;}
-    if(formSection!=="glue"&&!formProduct){setSaveMsg("Please select a product first");return;}
+    if(!formProduct){setSaveMsg("Please select a product first");return;}
     const needsColor=formSection!=="glue";
     if(needsColor&&!formColor){setSaveMsg("Please select a colour first");return;}
     setSaving(true);setSaveMsg("");
@@ -1242,10 +1242,10 @@ function ProductionTab({mob,user,role}){
       const pigQty=parseFloat(getQty("pigment",formColor));
       if(pigQty>0)ents.push({section:"Mixing",material:"PIGMENT",qty:pigQty*lots,color:colorVal,line:formLine,product:formProduct,shift:formShift,lots:lots,lotSize:lotSize});
     } else if(formSection==="glue"){
-      // Glue — straight consumption tracking
+      // Glue — multiplied by lots
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty(sec.id,mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:"",line:formLine,product:formProduct,shift:formShift});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:"",line:formLine,product:formProduct,shift:formShift,lots:lots,lotSize:lotSize});
       });
     } else if(formSection==="sheet"){
       // Sheet — uses sheetColor
@@ -1303,7 +1303,7 @@ function ProductionTab({mob,user,role}){
       </div>
 
       {/* Line + Product + Shift + Colour (shown after section selected) */}
-      {formSection&&<div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:(formLine&&(formSection==="glue"||(formProduct&&(formColor||(formSection==="sheet"&&sheetColor)))))?"#F0FDF4":"#FFFBEB"}}>
+      {formSection&&<div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:(formLine&&formProduct&&(formSection==="glue"||formColor||(formSection==="sheet"&&sheetColor)))?"#F0FDF4":"#FFFBEB"}}>
         <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat("+(formSection==="glue"?3:4)+",1fr)",gap:12}}>
           <div>
             <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formLine?"#16A34A":"#D97706",marginBottom:5}}>Line</div>
@@ -1313,8 +1313,8 @@ function ProductionTab({mob,user,role}){
             </select>
           </div>
           <div>
-            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formProduct?"#16A34A":formSection==="glue"?"#94A3B8":"#D97706",marginBottom:5}}>Product {formSection==="glue"?"(optional)":""}</div>
-            <select value={formProduct} onChange={e=>setFormProduct(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formProduct?"#16A34A":formSection==="glue"?"#E5E7EB":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formProduct?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formProduct?"#16A34A":"#D97706",marginBottom:5}}>Product</div>
+            <select value={formProduct} onChange={e=>setFormProduct(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formProduct?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formProduct?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
               <option value="">Select...</option>
               {PROD_PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}
             </select>
@@ -1336,7 +1336,7 @@ function ProductionTab({mob,user,role}){
       </div>}
 
       {/* Materials — shown when all required fields are filled */}
-      {formSection&&formLine&&((formSection==="glue")||(formProduct&&(formColor||(formSection==="sheet"&&sheetColor))))&&<div style={{padding:"12px 20px 16px",background:"#F8FAFC"}}>
+      {formSection&&formLine&&formProduct&&(formSection==="glue"||formColor||(formSection==="sheet"&&sheetColor))&&<div style={{padding:"12px 20px 16px",background:"#F8FAFC"}}>
         <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
           {(MIX_SECTIONS.find(s=>s.id===formSection)||{materials:[]}).materials.map(mat=>
             <div key={mat} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",padding:"8px 14px"}}>
@@ -1358,8 +1358,8 @@ function ProductionTab({mob,user,role}){
         </div>}
 
 
-        {/* Lot Size + Lots — only for Mixing */}
-        {formSection==="all"&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
+        {/* Lot Size + Lots — for Mixing and Mixing (Glue) */}
+        {(formSection==="all"||formSection==="glue")&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
             <div>
               <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569",marginBottom:8}}>Lot Size</div>
@@ -1380,9 +1380,9 @@ function ProductionTab({mob,user,role}){
           </div>
           <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:8}}>Total: {lots} × {lotSize} kg = {lots*parseInt(lotSize)} kg</div>
           {lots>1&&(()=>{
-            const sec=MIX_SECTIONS.find(s=>s.id==="all");
-            const matTotals=sec.materials.map(mat=>{const q=parseFloat(getQty("all",mat))||0;return q>0?[mat,q,q*lots]:null;}).filter(Boolean);
-            const pigQ=parseFloat(getQty("pigment",formColor))||0;
+            const sec=MIX_SECTIONS.find(s=>s.id===formSection);
+            const matTotals=sec.materials.map(mat=>{const q=parseFloat(getQty(formSection,mat))||0;return q>0?[mat,q,q*lots]:null;}).filter(Boolean);
+            const pigQ=formSection==="all"?(parseFloat(getQty("pigment",formColor))||0):0;
             if(matTotals.length===0&&pigQ===0)return null;
             const grandTotal=matTotals.reduce((s,m)=>s+m[2],0);
             return <div style={{marginTop:12,background:"#0F172A",borderRadius:8,padding:"12px 16px"}}>
