@@ -63,7 +63,7 @@ export async function POST(req) {
       const sheetName = SECTION_SHEETS[e.section];
       if (!sheetName) return;
       if (!bySheet[sheetName]) bySheet[sheetName] = [];
-      bySheet[sheetName].push([date, time, e.line || '', e.product || '', e.shift || '', e.color || '', e.material, Math.round(e.qty * 1000) / 1000, userName, e.lots || e.lotsUsed || 1, e.lotsProduced || '', e.lotsUsed || '']);
+      bySheet[sheetName].push([date, time, e.line || '', e.product || '', e.shift || '', e.color || '', e.material, Math.round(e.qty * 1000) / 1000, userName, e.lots || e.lotsUsed || 1, e.lotsProduced || '', e.lotsUsed || '', e.lotSize || '']);
     });
 
     let totalSaved = 0;
@@ -96,7 +96,7 @@ export async function GET() {
       try {
         const res = await sheets.spreadsheets.values.get({
           spreadsheetId: PROD_SHEET_ID,
-          range: `'${sheetName}'!A:L`,
+          range: `'${sheetName}'!A:M`,
         });
         const rows = res.data.values || [];
         if (rows.length === 0) continue;
@@ -119,6 +119,7 @@ export async function GET() {
             lots = parseInt(r[9]) || 1;
             var lotsProduced = parseInt(r[10]) || 0;
             var lotsUsed = parseInt(r[11]) || 0;
+            var lotSize = r[12] || '';
           } else {
             color = colE;
             material = (r[5] || '').trim();
@@ -140,6 +141,7 @@ export async function GET() {
             lots: lots,
             lotsProduced: lotsProduced,
             lotsUsed: lotsUsed,
+            lotSize: lotSize,
           });
         });
       } catch {}

@@ -1177,7 +1177,7 @@ function ProductionTab({mob,user,role}){
   const[formShift,setFormShift]=useState(detectShift());
   const[formDate,setFormDate]=useState(new Date().toISOString().split("T")[0]);
   const[lineFilter,setLineFilter]=useState("all");const[productFilter,setProductFilter]=useState("all");const[shiftFilter,setShiftFilter]=useState("all");
-  const[lots,setLots]=useState(1);
+  const[lots,setLots]=useState(1);const[lotSize,setLotSize]=useState("50");
   const[glueProduced,setGlueProduced]=useState(1);const[glueUsed,setGlueUsed]=useState(1);
   const[sheetColor,setSheetColor]=useState("");
 
@@ -1238,10 +1238,10 @@ function ProductionTab({mob,user,role}){
       // Mixing — multiplied by lots
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty(sec.id,mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:colorVal,line:formLine,product:formProduct,shift:formShift,lots:lots});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:colorVal,line:formLine,product:formProduct,shift:formShift,lots:lots,lotSize:lotSize});
       });
       const pigQty=parseFloat(getQty("pigment",formColor));
-      if(pigQty>0)ents.push({section:"Mixing",material:"PIGMENT",qty:pigQty*lots,color:colorVal,line:formLine,product:formProduct,shift:formShift});
+      if(pigQty>0)ents.push({section:"Mixing",material:"PIGMENT",qty:pigQty*lots,color:colorVal,line:formLine,product:formProduct,shift:formShift,lots:lots,lotSize:lotSize});
     } else if(formSection==="glue"){
       // Glue — qty × glueUsed, track produced and used
       sec.materials.forEach(mat=>{
@@ -1262,7 +1262,7 @@ function ProductionTab({mob,user,role}){
     try{
       const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown",date:formDate})});
       const data=await res.json();
-      if(data.ok){const wasBackdated=formDate!==new Date().toISOString().split("T")[0];setSaveMsg(data.saved+" entries saved"+(wasBackdated?" ("+formDate+")":""));if(wasBackdated)setPeriod("30d");setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setGlueProduced(1);setGlueUsed(1);setSheetColor("");setFormShift(detectShift());setFormDate(new Date().toISOString().split("T")[0]);setFormSection("");
+      if(data.ok){const wasBackdated=formDate!==new Date().toISOString().split("T")[0];setSaveMsg(data.saved+" entries saved"+(wasBackdated?" ("+formDate+")":""));if(wasBackdated)setPeriod("30d");setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setLotSize("50");setGlueProduced(1);setGlueUsed(1);setSheetColor("");setFormShift(detectShift());setFormDate(new Date().toISOString().split("T")[0]);setFormSection("");
         const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
       }else{setSaveMsg(data.error||"Failed to save");}
     }catch{setSaveMsg("Error saving");}
@@ -1385,16 +1385,27 @@ function ProductionTab({mob,user,role}){
           <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:8}}>Material quantities will be multiplied by lots used ({glueUsed})</div>
         </div>}
 
-        {/* Lots — only for Mixing */}
-        {formSection==="all"&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569"}}>Number of Lots</span>
+        {/* Lot Size + Lots — only for Mixing */}
+        {formSection==="all"&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+            <div>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569",marginBottom:8}}>Lot Size</div>
+              <div style={{display:"flex",gap:6}}>
+                {["50","100"].map(s=>
+                  <div key={s} onClick={()=>setLotSize(s)} style={{flex:1,padding:"10px",borderRadius:8,border:lotSize===s?"2px solid #2563EB":"1px solid #E5E7EB",background:lotSize===s?"#EFF6FF":"#F8FAFC",color:lotSize===s?"#2563EB":"#475569",fontSize:13,fontFamily:MN,fontWeight:lotSize===s?700:500,cursor:"pointer",textAlign:"center"}}>{s} kg</div>
+                )}
+              </div>
+            </div>
+            <div>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569",marginBottom:8}}>Number of Lots</div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <button onClick={()=>setLots(l=>Math.max(1,l-1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+                <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#0F172A",minWidth:36,textAlign:"center"}}>{lots}</span>
+                <button onClick={()=>setLots(l=>Math.min(20,l+1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+              </div>
+            </div>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <button onClick={()=>setLots(l=>Math.max(1,l-1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-            <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#0F172A",minWidth:36,textAlign:"center"}}>{lots}</span>
-            <button onClick={()=>setLots(l=>Math.min(20,l+1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
-          </div>
+          <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:8}}>Total: {lots} × {lotSize} kg = {lots*parseInt(lotSize)} kg</div>
         </div>}
 
         {/* Colour — only for Sheet */}
@@ -1497,15 +1508,18 @@ function ProductionTab({mob,user,role}){
         lotsByProduct[e.product||"?"]=(lotsByProduct[e.product||"?"]||0)+e.lots;
       });
       const prodData=Object.entries(lotsByProduct).sort((a,b)=>b[1]-a[1]);
-      // Colour totals
+      // Colour totals with lot size breakdown
       const lotsByColor={};const seen=new Set();
       filtered.filter(e=>e.lots&&e.lots>0&&e.section==="Mixing").forEach(e=>{
         const batchKey=e.date+"|"+e.time+"|"+e.color;
         if(seen.has(batchKey))return;seen.add(batchKey);
-        lotsByColor[e.color]=(lotsByColor[e.color]||0)+e.lots;
+        if(!lotsByColor[e.color])lotsByColor[e.color]={total:0,s50:0,s100:0};
+        lotsByColor[e.color].total+=e.lots;
+        if(e.lotSize==="100")lotsByColor[e.color].s100+=e.lots;
+        else lotsByColor[e.color].s50+=e.lots;
       });
-      const lotData=Object.entries(lotsByColor).sort((a,b)=>b[1]-a[1]);
-      const totalLots=lotData.reduce((s,d)=>s+d[1],0);
+      const lotData=Object.entries(lotsByColor).sort((a,b)=>b[1].total-a[1].total);
+      const totalLots=lotData.reduce((s,d)=>s+d[1].total,0);
       return (prodData.length>0||lotData.length>0)&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:24,overflow:"hidden"}}>
         <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Lots Summary</span>
@@ -1518,13 +1532,17 @@ function ProductionTab({mob,user,role}){
           )}
         </div>}
         {/* Colour breakdown */}
-        {lotData.map(([color,total],i)=>{const maxL=lotData[0][1];const pct=maxL>0?total/maxL:0;
+        {lotData.map(([color,d],i)=>{const maxL=lotData[0][1].total;const pct=maxL>0?d.total/maxL:0;
           return <div key={color} className="hv-row" style={{padding:"10px 20px",borderBottom:i<lotData.length-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12}}>
-            <span style={{width:120,fontSize:13,fontWeight:500,color:"#0F172A",flexShrink:0}}>{color}</span>
+            <span style={{width:100,fontSize:13,fontWeight:500,color:"#0F172A",flexShrink:0}}>{color}</span>
             <div style={{flex:1,height:6,background:"#F1F5F9",borderRadius:3,overflow:"hidden"}}>
               <div style={{height:"100%",width:Math.max(pct*100,2)+"%",background:i===0?"#0F172A":i<3?"#475569":"#94A3B8",borderRadius:3}}/>
             </div>
-            <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0F172A",minWidth:60,textAlign:"right"}}>{total} lots</span>
+            <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0F172A",minWidth:50,textAlign:"right"}}>{d.total}</span>
+            <div style={{display:"flex",gap:4,flexShrink:0}}>
+              {d.s50>0&&<span style={{fontFamily:MN,fontSize:9,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"2px 6px",borderRadius:4}}>50kg×{d.s50}</span>}
+              {d.s100>0&&<span style={{fontFamily:MN,fontSize:9,fontWeight:600,color:"#7C3AED",background:"#F3E8FF",padding:"2px 6px",borderRadius:4}}>100kg×{d.s100}</span>}
+            </div>
           </div>;
         })}
       </div>;})()}
