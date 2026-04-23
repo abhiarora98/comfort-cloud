@@ -1226,7 +1226,7 @@ function ProductionTab({mob,user,role}){
   const handleSave=async()=>{
     if(!formSection){setSaveMsg("Please select a section first");return;}
     if(!formLine){setSaveMsg("Please select a line first");return;}
-    if(!formProduct){setSaveMsg("Please select a product first");return;}
+    if(formSection!=="glue"&&!formProduct){setSaveMsg("Please select a product first");return;}
     const needsColor=formSection!=="glue";
     if(needsColor&&!formColor){setSaveMsg("Please select a colour first");return;}
     setSaving(true);setSaveMsg("");
@@ -1304,7 +1304,7 @@ function ProductionTab({mob,user,role}){
       </div>
 
       {/* Line + Product + Shift + Colour (shown after section selected) */}
-      {formSection&&<div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:(formLine&&formProduct&&(formSection==="glue"||formColor))?"#F0FDF4":"#FFFBEB"}}>
+      {formSection&&<div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:(formLine&&(formSection==="glue"||(formProduct&&(formSection==="glue"||formColor))))?"#F0FDF4":"#FFFBEB"}}>
         <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat("+(formSection==="glue"?3:4)+",1fr)",gap:12}}>
           <div>
             <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formLine?"#16A34A":"#D97706",marginBottom:5}}>Line</div>
@@ -1314,8 +1314,8 @@ function ProductionTab({mob,user,role}){
             </select>
           </div>
           <div>
-            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formProduct?"#16A34A":"#D97706",marginBottom:5}}>Product</div>
-            <select value={formProduct} onChange={e=>setFormProduct(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formProduct?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formProduct?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formProduct?"#16A34A":formSection==="glue"?"#94A3B8":"#D97706",marginBottom:5}}>Product {formSection==="glue"?"(optional)":""}</div>
+            <select value={formProduct} onChange={e=>setFormProduct(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formProduct?"#16A34A":formSection==="glue"?"#E5E7EB":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formProduct?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
               <option value="">Select...</option>
               {PROD_PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}
             </select>
@@ -1337,7 +1337,7 @@ function ProductionTab({mob,user,role}){
       </div>}
 
       {/* Materials — shown when all required fields are filled */}
-      {formSection&&formLine&&formProduct&&(formSection==="glue"||formColor||(formSection==="sheet"&&sheetColor))&&<div style={{padding:"12px 20px 16px",background:"#F8FAFC"}}>
+      {formSection&&formLine&&((formSection==="glue")||(formProduct&&(formColor||(formSection==="sheet"&&sheetColor))))&&<div style={{padding:"12px 20px 16px",background:"#F8FAFC"}}>
         <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
           {(MIX_SECTIONS.find(s=>s.id===formSection)||{materials:[]}).materials.map(mat=>
             <div key={mat} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",padding:"8px 14px"}}>
