@@ -1488,21 +1488,36 @@ function ProductionTab({mob,user,role}){
         </div>;
       })()}
 
-      {/* Lots by Colour */}
-      {(()=>{const lotsByColor={};const seen=new Set();
+      {/* Lots by Product & Colour */}
+      {(()=>{
+      // Product totals
+      const lotsByProduct={};const seenP=new Set();
+      filtered.filter(e=>e.lots&&e.lots>0&&e.section==="Mixing").forEach(e=>{
+        const k=e.date+"|"+e.time+"|"+e.product;if(seenP.has(k))return;seenP.add(k);
+        lotsByProduct[e.product||"?"]=(lotsByProduct[e.product||"?"]||0)+e.lots;
+      });
+      const prodData=Object.entries(lotsByProduct).sort((a,b)=>b[1]-a[1]);
+      // Colour totals
+      const lotsByColor={};const seen=new Set();
       filtered.filter(e=>e.lots&&e.lots>0&&e.section==="Mixing").forEach(e=>{
         const batchKey=e.date+"|"+e.time+"|"+e.color;
-        if(seen.has(batchKey))return;
-        seen.add(batchKey);
+        if(seen.has(batchKey))return;seen.add(batchKey);
         lotsByColor[e.color]=(lotsByColor[e.color]||0)+e.lots;
       });
       const lotData=Object.entries(lotsByColor).sort((a,b)=>b[1]-a[1]);
       const totalLots=lotData.reduce((s,d)=>s+d[1],0);
-      return lotData.length>0&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:24,overflow:"hidden"}}>
+      return (prodData.length>0||lotData.length>0)&&<div style={{background:"#fff",borderRadius:12,border:"1px solid #E5E7EB",marginBottom:24,overflow:"hidden"}}>
         <div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Lots by Colour</span>
+          <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#475569"}}>Lots Summary</span>
           <span style={{fontFamily:MN,fontSize:12,fontWeight:700,color:"#0F172A"}}>{totalLots} total lots</span>
         </div>
+        {/* Product capsules */}
+        {prodData.length>0&&<div style={{padding:"12px 20px",borderBottom:"1px solid #F1F5F9",display:"flex",gap:8,flexWrap:"wrap"}}>
+          {prodData.map(([prod,total])=>
+            <span key={prod} style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"#D97706",background:"#FEF3C7",padding:"4px 12px",borderRadius:20}}>{prod} · {total} lots</span>
+          )}
+        </div>}
+        {/* Colour breakdown */}
         {lotData.map(([color,total],i)=>{const maxL=lotData[0][1];const pct=maxL>0?total/maxL:0;
           return <div key={color} className="hv-row" style={{padding:"10px 20px",borderBottom:i<lotData.length-1?"1px solid #F1F5F9":"none",display:"flex",alignItems:"center",gap:12}}>
             <span style={{width:120,fontSize:13,fontWeight:500,color:"#0F172A",flexShrink:0}}>{color}</span>
