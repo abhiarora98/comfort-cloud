@@ -1406,6 +1406,32 @@ function ProductionTab({mob,user,role}){
             </div>
           </div>
           <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:8}}>Total: {lots} × {lotSize} kg = {lots*parseInt(lotSize)} kg</div>
+          {lots>1&&(()=>{
+            const sec=MIX_SECTIONS.find(s=>s.id==="all");
+            const matTotals=sec.materials.map(mat=>{const q=parseFloat(getQty("all",mat))||0;return q>0?[mat,q,q*lots]:null;}).filter(Boolean);
+            const pigQ=parseFloat(getQty("pigment",formColor))||0;
+            if(matTotals.length===0&&pigQ===0)return null;
+            const grandTotal=matTotals.reduce((s,m)=>s+m[2],0);
+            return <div style={{marginTop:12,background:"#0F172A",borderRadius:8,padding:"12px 16px"}}>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",marginBottom:10}}>Total after {lots} lots × {lotSize} kg</div>
+              <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:6}}>
+                {matTotals.map(([mat,per,total])=>
+                  <div key={mat} style={{display:"flex",justifyContent:"space-between",padding:"4px 0"}}>
+                    <span style={{fontSize:11,color:"rgba(255,255,255,0.6)"}}>{mat}</span>
+                    <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#fff"}}>{total.toFixed(1)} kg</span>
+                  </div>
+                )}
+                {pigQ>0&&<div style={{display:"flex",justifyContent:"space-between",padding:"4px 0"}}>
+                  <span style={{fontSize:11,color:"rgba(255,255,255,0.6)"}}>PIGMENT</span>
+                  <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#fff"}}>{(pigQ*lots).toFixed(3)} kg</span>
+                </div>}
+              </div>
+              <div style={{marginTop:8,paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.1)",display:"flex",justifyContent:"space-between"}}>
+                <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)"}}>Grand Total</span>
+                <span style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#4ade80"}}>{(grandTotal+(pigQ*lots)).toFixed(1)} kg</span>
+              </div>
+            </div>;
+          })()}
         </div>}
 
         {/* Colour — only for Sheet */}
