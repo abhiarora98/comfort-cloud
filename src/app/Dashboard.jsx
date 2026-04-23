@@ -1228,11 +1228,6 @@ function ProductionTab({mob,user,role}){
     if(!formProduct){setSaveMsg("Please select a product first");return;}
     const needsColor=formSection!=="glue";
     if(needsColor&&!formColor){setSaveMsg("Please select a colour first");return;}
-    if(formSection==="glue"){
-      const ls=parseFloat(lotSize);
-      if(!ls||ls<=0){setSaveMsg("Please enter lot size");return;}
-      if(ls>500){setSaveMsg("Lot size cannot exceed 500 kg");return;}
-    }
     setSaving(true);setSaveMsg("");
     const ents=[];
     const sec=MIX_SECTIONS.find(s=>s.id===formSection);
@@ -1247,10 +1242,10 @@ function ProductionTab({mob,user,role}){
       const pigQty=parseFloat(getQty("pigment",formColor));
       if(pigQty>0)ents.push({section:"Mixing",material:"PIGMENT",qty:pigQty*lots,color:colorVal,line:formLine,product:formProduct,shift:formShift,lots:lots,lotSize:lotSize});
     } else if(formSection==="glue"){
-      // Glue — multiplied by lots
+      // Glue — multiplied by lots (no lot size)
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty(sec.id,mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:"",line:formLine,product:formProduct,shift:formShift,lots:lots,lotSize:lotSize});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:"",line:formLine,product:formProduct,shift:formShift,lots:lots});
       });
     } else if(formSection==="sheet"){
       // Sheet — uses sheetColor
@@ -1302,7 +1297,7 @@ function ProductionTab({mob,user,role}){
         <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formSection?"#16A34A":"#D97706",marginBottom:8}}>Section {formSection?"·":"(required)"}</div>
         <div style={{display:"flex",gap:8}}>
           {MIX_SECTIONS.map(sec=>
-            <div key={sec.id} className={formSection!==sec.id?"hv-pill":""} onClick={()=>{setFormSection(sec.id);setFormData({});setFormColor("");setSheetColor("");setLots(1);setLotSize(sec.id==="glue"?"":"50");setFormLine(sec.id==="glue"?"Line (Glue)":"");setFormProduct("");}} style={{flex:1,padding:"12px",borderRadius:8,border:formSection===sec.id?"2px solid #2563EB":"1px solid #E5E7EB",background:formSection===sec.id?"#EFF6FF":"#F8FAFC",color:formSection===sec.id?"#2563EB":"#475569",fontSize:12,fontFamily:MN,fontWeight:formSection===sec.id?700:500,cursor:"pointer",textAlign:"center"}}>{sec.label}</div>
+            <div key={sec.id} className={formSection!==sec.id?"hv-pill":""} onClick={()=>{setFormSection(sec.id);setFormData({});setFormColor("");setSheetColor("");setLots(1);setLotSize("50");setFormLine(sec.id==="glue"?"Line (Glue)":"");setFormProduct("");}} style={{flex:1,padding:"12px",borderRadius:8,border:formSection===sec.id?"2px solid #2563EB":"1px solid #E5E7EB",background:formSection===sec.id?"#EFF6FF":"#F8FAFC",color:formSection===sec.id?"#2563EB":"#475569",fontSize:12,fontFamily:MN,fontWeight:formSection===sec.id?700:500,cursor:"pointer",textAlign:"center"}}>{sec.label}</div>
           )}
         </div>
       </div>
@@ -1363,17 +1358,17 @@ function ProductionTab({mob,user,role}){
         </div>}
 
 
-        {/* Lot Size + Lots — for Mixing and Mixing (Glue) */}
+        {/* Lot Size + Lots — Mixing has both, Mixing (Glue) has only Lots */}
         {(formSection==="all"||formSection==="glue")&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-            <div>
-              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formSection==="glue"?(lotSize&&parseFloat(lotSize)>0?"#16A34A":"#D97706"):"#475569",marginBottom:8}}>Lot Size{formSection==="glue"?" (kg)":""}</div>
-              {formSection==="glue"?<input type="number" min="1" max="500" step="0.1" value={lotSize} onChange={e=>{const v=e.target.value;if(v===""){setLotSize("");return;}const n=parseFloat(v);if(!isNaN(n)&&n<=500)setLotSize(v);}} placeholder="Enter kg (max 500)" style={{width:"100%",padding:"10px 12px",border:"1px solid "+(lotSize&&parseFloat(lotSize)>0?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:"#0F172A",outline:"none"}}/>:<div style={{display:"flex",gap:6}}>
+          <div style={{display:"grid",gridTemplateColumns:formSection==="glue"?"1fr":"1fr 1fr",gap:16}}>
+            {formSection==="all"&&<div>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569",marginBottom:8}}>Lot Size</div>
+              <div style={{display:"flex",gap:6}}>
                 {["50","100"].map(s=>
                   <div key={s} onClick={()=>setLotSize(s)} style={{flex:1,padding:"10px",borderRadius:8,border:lotSize===s?"2px solid #2563EB":"1px solid #E5E7EB",background:lotSize===s?"#EFF6FF":"#F8FAFC",color:lotSize===s?"#2563EB":"#475569",fontSize:13,fontFamily:MN,fontWeight:lotSize===s?700:500,cursor:"pointer",textAlign:"center"}}>{s} kg</div>
                 )}
-              </div>}
-            </div>
+              </div>
+            </div>}
             <div>
               <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569",marginBottom:8}}>Number of Lots</div>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -1383,7 +1378,7 @@ function ProductionTab({mob,user,role}){
               </div>
             </div>
           </div>
-          <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:8}}>{lotSize&&parseFloat(lotSize)>0?`Total: ${lots} × ${lotSize} kg = ${(lots*parseFloat(lotSize)).toFixed(1)} kg`:"Enter lot size to see total"}</div>
+          {formSection==="all"&&<div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:8}}>Total: {lots} × {lotSize} kg = {lots*parseInt(lotSize)} kg</div>}
           {lots>1&&(()=>{
             const sec=MIX_SECTIONS.find(s=>s.id===formSection);
             const matTotals=sec.materials.map(mat=>{const q=parseFloat(getQty(formSection,mat))||0;return q>0?[mat,q,q*lots]:null;}).filter(Boolean);
@@ -1391,7 +1386,7 @@ function ProductionTab({mob,user,role}){
             if(matTotals.length===0&&pigQ===0)return null;
             const grandTotal=matTotals.reduce((s,m)=>s+m[2],0);
             return <div style={{marginTop:12,background:"#0F172A",borderRadius:8,padding:"12px 16px"}}>
-              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",marginBottom:10}}>Total after {lots} lots × {lotSize} kg</div>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",marginBottom:10}}>Total after {lots} lots{formSection==="all"?` × ${lotSize} kg`:""}</div>
               <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:6}}>
                 {matTotals.map(([mat,per,total])=>
                   <div key={mat} style={{display:"flex",justifyContent:"space-between",padding:"4px 0"}}>
