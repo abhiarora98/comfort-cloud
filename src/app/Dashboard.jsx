@@ -1162,7 +1162,10 @@ const PROD_LINES=["LINE - 1","LINE - 2","LINE - 3"];
 const GLUE_LINES=["Line (Glue)"];
 const PROD_PRODUCTS=["LOOP","S-MAT","TURF"];
 const PROD_SHIFTS=["Day (8 AM - 8 PM)","Night (8 PM - 8 AM)"];
-function detectShift(){const h=new Date().getHours();return (h>=8&&h<20)?PROD_SHIFTS[0]:PROD_SHIFTS[1];}
+function istHour(){return parseInt(new Date().toLocaleString("en-GB",{hour:"2-digit",hour12:false,timeZone:"Asia/Kolkata"}),10);}
+function istToday(){const p=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"});return p;}
+function istDateIN(){return new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"2-digit",year:"numeric",timeZone:"Asia/Kolkata"});}
+function detectShift(){const h=istHour();return (h>=8&&h<20)?PROD_SHIFTS[0]:PROD_SHIFTS[1];}
 
 function ProductionTab({mob,user,role}){
   const isAdmin=role==="admin";
@@ -1171,11 +1174,11 @@ function ProductionTab({mob,user,role}){
   const[formSection,setFormSection]=useState("");const[formData,setFormData]=useState({});
   const[editIdx,setEditIdx]=useState(null);const[editQty,setEditQty]=useState("");const[deleting,setDeleting]=useState(null);
   const[period,setPeriod]=useState("today");const[saveMsg,setSaveMsg]=useState("");
-  const[filterDate,setFilterDate]=useState(new Date().toISOString().split("T")[0]);
+  const[filterDate,setFilterDate]=useState(istToday());
   const[formColor,setFormColor]=useState("");const[colorFilter,setColorFilter]=useState("all");
   const[formLine,setFormLine]=useState("");const[formProduct,setFormProduct]=useState("");
   const[formShift,setFormShift]=useState(detectShift());
-  const[formDate,setFormDate]=useState(new Date().toISOString().split("T")[0]);
+  const[formDate,setFormDate]=useState(istToday());
   const[lineFilter,setLineFilter]=useState("all");const[productFilter,setProductFilter]=useState("all");const[shiftFilter,setShiftFilter]=useState("all");
   const[lots,setLots]=useState(1);const[lotSize,setLotSize]=useState("50");
   const[sheetColor,setSheetColor]=useState("");
@@ -1187,7 +1190,7 @@ function ProductionTab({mob,user,role}){
 
   // Filter entries by period
   const filtered=useMemo(()=>{
-    const now=new Date();const todayStr=now.toLocaleDateString("en-IN",{day:"2-digit",month:"2-digit",year:"numeric"});
+    const now=new Date();const todayStr=istDateIN();
     let r=entries;
     if(colorFilter!=="all")r=r.filter(e=>e.color===colorFilter);
     if(lineFilter!=="all")r=r.filter(e=>e.line===lineFilter);
@@ -1261,7 +1264,7 @@ function ProductionTab({mob,user,role}){
     try{
       const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown",date:formDate})});
       const data=await res.json();
-      if(data.ok){const wasBackdated=formDate!==new Date().toISOString().split("T")[0];setSaveMsg(data.saved+" entries saved"+(wasBackdated?" ("+formDate+")":""));if(wasBackdated)setPeriod("30d");setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setLotSize("50");setSheetColor("");setFormShift(detectShift());setFormDate(new Date().toISOString().split("T")[0]);setFormSection("");
+      if(data.ok){const wasBackdated=formDate!==istToday();setSaveMsg(data.saved+" entries saved"+(wasBackdated?" ("+formDate+")":""));if(wasBackdated)setPeriod("30d");setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setLotSize("50");setSheetColor("");setFormShift(detectShift());setFormDate(istToday());setFormSection("");
         const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
       }else{setSaveMsg(data.error||"Failed to save");}
     }catch{setSaveMsg("Error saving");}
@@ -1289,7 +1292,7 @@ function ProductionTab({mob,user,role}){
       <div style={{padding:"12px 20px",borderBottom:"1px solid #E5E7EB",display:"flex",alignItems:"center",gap:12}}>
         <span style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#16A34A"}}>Date ·</span>
         <input type="date" value={formDate} onChange={e=>setFormDate(e.target.value)} style={{padding:"8px 12px",border:"1px solid #16A34A",borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:"#0F172A",outline:"none",cursor:"pointer"}}/>
-        {formDate!==new Date().toISOString().split("T")[0]&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#D97706",background:"#FEF3C7",padding:"2px 8px",borderRadius:4}}>Backdated entry</span>}
+        {formDate!==istToday()&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#D97706",background:"#FEF3C7",padding:"2px 8px",borderRadius:4}}>Backdated entry</span>}
       </div>
 
       {/* Section selector */}
@@ -1671,8 +1674,8 @@ export default function Dashboard(){
         // --- Activity feed ---
         try{
         var now=new Date();
-        var ts=now.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
-        var dateStr=now.toISOString().split("T")[0];
+        var ts=now.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"});
+        var dateStr=istToday();
         var rtdA=active.filter(function(o){return o.approvalDate&&o.dispatchedCount<o.lineCount;});
         var pendA=active.filter(function(o){return!o.approvalDate;});
         var odA=rtdA.filter(function(o){return daysSince(o.approvalDate)>7;});
@@ -1864,7 +1867,7 @@ export default function Dashboard(){
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <span style={{width:7,height:7,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 10px #4ade8060",animation:"pulse 3s ease-in-out infinite"}}/>
               <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.12em",textTransform:"uppercase",color:"rgba(255,255,255,0.5)"}}>Live</span>
-              <span style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.25)"}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short"})}</span>
+              <span style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.25)"}}>{new Date().toLocaleDateString("en-IN",{day:"numeric",month:"short",timeZone:"Asia/Kolkata"})}</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontFamily:MN,fontSize:10,color:"rgba(255,255,255,0.25)"}}>{activityFeed.length} events</span>

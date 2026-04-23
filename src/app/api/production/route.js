@@ -47,9 +47,9 @@ export async function POST(req) {
       const [y, m, d] = customDate.split('-');
       date = `${d}/${m}/${y}`;
     } else {
-      date = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      date = now.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Kolkata' });
     }
-    const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
     const userName = user || 'unknown';
 
     const valid = entries.filter(e => e.qty > 0 && !isNaN(e.qty));
