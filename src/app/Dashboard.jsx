@@ -1179,6 +1179,7 @@ function ProductionTab({mob,user,role}){
   const[lineFilter,setLineFilter]=useState("all");const[productFilter,setProductFilter]=useState("all");const[shiftFilter,setShiftFilter]=useState("all");
   const[lots,setLots]=useState(1);const[lotSize,setLotSize]=useState("50");
   const[glueProduced,setGlueProduced]=useState(1);const[glueUsed,setGlueUsed]=useState(1);
+  const[glueAction,setGlueAction]=useState("produce");
   const[sheetColor,setSheetColor]=useState("");
 
   // Fetch entries
@@ -1226,7 +1227,12 @@ function ProductionTab({mob,user,role}){
   const handleSave=async()=>{
     if(!formSection){setSaveMsg("Please select a section first");return;}
     if(!formLine){setSaveMsg("Please select a line first");return;}
-    if(formSection!=="glue"&&!formProduct){setSaveMsg("Please select a product first");return;}
+    if(formSection==="glue"){
+      if(glueAction==="use"&&!formProduct){setSaveMsg("Please select a product first");return;}
+      if(glueAction==="use"&&glueUsed<1){setSaveMsg("Lots used must be at least 1");return;}
+    } else {
+      if(!formProduct){setSaveMsg("Please select a product first");return;}
+    }
     const needsColor=formSection!=="glue";
     if(needsColor&&!formColor){setSaveMsg("Please select a colour first");return;}
     setSaving(true);setSaveMsg("");
@@ -1243,11 +1249,16 @@ function ProductionTab({mob,user,role}){
       const pigQty=parseFloat(getQty("pigment",formColor));
       if(pigQty>0)ents.push({section:"Mixing",material:"PIGMENT",qty:pigQty*lots,color:colorVal,line:formLine,product:formProduct,shift:formShift,lots:lots,lotSize:lotSize});
     } else if(formSection==="glue"){
-      // Glue — qty × glueUsed, track produced and used
-      sec.materials.forEach(mat=>{
-        const q=parseFloat(getQty(sec.id,mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q*glueUsed,color:formColor||"",line:formLine,product:formProduct,shift:formShift,lotsProduced:glueProduced,lotsUsed:glueUsed});
-      });
+      if(glueAction==="produce"){
+        // Produce — record materials × lots produced (no product, no colour)
+        sec.materials.forEach(mat=>{
+          const q=parseFloat(getQty(sec.id,mat));
+          if(q>0)ents.push({section:sec.label,material:mat,qty:q*glueProduced,color:"",line:formLine,product:"",shift:formShift,lotsProduced:glueProduced,lotsUsed:0});
+        });
+      } else {
+        // Use — single row tracking consumption (no materials)
+        ents.push({section:sec.label,material:"GLUE-USED",qty:glueUsed,color:"",line:formLine,product:formProduct,shift:formShift,lotsProduced:0,lotsUsed:glueUsed});
+      }
     } else if(formSection==="sheet"){
       // Sheet — uses sheetColor
       const sc=sheetColor||formColor;
@@ -1262,7 +1273,7 @@ function ProductionTab({mob,user,role}){
     try{
       const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown",date:formDate})});
       const data=await res.json();
-      if(data.ok){const wasBackdated=formDate!==new Date().toISOString().split("T")[0];setSaveMsg(data.saved+" entries saved"+(wasBackdated?" ("+formDate+")":""));if(wasBackdated)setPeriod("30d");setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setLotSize("50");setGlueProduced(1);setGlueUsed(1);setSheetColor("");setFormShift(detectShift());setFormDate(new Date().toISOString().split("T")[0]);setFormSection("");
+      if(data.ok){const wasBackdated=formDate!==new Date().toISOString().split("T")[0];setSaveMsg(data.saved+" entries saved"+(wasBackdated?" ("+formDate+")":""));if(wasBackdated)setPeriod("30d");setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setLotSize("50");setGlueProduced(1);setGlueUsed(1);setGlueAction("produce");setSheetColor("");setFormShift(detectShift());setFormDate(new Date().toISOString().split("T")[0]);setFormSection("");
         const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
       }else{setSaveMsg(data.error||"Failed to save");}
     }catch{setSaveMsg("Error saving");}
@@ -1298,28 +1309,41 @@ function ProductionTab({mob,user,role}){
         <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formSection?"#16A34A":"#D97706",marginBottom:8}}>Section {formSection?"·":"(required)"}</div>
         <div style={{display:"flex",gap:8}}>
           {MIX_SECTIONS.map(sec=>
-            <div key={sec.id} className={formSection!==sec.id?"hv-pill":""} onClick={()=>{setFormSection(sec.id);setFormData({});setFormColor("");setSheetColor("");setLots(1);setFormLine(sec.id==="glue"?"Sheet Mch.":"");setGlueProduced(1);setGlueUsed(1);}} style={{flex:1,padding:"12px",borderRadius:8,border:formSection===sec.id?"2px solid #2563EB":"1px solid #E5E7EB",background:formSection===sec.id?"#EFF6FF":"#F8FAFC",color:formSection===sec.id?"#2563EB":"#475569",fontSize:12,fontFamily:MN,fontWeight:formSection===sec.id?700:500,cursor:"pointer",textAlign:"center"}}>{sec.label}</div>
+            <div key={sec.id} className={formSection!==sec.id?"hv-pill":""} onClick={()=>{setFormSection(sec.id);setFormData({});setFormColor("");setSheetColor("");setLots(1);setFormLine(sec.id==="glue"?"Sheet Mch.":"");setFormProduct("");setGlueProduced(1);setGlueUsed(1);setGlueAction("produce");}} style={{flex:1,padding:"12px",borderRadius:8,border:formSection===sec.id?"2px solid #2563EB":"1px solid #E5E7EB",background:formSection===sec.id?"#EFF6FF":"#F8FAFC",color:formSection===sec.id?"#2563EB":"#475569",fontSize:12,fontFamily:MN,fontWeight:formSection===sec.id?700:500,cursor:"pointer",textAlign:"center"}}>{sec.label}</div>
           )}
         </div>
       </div>
 
+      {/* Action selector — only for Mixing (Glue) */}
+      {formSection==="glue"&&<div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB"}}>
+        <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#16A34A",marginBottom:8}}>Action ·</div>
+        <div style={{display:"flex",gap:8}}>
+          {[["produce","Produce","Make new glue lots"],["use","Use","Consume glue on a line"]].map(([id,label,hint])=>
+            <div key={id} className={glueAction!==id?"hv-pill":""} onClick={()=>{setGlueAction(id);setFormData({});setFormProduct("");setFormLine(id==="produce"?"Sheet Mch.":"");setGlueProduced(1);setGlueUsed(1);}} style={{flex:1,padding:"12px",borderRadius:8,border:glueAction===id?"2px solid #2563EB":"1px solid #E5E7EB",background:glueAction===id?"#EFF6FF":"#F8FAFC",color:glueAction===id?"#2563EB":"#475569",fontSize:12,fontFamily:MN,fontWeight:glueAction===id?700:500,cursor:"pointer",textAlign:"center"}}>
+              <div>{label}</div>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:500,color:glueAction===id?"#2563EB":"#94A3B8",marginTop:2}}>{hint}</div>
+            </div>
+          )}
+        </div>
+      </div>}
+
       {/* Line + Product + Shift + Colour (shown after section selected) */}
-      {formSection&&<div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:(formLine&&(formSection==="glue"||(formProduct&&(formSection==="glue"||formColor))))?"#F0FDF4":"#FFFBEB"}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat("+(formSection==="glue"?3:4)+",1fr)",gap:12}}>
+      {formSection&&<div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:(formLine&&((formSection==="glue"&&glueAction==="produce")||(formSection==="glue"&&glueAction==="use"&&formProduct)||(formSection!=="glue"&&formProduct&&(formColor||(formSection==="sheet"&&sheetColor)))))?"#F0FDF4":"#FFFBEB"}}>
+        <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat("+(formSection==="glue"?(glueAction==="produce"?2:3):4)+",1fr)",gap:12}}>
           <div>
             <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formLine?"#16A34A":"#D97706",marginBottom:5}}>Line</div>
             <select value={formLine} onChange={e=>setFormLine(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formLine?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formLine?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
               <option value="">Select...</option>
-              {(formSection==="glue"?GLUE_LINES:PROD_LINES).map(l=><option key={l} value={l}>{l}</option>)}
+              {(formSection==="glue"?(glueAction==="produce"?GLUE_LINES:PROD_LINES):PROD_LINES).map(l=><option key={l} value={l}>{l}</option>)}
             </select>
           </div>
-          <div>
-            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formProduct?"#16A34A":formSection==="glue"?"#94A3B8":"#D97706",marginBottom:5}}>Product {formSection==="glue"?"(optional)":""}</div>
-            <select value={formProduct} onChange={e=>setFormProduct(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formProduct?"#16A34A":formSection==="glue"?"#E5E7EB":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formProduct?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
+          {(formSection!=="glue"||glueAction==="use")&&<div>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formProduct?"#16A34A":"#D97706",marginBottom:5}}>Product</div>
+            <select value={formProduct} onChange={e=>setFormProduct(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formProduct?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formProduct?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
               <option value="">Select...</option>
               {PROD_PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}
             </select>
-          </div>
+          </div>}
           <div>
             <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#16A34A",marginBottom:5}}>Shift</div>
             <select value={formShift} onChange={e=>setFormShift(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid #16A34A",borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:"#0F172A",outline:"none",cursor:"pointer"}}>
@@ -1336,16 +1360,16 @@ function ProductionTab({mob,user,role}){
         </div>
       </div>}
 
-      {/* Materials — shown when all required fields are filled */}
-      {formSection&&formLine&&((formSection==="glue")||(formProduct&&(formColor||(formSection==="sheet"&&sheetColor))))&&<div style={{padding:"12px 20px 16px",background:"#F8FAFC"}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
+      {/* Materials — shown when all required fields are filled (Glue: only in Produce) */}
+      {formSection&&formLine&&((formSection==="glue"&&glueAction==="produce")||(formSection==="glue"&&glueAction==="use")||(formSection!=="glue"&&formProduct&&(formColor||(formSection==="sheet"&&sheetColor))))&&<div style={{padding:"12px 20px 16px",background:"#F8FAFC"}}>
+        {(formSection!=="glue"||glueAction==="produce")&&<div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(2,1fr)",gap:8}}>
           {(MIX_SECTIONS.find(s=>s.id===formSection)||{materials:[]}).materials.map(mat=>
             <div key={mat} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",borderRadius:8,border:"1px solid #E5E7EB",padding:"8px 14px"}}>
               <span style={{flex:1,fontSize:12,fontWeight:500,color:"#475569"}}>{mat}</span>
               <input type="number" min="0" step="0.1" value={getQty(formSection==="sheet"?"sheet":formSection,mat)} onChange={e=>setQty(formSection==="sheet"?"sheet":formSection,mat,e.target.value)} placeholder="kg" style={{width:80,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Pigment — only for Mixing */}
         {formSection==="all"&&formColor&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
@@ -1358,31 +1382,34 @@ function ProductionTab({mob,user,role}){
           </div>
         </div>}
 
-        {/* Glue — Produced & Used */}
-        {formSection==="glue"&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,alignItems:"center"}}>
+        {/* Glue — Produce: Lots Produced counter */}
+        {formSection==="glue"&&glueAction==="produce"&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
+          <div style={{display:"flex",alignItems:"center",gap:16}}>
             <div>
               <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569",marginBottom:6}}>Lots Produced</div>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <button onClick={()=>setGlueProduced(l=>Math.max(1,l-1))} style={{width:28,height:28,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-                <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#0F172A",minWidth:30,textAlign:"center"}}>{glueProduced}</span>
-                <button onClick={()=>setGlueProduced(l=>Math.min(20,l+1))} style={{width:28,height:28,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+                <button onClick={()=>setGlueProduced(l=>Math.max(1,l-1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+                <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#0F172A",minWidth:36,textAlign:"center"}}>{glueProduced}</span>
+                <button onClick={()=>setGlueProduced(l=>Math.min(20,l+1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
               </div>
             </div>
+            <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>Material quantities will be multiplied by lots produced ({glueProduced})</div>
+          </div>
+        </div>}
+
+        {/* Glue — Use: Lots Used counter (no materials) */}
+        {formSection==="glue"&&glueAction==="use"&&<div style={{padding:"4px 0"}}>
+          <div style={{display:"flex",alignItems:"center",gap:16}}>
             <div>
               <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569",marginBottom:6}}>Lots Used</div>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <button onClick={()=>setGlueUsed(l=>Math.max(0,l-1))} style={{width:28,height:28,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-                <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:glueUsed>glueProduced?"#DC2626":"#0F172A",minWidth:30,textAlign:"center"}}>{glueUsed}</span>
-                <button onClick={()=>setGlueUsed(l=>Math.min(glueProduced,l+1))} style={{width:28,height:28,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+                <button onClick={()=>setGlueUsed(l=>Math.max(1,l-1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+                <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:"#0F172A",minWidth:36,textAlign:"center"}}>{glueUsed}</span>
+                <button onClick={()=>setGlueUsed(l=>Math.min(20,l+1))} style={{width:30,height:30,borderRadius:6,border:"1px solid #E5E7EB",background:"#fff",color:"#0F172A",fontFamily:MN,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
               </div>
             </div>
-            <div>
-              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>Balance</div>
-              <span style={{fontFamily:MN,fontSize:18,fontWeight:700,color:glueProduced-glueUsed>0?"#16A34A":"#94A3B8"}}>{glueProduced-glueUsed} lot{glueProduced-glueUsed!==1?"s":""}</span>
-            </div>
+            <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8"}}>Tracking consumption only — no material entry.</div>
           </div>
-          <div style={{fontFamily:MN,fontSize:10,color:"#94A3B8",marginTop:8}}>Material quantities will be multiplied by lots used ({glueUsed})</div>
         </div>}
 
         {/* Lot Size + Lots — only for Mixing */}
@@ -1504,10 +1531,16 @@ function ProductionTab({mob,user,role}){
       </div>
 
       {/* Glue Summary */}
-      {(()=>{const glueEntries=filtered.filter(e=>e.section==="Mixing (Glue)"&&e.lotsProduced>0);
-        if(glueEntries.length===0)return null;
-        const seen=new Set();let totalProd=0,totalUsed=0;
-        glueEntries.forEach(e=>{const k=e.date+"|"+e.time;if(seen.has(k))return;seen.add(k);totalProd+=e.lotsProduced;totalUsed+=e.lotsUsed;});
+      {(()=>{
+        const produceEntries=filtered.filter(e=>e.section==="Mixing (Glue)"&&e.lotsProduced>0);
+        const useEntries=filtered.filter(e=>e.section==="Mixing (Glue)"&&e.lotsUsed>0&&e.material==="GLUE-USED");
+        const legacyUse=filtered.filter(e=>e.section==="Mixing (Glue)"&&e.lotsUsed>0&&e.material!=="GLUE-USED");
+        if(produceEntries.length===0&&useEntries.length===0&&legacyUse.length===0)return null;
+        const seenP=new Set();let totalProd=0;
+        produceEntries.forEach(e=>{const k=e.date+"|"+e.time;if(seenP.has(k))return;seenP.add(k);totalProd+=e.lotsProduced;});
+        let totalUsed=0;useEntries.forEach(e=>{totalUsed+=e.lotsUsed;});
+        const seenL=new Set();
+        legacyUse.forEach(e=>{const k=e.date+"|"+e.time;if(seenL.has(k))return;seenL.add(k);totalUsed+=e.lotsUsed;});
         const balance=totalProd-totalUsed;
         return <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:14,marginBottom:24}}>
           <div className="hv-card" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px"}}>
@@ -1520,7 +1553,7 @@ function ProductionTab({mob,user,role}){
           </div>
           <div className="hv-card" style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px"}}>
             <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>Glue Balance</div>
-            <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:balance>0?"#16A34A":"#DC2626",lineHeight:1}}>{balance} lots</div>
+            <div style={{fontFamily:MN,fontSize:22,fontWeight:700,color:balance>0?"#16A34A":balance===0?"#475569":"#DC2626",lineHeight:1}}>{balance} lots</div>
           </div>
         </div>;
       })()}
