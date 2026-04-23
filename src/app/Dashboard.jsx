@@ -1154,7 +1154,7 @@ function AnalyticsTab({mob}){
 
 /* ═══════ PRODUCTION TAB ═══════ */
 const MIXING_ALL=["PVC","SCRAP","CALCIUM","DOP","CPW","ADIL","EPOXY","STERIC ACID","FINOWAX","TITANIUM","HEAT STB."];
-const MIXING_GLUE=["PVC","DOP","CPW","MTO","DBP","D80"];
+const MIXING_GLUE=["PVC PASTE","DOP","CPW","MTO","DBP","D80"];
 const MIXING_SHEET=["SCRAP","CALCIUM","DOP","STERIC ACID","CPW"];
 const MIX_SECTIONS=[{id:"all",label:"Mixing",materials:MIXING_ALL},{id:"glue",label:"Mixing (Glue)",materials:MIXING_GLUE},{id:"sheet",label:"Mixing (Sheet)",materials:MIXING_SHEET}];
 const PROD_COLORS=["P.GREEN","RED","BLUE","GREY","BROWN","MAROON","BEIGE","BLACK","BEIGE-BROWN","LIGHT GREY","DARK GREY","GREEN-BLACK","RED-BLACK","BLUE-BLACK","GREEN-BLUE","RED-BLUE","TAN-BLACK","WHITE","YELLOW"];

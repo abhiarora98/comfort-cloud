@@ -10,7 +10,7 @@ const SECTION_SHEETS = {
 };
 
 const MIXING_ALL = ['PVC','SCRAP','CALCIUM','DOP','CPW','ADIL','EPOXY','STERIC ACID','FINOWAX','TITANIUM','HEAT STB.'];
-const MIXING_GLUE = ['PVC','DOP','CPW','MTO','DBP','D80'];
+const MIXING_GLUE = ['PVC PASTE','DOP','CPW','MTO','DBP','D80'];
 const MIXING_SHEET = ['SCRAP','CALCIUM','DOP','STERIC ACID','CPW'];
 
 async function getSheets() {
