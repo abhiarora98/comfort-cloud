@@ -1769,7 +1769,7 @@ export default function Dashboard(){
   const pFilt=PARTIES.filter(p=>!psrch||p.name.toLowerCase().includes(psrch.toLowerCase()));
   const sPObj=selP?PARTIES.find(p=>p.name===selP):null;
 
-  const role=user?.publicMetadata?.role||user?.unsafeMetadata?.role||"sales";
+  const role=user?.publicMetadata?.role||user?.unsafeMetadata?.role||(user?"sales":"admin");
   console.log("USER ROLE DEBUG:",{role,publicMetadata:user?.publicMetadata,unsafeMetadata:user?.unsafeMetadata,email:user?.emailAddresses?.[0]?.emailAddress});
   const ROLE_TABS={admin:["pending","party","stock","dispatch","analytics","calls","production"],management:["pending","party","analytics"],ops:["pending","stock","dispatch","production"],production:["production"],sales:["pending","party"]};
   const allowedTabs=ROLE_TABS[role]||ROLE_TABS["sales"];
