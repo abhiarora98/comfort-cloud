@@ -1806,7 +1806,7 @@ export default function Dashboard(){
           {menuOpen&&<div style={{position:"absolute",top:42,right:0,background:"#1e293b",border:"1px solid rgba(255,255,255,0.12)",borderRadius:10,minWidth:160,boxShadow:"0 8px 24px rgba(0,0,0,0.4)",zIndex:999,overflow:"hidden"}}>
             <div style={{padding:"10px 14px",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
               <div style={{fontFamily:MN,fontSize:11,color:"rgba(255,255,255,0.4)",marginBottom:2}}>Signed in as</div>
-              <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user.firstName||user.emailAddresses?.[0]?.emailAddress}</div>
+              <div style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"Guest"}</div>
             </div>
             {(user?.firstName==="Abhi"&&user?.lastName==="Arora")&&<a href="/purchases" onClick={()=>setMenuOpen(false)} style={{display:"block",width:"100%",padding:"10px 14px",background:"none",border:"none",color:"rgba(255,255,255,0.7)",fontFamily:MN,fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",textDecoration:"none",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>Purchases</a>}
             <button onClick={()=>{setMenuOpen(false);signOut();}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",color:"#f87171",fontFamily:MN,fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left"}}>Sign out</button>
