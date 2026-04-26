@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 const isPublicRoute = createRouteMatcher(['/sign-in(.*)']);
 const BYPASS_COOKIE = 'cc-bypass';
-const BYPASS_MAX_AGE = 60 * 60 * 24; // 24h
+const BYPASS_MAX_AGE = 60 * 60 * 24 * 365; // 1 year — revoke by rotating CLERK_BYPASS_TOKEN
 
 export default clerkMiddleware(async (auth, req) => {
   if (isPublicRoute(req)) return;
