@@ -1339,6 +1339,17 @@ function ProductionTab({mob,user,role}){
         </div>}
 
 
+        {/* Colour — only for Sheet (rendered before lots so the lots block sits last) */}
+        {formSection==="sheet"&&sheetColor&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,border:"1px solid "+(parseFloat(getQty("sheetcolour",sheetColor))>0?"#7C3AED40":"#E5E7EB"),padding:"10px 14px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Colour</span>
+              <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{sheetColor}</span>
+            </div>
+            <input type="number" min="0" step="0.001" value={getQty("sheetcolour",sheetColor)} onChange={e=>setQty("sheetcolour",sheetColor,e.target.value)} placeholder="kg" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
+          </div>
+        </div>}
+
         {/* Lot Size + Lots — Mixing has both, Mixing (Glue) and Mixing (Sheet) have only Lots */}
         {(formSection==="all"||formSection==="glue"||formSection==="sheet")&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
           <div style={{display:"grid",gridTemplateColumns:formSection==="all"?"1fr 1fr":"1fr",gap:16}}>
@@ -1391,17 +1402,6 @@ function ProductionTab({mob,user,role}){
               </div>
             </div>;
           })()}
-        </div>}
-
-        {/* Colour — only for Sheet */}
-        {formSection==="sheet"&&sheetColor&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:"#fff",borderRadius:8,border:"1px solid "+(parseFloat(getQty("sheetcolour",sheetColor))>0?"#7C3AED40":"#E5E7EB"),padding:"10px 14px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#7C3AED"}}>Colour</span>
-              <span style={{fontSize:12,fontWeight:500,color:"#475569"}}>{sheetColor}</span>
-            </div>
-            <input type="number" min="0" step="0.001" value={getQty("sheetcolour",sheetColor)} onChange={e=>setQty("sheetcolour",sheetColor,e.target.value)} placeholder="kg" style={{width:90,padding:"6px 10px",border:"1px solid #E5E7EB",borderRadius:6,fontSize:12,fontFamily:MN,textAlign:"right",outline:"none",color:"#0F172A"}}/>
-          </div>
         </div>}
       </div>}
 
