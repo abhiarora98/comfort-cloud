@@ -39,12 +39,7 @@ function priorityFor(amount) {
   return 'low';
 }
 
-function pendingReason(b) {
-  if (b.source === 'invoice' && String(b.is_matched_with_tally).toUpperCase() !== 'TRUE') {
-    return 'No matching entry found in Tally';
-  }
-  return 'Awaiting approval';
-}
+const PENDING_REASON = 'No matching entry found in Tally';
 
 function useW(){const[w,setW]=useState(typeof window!=='undefined'?window.innerWidth:1200);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);return w;}
 
@@ -93,7 +88,7 @@ export default function PurchasesPage() {
   const [suggestion, setSuggestion] = useState(null); // { category, confidence, classified_by, reasons }
   const [classifying, setClassifying] = useState(false);
   const [editingCatId, setEditingCatId] = useState(null);
-  const [toast, setToast] = useState(null); // { kind: 'ok'|'warn', text }
+  const [recentlyApprovedId, setRecentlyApprovedId] = useState(null);
   const classifyTimer = useRef(null);
   const w = useW();
   const mob = w < 768;
@@ -111,10 +106,10 @@ export default function PurchasesPage() {
   useEffect(() => { fetchBills(); }, [fetchBills]);
 
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4000);
+    if (!recentlyApprovedId) return;
+    const t = setTimeout(() => setRecentlyApprovedId(null), 2500);
     return () => clearTimeout(t);
-  }, [toast]);
+  }, [recentlyApprovedId]);
 
   // Live category preview — debounced classify call as the user types.
   useEffect(() => {
@@ -306,14 +301,9 @@ export default function PurchasesPage() {
       });
       const data = await resp.json();
       if (!data.ok) throw new Error(data.error || `${action} failed`);
-      const supplierName = bill.supplier || bill.supplier_original || 'this vendor';
-      setToast(action === 'approve'
-        ? { kind: 'ok',   text: `Approved. Future invoices from "${supplierName}" will improve.` }
-        : { kind: 'warn', text: `Rejected. Bill kept in history for review.` }
-      );
+      if (action === 'approve') setRecentlyApprovedId(bill.id);
     } catch (e) {
       console.error(`${action} bill:`, e);
-      setToast({ kind: 'warn', text: `Could not ${action}. Please retry.` });
       await fetchBills();
     }
   };
@@ -470,7 +460,8 @@ export default function PurchasesPage() {
             ) : (
               <div>
                 {bills.map((b, i) => (
-                  <div key={b.id || i} onClick={() => setSelectedBill(b)} style={{ padding: '12px 16px', borderBottom: i < bills.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', background: b.approval_status === 'pending' ? '#fffbeb' : 'transparent' }}>
+                  <div key={b.id || i} style={{ borderBottom: i < bills.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                  <div onClick={() => setSelectedBill(b)} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', background: b.approval_status === 'pending' ? '#fffbeb' : 'transparent' }}>
                     {b.photo_url
                       ? <img src={b.photo_url} alt="Bill" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }} />
                       : <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', border: '1px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
@@ -487,13 +478,13 @@ export default function PurchasesPage() {
                         {b.approval_status === 'approved' && <span title={`Approved by ${b.approved_by || '—'}`} style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>Approved</span>}
                         {b.approval_status === 'rejected' && <span title={`Rejected by ${b.approved_by || '—'}`} style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>Rejected</span>}
                       </div>
-                      <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{b.bill_no} · {b.date}</div>
-                      {b.verified === 'mismatch' && b.mismatches && <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.mismatches}</div>}
                       {b.approval_status === 'pending' && (
-                        <div style={{ fontFamily: MN, fontSize: 10, color: '#a16207', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {pendingReason(b)}
+                        <div style={{ fontFamily: MN, fontSize: 10, color: '#a16207', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {PENDING_REASON}
                         </div>
                       )}
+                      <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{b.bill_no} · {b.date}</div>
+                      {b.verified === 'mismatch' && b.mismatches && <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.mismatches}</div>}
                       {b.verified !== 'mismatch' && b.approval_status !== 'pending' && b.description && <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.description}</div>}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
@@ -508,6 +499,13 @@ export default function PurchasesPage() {
                         <div style={{ fontFamily: MN, fontSize: 9, color: '#cbd5e1' }}>{b.saved_by}</div>
                       )}
                     </div>
+                  </div>
+                  {recentlyApprovedId === b.id && (
+                    <div style={{ padding: '8px 16px', background: '#dcfce7', fontFamily: MN, fontSize: 11, fontWeight: 600, color: '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 13 }}>✓</span>
+                      <span>Saved. Future invoices from this vendor will improve.</span>
+                    </div>
+                  )}
                   </div>
                 ))}
               </div>
@@ -660,24 +658,6 @@ export default function PurchasesPage() {
           );
         })()}
       </div>
-
-      {/* Toast */}
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 1100, maxWidth: 'calc(100vw - 32px)' }}>
-          <div style={{
-            background: toast.kind === 'ok' ? '#dcfce7' : '#fef3c7',
-            border: `1px solid ${toast.kind === 'ok' ? '#bbf7d0' : '#fde68a'}`,
-            color: toast.kind === 'ok' ? '#166534' : '#92400e',
-            padding: '10px 14px', borderRadius: 10,
-            fontFamily: MN, fontSize: 11, fontWeight: 600,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <span style={{ fontSize: 14 }}>{toast.kind === 'ok' ? '✓' : '⚠'}</span>
-            <span>{toast.text}</span>
-          </div>
-        </div>
-      )}
 
       {/* Mismatch warning modal */}
       {mismatchWarning && (
