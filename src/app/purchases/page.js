@@ -41,6 +41,82 @@ function priorityFor(amount) {
 
 const PENDING_REASON = 'No matching entry found in Tally';
 
+// --- Manual Tally upload parser (CSV/Excel) -----------------------------
+const COL_ALIASES = {
+  date:     ['date', 'voucherdate', 'billdate', 'invoicedate', 'dated'],
+  supplier: ['supplier', 'party', 'partyname', 'partyledger', 'partyledgername', 'vendor', 'name'],
+  amount:   ['amount', 'value', 'grossamount', 'netamount', 'total', 'amountrs', 'debit', 'credit'],
+  bill_no:  ['billno', 'billnumber', 'voucherno', 'vouchernumber', 'invoiceno', 'invoicenumber', 'reference', 'refno', 'ref'],
+};
+
+function normHeader(h) {
+  return String(h || '').toLowerCase().replace(/[\s_\-./]/g, '').trim();
+}
+
+function pickColumns(headers) {
+  const map = {};
+  for (const [key, aliases] of Object.entries(COL_ALIASES)) {
+    const idx = headers.findIndex(h => aliases.includes(normHeader(h)));
+    if (idx >= 0) map[key] = idx;
+  }
+  return map;
+}
+
+function toIsoDate(v) {
+  if (v === '' || v == null) return '';
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    const y = v.getFullYear();
+    const m = String(v.getMonth() + 1).padStart(2, '0');
+    const d = String(v.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // DD/MM/YYYY or DD-MM-YYYY (Indian/Tally default)
+  const dmy = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/);
+  if (dmy) {
+    const dd = dmy[1].padStart(2, '0');
+    const mm = dmy[2].padStart(2, '0');
+    let yy = dmy[3];
+    if (yy.length === 2) yy = (parseInt(yy, 10) < 50 ? '20' : '19') + yy;
+    return `${yy}-${mm}-${dd}`;
+  }
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  return '';
+}
+
+async function parseTallyFile(file) {
+  const XLSX = await import('xlsx');
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  if (!ws) return { rows: [], error: 'No sheet in file' };
+  const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: '' });
+  if (aoa.length < 2) return { rows: [], error: 'No data rows' };
+  // Header is the first row with at least 3 non-empty cells (skips report titles).
+  let headerIdx = aoa.findIndex(r => r.filter(c => String(c).trim()).length >= 3);
+  if (headerIdx < 0) headerIdx = 0;
+  const headers = aoa[headerIdx];
+  const colMap = pickColumns(headers);
+  const missing = ['date', 'supplier', 'amount', 'bill_no'].filter(k => colMap[k] === undefined);
+  if (missing.length) return { rows: [], error: `Missing columns: ${missing.join(', ')}` };
+  const rows = [];
+  let skipped = 0;
+  for (let i = headerIdx + 1; i < aoa.length; i++) {
+    const r = aoa[i];
+    const supplier = String(r[colMap.supplier] ?? '').trim();
+    const bill_no  = String(r[colMap.bill_no]  ?? '').trim();
+    const date     = toIsoDate(r[colMap.date]);
+    const amountRaw = String(r[colMap.amount] ?? '').trim();
+    const amount    = amountRaw.replace(/[^\d.\-]/g, '');
+    if (!supplier || !bill_no || !date) { skipped++; continue; }
+    rows.push({ date, supplier_original: supplier, amount, bill_no });
+  }
+  return { rows, skipped, error: null };
+}
+// ------------------------------------------------------------------------
+
 function useW(){const[w,setW]=useState(typeof window!=='undefined'?window.innerWidth:1200);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);return w;}
 
 function parseCSVLine(line) {
@@ -84,6 +160,7 @@ export default function PurchasesPage() {
   const [loadingBills, setLoadingBills] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
+  const [uploading, setUploading] = useState(false);
   const [view, setView] = useState('history'); // 'history' | 'form' | 'insights'
   const [suggestion, setSuggestion] = useState(null); // { category, confidence, classified_by, reasons }
   const [classifying, setClassifying] = useState(false);
@@ -141,6 +218,40 @@ export default function PurchasesPage() {
     }, 600);
     return () => { if (classifyTimer.current) clearTimeout(classifyTimer.current); };
   }, [form.supplier, form.notes, form.amount, view]);
+
+  const handleTallyUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true); setSyncMsg('');
+    try {
+      const { rows, error, skipped } = await parseTallyFile(file);
+      if (error) throw new Error(error);
+      if (rows.length === 0) throw new Error('No valid rows found');
+      const items = rows.map(r => ({
+        ...r,
+        company_id: COMPANY_ID,
+        source: 'tally',
+        verified: 'tally',
+        saved_by: 'Tally Upload',
+      }));
+      const resp = await fetch('/api/purchases/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items, saved_by: 'Tally Upload' }),
+      });
+      const data = await resp.json();
+      if (!data.ok) throw new Error(data.error || 'Bulk save failed');
+      const { created, duplicate, errors } = data.summary;
+      if (created > 0) await fetchBills();
+      const skipNote = skipped ? ` · ${skipped} skipped` : '';
+      setSyncMsg(`✓ ${created} new · ${duplicate} dup · ${errors} err${skipNote}`);
+    } catch (err) {
+      setSyncMsg('⚠ ' + (err.message || 'Upload failed'));
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
 
   const syncTally = async () => {
     setSyncing(true); setSyncMsg('');
@@ -444,9 +555,13 @@ export default function PurchasesPage() {
               <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8' }}>Bill History</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {syncMsg && <div style={{ fontFamily: MN, fontSize: 10, color: syncMsg.startsWith('✓') ? '#059669' : '#dc2626' }}>{syncMsg}</div>}
-                <button onClick={syncTally} disabled={syncing} style={{ background: syncing ? '#94a3b8' : '#0f172a', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: 6, fontFamily: MN, fontSize: 10, fontWeight: 700, cursor: syncing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button onClick={syncTally} disabled={syncing || uploading} style={{ background: (syncing || uploading) ? '#94a3b8' : '#0f172a', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: 6, fontFamily: MN, fontSize: 10, fontWeight: 700, cursor: (syncing || uploading) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                   {syncing ? <><span style={{ display: 'inline-block', width: 8, height: 8, border: '1.5px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />Syncing</> : '⟳ Tally'}
                 </button>
+                <label style={{ background: uploading ? '#94a3b8' : '#475569', color: '#fff', padding: '5px 10px', borderRadius: 6, fontFamily: MN, fontSize: 10, fontWeight: 700, cursor: (uploading || syncing) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <input type="file" accept=".csv,.xlsx,.xls" onChange={handleTallyUpload} disabled={uploading || syncing} style={{ display: 'none' }} />
+                  {uploading ? <><span style={{ display: 'inline-block', width: 8, height: 8, border: '1.5px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />Uploading</> : '⬆ Upload'}
+                </label>
                 <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{bills.length} bills</div>
               </div>
             </div>
