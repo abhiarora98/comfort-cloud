@@ -1,11 +1,13 @@
 import { TABS, readRows, appendRow, updateRow } from './sheets.js';
 import {
+  isCategory,
   makeId,
   normalizeSupplier,
   supplierKey,
   validatePurchase,
 } from './schema.js';
 import { classify } from './classifier.js';
+import { bumpVendor } from './vendors.js';
 
 function pickBillNo(input) {
   return input.bill_no || input.billNo || '';
@@ -64,19 +66,47 @@ export async function ingestPurchase(input, { savedBy } = {}) {
   };
   validatePurchase(purchase);
 
-  const c = await classify({
-    company_id: purchase.company_id,
-    supplier: purchase.supplier,
-    description: purchase.description,
-    items,
-    amount: purchase.amount,
-  });
+  const userPicked = input.user_category && isCategory(input.user_category);
+  let c;
+  if (userPicked) {
+    c = {
+      category: input.user_category,
+      subcategory: input.subcategory || '',
+      confidence: 1.0,
+      classified_by: 'user',
+      reasons: ['user-picked at ingest'],
+    };
+  } else {
+    c = await classify({
+      company_id: purchase.company_id,
+      supplier: purchase.supplier,
+      description: purchase.description,
+      items,
+      amount: purchase.amount,
+    });
+  }
   purchase.category = c.category;
   purchase.subcategory = c.subcategory;
   purchase.confidence = c.confidence;
   purchase.classified_by = c.classified_by;
 
   await appendRow(TABS.purchases, purchase);
+
+  // User-picked category at ingest is a labeled training signal — bump
+  // vendor memory so future purchases from this vendor classify as 'pattern'.
+  if (userPicked && supplier_key) {
+    try {
+      await bumpVendor({
+        company_id: purchase.company_id,
+        supplier_key,
+        category: purchase.category,
+        amount: purchase.amount,
+      });
+    } catch (e) {
+      console.error('bumpVendor failed at ingest:', e);
+    }
+  }
+
   return { id, status: 'created', purchase, classification: c };
 }
 
