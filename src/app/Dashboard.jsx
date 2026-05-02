@@ -1222,14 +1222,14 @@ function ProductionTab({mob,user,role}){
         if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:"",line:formLine,product:formProduct,shift:formShift,lots:lots});
       });
     } else if(formSection==="sheet"){
-      // Sheet — uses sheetColor
+      // Sheet — multiplied by lots (no lot size)
       const sc=sheetColor||formColor;
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty("sheet",mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:sc,line:formLine,product:formProduct,shift:formShift,modelBacking:formModelBacking});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q*lots,color:sc,line:formLine,product:formProduct,shift:formShift,modelBacking:formModelBacking,lots:lots});
       });
       const sheetColQty=parseFloat(getQty("sheetcolour",sc));
-      if(sheetColQty>0)ents.push({section:"Mixing (Sheet)",material:"COLOUR",qty:sheetColQty,color:sc,line:formLine,product:formProduct,shift:formShift,modelBacking:formModelBacking});
+      if(sheetColQty>0)ents.push({section:"Mixing (Sheet)",material:"COLOUR",qty:sheetColQty*lots,color:sc,line:formLine,product:formProduct,shift:formShift,modelBacking:formModelBacking,lots:lots});
     }
     if(ents.length===0){setSaving(false);setSaveMsg("No quantities entered");return;}
     try{
@@ -1339,9 +1339,9 @@ function ProductionTab({mob,user,role}){
         </div>}
 
 
-        {/* Lot Size + Lots — Mixing has both, Mixing (Glue) has only Lots */}
-        {(formSection==="all"||formSection==="glue")&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
-          <div style={{display:"grid",gridTemplateColumns:formSection==="glue"?"1fr":"1fr 1fr",gap:16}}>
+        {/* Lot Size + Lots — Mixing has both, Mixing (Glue) and Mixing (Sheet) have only Lots */}
+        {(formSection==="all"||formSection==="glue"||formSection==="sheet")&&<div style={{marginTop:14,borderTop:"1px solid #E5E7EB",paddingTop:14}}>
+          <div style={{display:"grid",gridTemplateColumns:formSection==="all"?"1fr 1fr":"1fr",gap:16}}>
             {formSection==="all"&&<div>
               <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#475569",marginBottom:8}}>Lot Size</div>
               <div style={{display:"flex",gap:6}}>
@@ -1364,7 +1364,8 @@ function ProductionTab({mob,user,role}){
             const sec=MIX_SECTIONS.find(s=>s.id===formSection);
             const matTotals=sec.materials.map(mat=>{const q=parseFloat(getQty(formSection,mat))||0;return q>0?[mat,q,q*lots]:null;}).filter(Boolean);
             const pigQ=formSection==="all"?(parseFloat(getQty("pigment",formColor))||0):0;
-            if(matTotals.length===0&&pigQ===0)return null;
+            const sheetColQ=formSection==="sheet"?(parseFloat(getQty("sheetcolour",sheetColor||formColor))||0):0;
+            if(matTotals.length===0&&pigQ===0&&sheetColQ===0)return null;
             const grandTotal=matTotals.reduce((s,m)=>s+m[2],0);
             return <div style={{marginTop:12,background:"#0F172A",borderRadius:8,padding:"12px 16px"}}>
               <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",marginBottom:10}}>Total after {lots} lots{formSection==="all"?` × ${lotSize} kg`:""}</div>
@@ -1379,10 +1380,14 @@ function ProductionTab({mob,user,role}){
                   <span style={{fontSize:11,color:"rgba(255,255,255,0.6)"}}>PIGMENT</span>
                   <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#fff"}}>{(pigQ*lots).toFixed(3)} kg</span>
                 </div>}
+                {sheetColQ>0&&<div style={{display:"flex",justifyContent:"space-between",padding:"4px 0"}}>
+                  <span style={{fontSize:11,color:"rgba(255,255,255,0.6)"}}>COLOUR</span>
+                  <span style={{fontFamily:MN,fontSize:11,fontWeight:700,color:"#fff"}}>{(sheetColQ*lots).toFixed(3)} kg</span>
+                </div>}
               </div>
               <div style={{marginTop:8,paddingTop:8,borderTop:"1px solid rgba(255,255,255,0.1)",display:"flex",justifyContent:"space-between"}}>
                 <span style={{fontFamily:MN,fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.5)"}}>Grand Total</span>
-                <span style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#4ade80"}}>{(grandTotal+(pigQ*lots)).toFixed(1)} kg</span>
+                <span style={{fontFamily:MN,fontSize:14,fontWeight:700,color:"#4ade80"}}>{(grandTotal+(pigQ*lots)+(sheetColQ*lots)).toFixed(1)} kg</span>
               </div>
             </div>;
           })()}
