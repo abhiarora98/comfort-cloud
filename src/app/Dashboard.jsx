@@ -1199,7 +1199,8 @@ function ProductionTab({mob,user,role}){
     if(!formLine){setSaveMsg("Please select a line first");return;}
     if(!formProduct){setSaveMsg("Please select a product first");return;}
     const needsColor=formSection!=="glue";
-    if(needsColor&&!formColor){setSaveMsg("Please select a colour first");return;}
+    const pickedColor=formSection==="sheet"?sheetColor:formColor;
+    if(needsColor&&!pickedColor){setSaveMsg("Please select a colour first");return;}
     if(formSection==="sheet"&&!formModelBacking){setSaveMsg("Please select model & backing");return;}
     setSaving(true);setSaveMsg("");
     const ents=[];
