@@ -1126,7 +1126,10 @@ const MIX_SECTIONS=[{id:"all",label:"Mixing",materials:MIXING_ALL},{id:"glue",la
 const PROD_COLORS=["P.GREEN","RED","BLUE","GREY","BROWN","MAROON","BEIGE","BLACK","BEIGE-BROWN","LIGHT GREY","DARK GREY","GREEN-BLACK","RED-BLACK","BLUE-BLACK","GREEN-BLUE","RED-BLUE","TAN-BLACK","WHITE","YELLOW"];
 const PROD_LINES=["LINE - 1","LINE - 2","LINE - 3"];
 const GLUE_LINES=["Line (Glue)"];
+const SHEET_LINES=["Sheet Mch."];
 const PROD_PRODUCTS=["LOOP","S-MAT","TURF"];
+const SHEET_PRODUCTS=["Sheet"];
+const SHEET_MODEL_BACKING=["Alto Diamond","Alto Spike","Nimbo Diamond","Nimbo Spike","Cirro Spike","Strato Spike"];
 const PROD_SHIFTS=["Day (8 AM - 8 PM)","Night (8 PM - 8 AM)"];
 function istHour(){return parseInt(new Date().toLocaleString("en-GB",{hour:"2-digit",hour12:false,timeZone:"Asia/Kolkata"}),10);}
 function istToday(){const p=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"});return p;}
@@ -1147,7 +1150,7 @@ function ProductionTab({mob,user,role}){
   const[formDate,setFormDate]=useState(istToday());
   const[lineFilter,setLineFilter]=useState("all");const[productFilter,setProductFilter]=useState("all");const[shiftFilter,setShiftFilter]=useState("all");
   const[lots,setLots]=useState(1);const[lotSize,setLotSize]=useState("50");
-  const[sheetColor,setSheetColor]=useState("");
+  const[sheetColor,setSheetColor]=useState("");const[formModelBacking,setFormModelBacking]=useState("");
 
   // Fetch entries
   useEffect(()=>{
@@ -1197,6 +1200,7 @@ function ProductionTab({mob,user,role}){
     if(!formProduct){setSaveMsg("Please select a product first");return;}
     const needsColor=formSection!=="glue";
     if(needsColor&&!formColor){setSaveMsg("Please select a colour first");return;}
+    if(formSection==="sheet"&&!formModelBacking){setSaveMsg("Please select model & backing");return;}
     setSaving(true);setSaveMsg("");
     const ents=[];
     const sec=MIX_SECTIONS.find(s=>s.id===formSection);
@@ -1221,16 +1225,16 @@ function ProductionTab({mob,user,role}){
       const sc=sheetColor||formColor;
       sec.materials.forEach(mat=>{
         const q=parseFloat(getQty("sheet",mat));
-        if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:sc,line:formLine,product:formProduct,shift:formShift});
+        if(q>0)ents.push({section:sec.label,material:mat,qty:q,color:sc,line:formLine,product:formProduct,shift:formShift,modelBacking:formModelBacking});
       });
       const sheetColQty=parseFloat(getQty("sheetcolour",sc));
-      if(sheetColQty>0)ents.push({section:"Mixing (Sheet)",material:"COLOUR",qty:sheetColQty,color:sc,line:formLine,product:formProduct,shift:formShift});
+      if(sheetColQty>0)ents.push({section:"Mixing (Sheet)",material:"COLOUR",qty:sheetColQty,color:sc,line:formLine,product:formProduct,shift:formShift,modelBacking:formModelBacking});
     }
     if(ents.length===0){setSaving(false);setSaveMsg("No quantities entered");return;}
     try{
       const res=await fetch("/api/production",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({entries:ents,user:user?.firstName||user?.emailAddresses?.[0]?.emailAddress||"unknown",date:formDate})});
       const data=await res.json();
-      if(data.ok){const wasBackdated=formDate!==istToday();setSaveMsg(data.saved+" entries saved"+(wasBackdated?" ("+formDate+")":""));if(wasBackdated)setPeriod("30d");setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setLotSize("50");setSheetColor("");setFormShift(detectShift());setFormDate(istToday());setFormSection("");
+      if(data.ok){const wasBackdated=formDate!==istToday();setSaveMsg(data.saved+" entries saved"+(wasBackdated?" ("+formDate+")":""));if(wasBackdated)setPeriod("30d");setFormData({});setFormColor("");setFormLine("");setFormProduct("");setLots(1);setLotSize("50");setSheetColor("");setFormModelBacking("");setFormShift(detectShift());setFormDate(istToday());setFormSection("");
         const r2=await fetch("/api/production");const d2=await r2.json();setEntries(d2.entries||[]);
       }else{setSaveMsg(data.error||"Failed to save");}
     }catch{setSaveMsg("Error saving");}
@@ -1266,26 +1270,26 @@ function ProductionTab({mob,user,role}){
         <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formSection?"#16A34A":"#D97706",marginBottom:8}}>Section {formSection?"·":"(required)"}</div>
         <div style={{display:"flex",gap:8}}>
           {MIX_SECTIONS.map(sec=>
-            <div key={sec.id} className={formSection!==sec.id?"hv-pill":""} onClick={()=>{setFormSection(sec.id);setFormData({});setFormColor("");setSheetColor("");setLots(1);setLotSize("50");setFormLine(sec.id==="glue"?"Line (Glue)":"");setFormProduct("");}} style={{flex:1,padding:"12px",borderRadius:8,border:formSection===sec.id?"2px solid #2563EB":"1px solid #E5E7EB",background:formSection===sec.id?"#EFF6FF":"#F8FAFC",color:formSection===sec.id?"#2563EB":"#475569",fontSize:12,fontFamily:MN,fontWeight:formSection===sec.id?700:500,cursor:"pointer",textAlign:"center"}}>{sec.label}</div>
+            <div key={sec.id} className={formSection!==sec.id?"hv-pill":""} onClick={()=>{setFormSection(sec.id);setFormData({});setFormColor("");setSheetColor("");setLots(1);setLotSize("50");setFormLine(sec.id==="glue"?"Line (Glue)":sec.id==="sheet"?"Sheet Mch.":"");setFormProduct(sec.id==="sheet"?"Sheet":"");setFormModelBacking("");}} style={{flex:1,padding:"12px",borderRadius:8,border:formSection===sec.id?"2px solid #2563EB":"1px solid #E5E7EB",background:formSection===sec.id?"#EFF6FF":"#F8FAFC",color:formSection===sec.id?"#2563EB":"#475569",fontSize:12,fontFamily:MN,fontWeight:formSection===sec.id?700:500,cursor:"pointer",textAlign:"center"}}>{sec.label}</div>
           )}
         </div>
       </div>
 
       {/* Line + Product + Shift + Colour (shown after section selected) */}
       {formSection&&<div style={{padding:"14px 20px",borderBottom:"1px solid #E5E7EB",background:(formLine&&formProduct&&(formSection==="glue"||formColor||(formSection==="sheet"&&sheetColor)))?"#F0FDF4":"#FFFBEB"}}>
-        <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat("+(formSection==="glue"?3:4)+",1fr)",gap:12}}>
+        <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":"repeat("+(formSection==="glue"?3:formSection==="sheet"?5:4)+",1fr)",gap:12}}>
           <div>
             <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formLine?"#16A34A":"#D97706",marginBottom:5}}>Line</div>
             <select value={formLine} onChange={e=>setFormLine(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formLine?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formLine?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
               <option value="">Select...</option>
-              {(formSection==="glue"?GLUE_LINES:PROD_LINES).map(l=><option key={l} value={l}>{l}</option>)}
+              {(formSection==="glue"?GLUE_LINES:formSection==="sheet"?SHEET_LINES:PROD_LINES).map(l=><option key={l} value={l}>{l}</option>)}
             </select>
           </div>
           <div>
             <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formProduct?"#16A34A":"#D97706",marginBottom:5}}>Product</div>
             <select value={formProduct} onChange={e=>setFormProduct(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formProduct?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formProduct?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
               <option value="">Select...</option>
-              {PROD_PRODUCTS.map(p=><option key={p} value={p}>{p}</option>)}
+              {(formSection==="sheet"?SHEET_PRODUCTS:PROD_PRODUCTS).map(p=><option key={p} value={p}>{p}</option>)}
             </select>
           </div>
           <div>
@@ -1299,6 +1303,13 @@ function ProductionTab({mob,user,role}){
             <select value={formSection==="sheet"?sheetColor:formColor} onChange={e=>formSection==="sheet"?setSheetColor(e.target.value):setFormColor(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(((formSection==="sheet"?sheetColor:formColor))?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:((formSection==="sheet"?sheetColor:formColor))?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
               <option value="">Select...</option>
               {PROD_COLORS.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>}
+          {formSection==="sheet"&&<div>
+            <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:formModelBacking?"#16A34A":"#D97706",marginBottom:5}}>Model & Backing</div>
+            <select value={formModelBacking} onChange={e=>setFormModelBacking(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid "+(formModelBacking?"#16A34A":"#D97706"),borderRadius:8,background:"#fff",fontSize:13,fontFamily:MN,fontWeight:600,color:formModelBacking?"#0F172A":"#94A3B8",outline:"none",cursor:"pointer"}}>
+              <option value="">Select...</option>
+              {SHEET_MODEL_BACKING.map(m=><option key={m} value={m}>{m}</option>)}
             </select>
           </div>}
         </div>

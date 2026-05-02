@@ -63,7 +63,7 @@ export async function POST(req) {
       const sheetName = SECTION_SHEETS[e.section];
       if (!sheetName) return;
       if (!bySheet[sheetName]) bySheet[sheetName] = [];
-      bySheet[sheetName].push([date, time, e.line || '', e.product || '', e.shift || '', e.color || '', e.material, Math.round(e.qty * 1000) / 1000, userName, e.lots || e.lotsUsed || 1, e.lotsProduced || '', e.lotsUsed || '', e.lotSize || '']);
+      bySheet[sheetName].push([date, time, e.line || '', e.product || '', e.shift || '', e.color || '', e.material, Math.round(e.qty * 1000) / 1000, userName, e.lots || e.lotsUsed || 1, e.lotsProduced || '', e.lotsUsed || '', e.lotSize || '', e.modelBacking || '']);
     });
 
     let totalSaved = 0;
@@ -96,7 +96,7 @@ export async function GET() {
       try {
         const res = await sheets.spreadsheets.values.get({
           spreadsheetId: PROD_SHEET_ID,
-          range: `'${sheetName}'!A:M`,
+          range: `'${sheetName}'!A:N`,
         });
         const rows = res.data.values || [];
         if (rows.length === 0) continue;
@@ -110,6 +110,7 @@ export async function GET() {
           const isNewFormat = colE.startsWith('Day') || colE.startsWith('Night');
           let shift = '', color = '', material = '', qty = 0, user = '';
           let lots = 1;
+          let modelBacking = '';
           if (isNewFormat) {
             shift = colE;
             color = (r[5] || '').trim();
@@ -120,6 +121,7 @@ export async function GET() {
             var lotsProduced = parseInt(r[10]) || 0;
             var lotsUsed = parseInt(r[11]) || 0;
             var lotSize = r[12] || '';
+            modelBacking = (r[13] || '').trim();
           } else {
             color = colE;
             material = (r[5] || '').trim();
@@ -142,6 +144,7 @@ export async function GET() {
             lotsProduced: lotsProduced,
             lotsUsed: lotsUsed,
             lotSize: lotSize,
+            modelBacking: modelBacking,
           });
         });
       } catch {}
