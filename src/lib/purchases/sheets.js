@@ -51,6 +51,9 @@ export const TABS = {
       'mismatches',
       'saved_by',
       'saved_at',
+      'approval_status',
+      'approved_by',
+      'approved_at',
     ],
   },
   vendors: {
@@ -104,6 +107,28 @@ async function ensureTab(tab) {
       valueInputOption: 'RAW',
       requestBody: { values: [tab.headers] },
     });
+  } else {
+    // Reconcile: if existing header row is a strict prefix of our headers
+    // (i.e. only missing trailing columns), append the new ones. If a user
+    // has reordered or renamed headers, leave them alone.
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: `${tab.name}!1:1`,
+    });
+    const existing = (res.data.values?.[0] || []).map((h) =>
+      String(h || '').trim(),
+    );
+    const isPrefix =
+      existing.length < tab.headers.length &&
+      existing.every((h, i) => h === tab.headers[i]);
+    if (isPrefix) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID,
+        range: `${tab.name}!A1`,
+        valueInputOption: 'RAW',
+        requestBody: { values: [tab.headers] },
+      });
+    }
   }
   _ensured.add(tab.name);
 }

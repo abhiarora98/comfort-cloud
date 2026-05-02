@@ -42,6 +42,12 @@ export async function ingestPurchase(input, { savedBy } = {}) {
   }
 
   const items = Array.isArray(input.items) ? input.items : null;
+  const is_matched_with_tally = !!input.is_matched_with_tally;
+  // Unmatched invoices need human approval. Tally rows and Tally-matched
+  // invoices skip approval (empty status). Manual entries are out of scope
+  // per the stated rule and also skip approval.
+  const approval_status =
+    source === 'invoice' && !is_matched_with_tally ? 'pending' : '';
 
   const purchase = {
     id,
@@ -56,13 +62,16 @@ export async function ingestPurchase(input, { savedBy } = {}) {
     description: pickDescription(input),
     source,
     photo_url: pickPhotoUrl(input),
-    is_matched_with_tally: !!input.is_matched_with_tally,
+    is_matched_with_tally,
     verified: input.verified || '',
     mismatches: input.mismatches || '',
     saved_by: savedBy || input.saved_by || '',
     saved_at: new Date().toISOString(),
     user_corrected: false,
     previous_category: '',
+    approval_status,
+    approved_by: '',
+    approved_at: '',
   };
   validatePurchase(purchase);
 

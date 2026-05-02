@@ -263,6 +263,28 @@ export default function PurchasesPage() {
     await doSave([]);
   };
 
+  const setApproval = async (bill, action) => {
+    if (!bill.id) return;
+    const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    const optimistic = {
+      approve: { approval_status: 'approved', approved_by: userName, approved_at: new Date().toISOString() },
+      reject:  { approval_status: 'rejected', approved_by: userName, approved_at: new Date().toISOString() },
+    }[action];
+    setBills(prev => prev.map(b => b.id === bill.id ? { ...b, ...optimistic } : b));
+    try {
+      const resp = await fetch(`/api/purchases/${encodeURIComponent(bill.id)}/${action}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved_by: userName }),
+      });
+      const data = await resp.json();
+      if (!data.ok) throw new Error(data.error || `${action} failed`);
+    } catch (e) {
+      console.error(`${action} bill:`, e);
+      await fetchBills();
+    }
+  };
+
   const updateBillCategory = async (bill, newCategory) => {
     setEditingCatId(null);
     if (!bill.id || newCategory === bill.category) return;
@@ -372,7 +394,21 @@ export default function PurchasesPage() {
       <div style={{ padding: mob ? '16px' : '24px 28px', maxWidth: 900, margin: '0 auto' }}>
 
         {/* History view */}
-        {view === 'history' && (
+        {view === 'history' && (() => {
+          const pendingCount = bills.filter(b => b.approval_status === 'pending').length;
+          return (
+          <>
+          {pendingCount > 0 && (
+            <div style={{ ...card, padding: '12px 16px', marginBottom: 12, background: '#fef3c7', border: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>⏳</span>
+              <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {pendingCount} {pendingCount === 1 ? 'invoice needs' : 'invoices need'} approval
+              </div>
+              <div style={{ fontFamily: MN, fontSize: 10, color: '#a16207', marginLeft: 'auto' }}>
+                Review below
+              </div>
+            </div>
+          )}
           <div style={card}>
             <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8' }}>Bill History</div>
@@ -394,7 +430,7 @@ export default function PurchasesPage() {
             ) : (
               <div>
                 {bills.map((b, i) => (
-                  <div key={b.id || i} onClick={() => setSelectedBill(b)} style={{ padding: '12px 16px', borderBottom: i < bills.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                  <div key={b.id || i} onClick={() => setSelectedBill(b)} style={{ padding: '12px 16px', borderBottom: i < bills.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', background: b.approval_status === 'pending' ? '#fffbeb' : 'transparent' }}>
                     {b.photo_url
                       ? <img src={b.photo_url} alt="Bill" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }} />
                       : <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', border: '1px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
@@ -403,6 +439,9 @@ export default function PurchasesPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                         <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.supplier || b.supplier_original || '—'}</div>
                         {b.verified === 'mismatch' && <span title={b.mismatches} style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>}
+                        {b.approval_status === 'pending' && <span style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>Pending</span>}
+                        {b.approval_status === 'approved' && <span title={`Approved by ${b.approved_by || '—'}`} style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>Approved</span>}
+                        {b.approval_status === 'rejected' && <span title={`Rejected by ${b.approved_by || '—'}`} style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>Rejected</span>}
                       </div>
                       <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{b.bill_no} · {b.date}</div>
                       {b.verified === 'mismatch' && b.mismatches && <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.mismatches}</div>}
@@ -411,14 +450,23 @@ export default function PurchasesPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                       {b.amount && <div style={{ fontFamily: MN, fontSize: 13, fontWeight: 700, color: '#0f172a' }}>₹{Number(b.amount).toLocaleString('en-IN')}</div>}
                       {renderCategoryChip(b, { interactive: true })}
-                      <div style={{ fontFamily: MN, fontSize: 9, color: '#cbd5e1' }}>{b.saved_by}</div>
+                      {b.approval_status === 'pending' ? (
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button onClick={(e) => { e.stopPropagation(); setApproval(b, 'approve'); }} title="Approve" style={{ padding: '3px 8px', fontFamily: MN, fontSize: 10, fontWeight: 700, borderRadius: 6, border: '1px solid #16a34a', background: '#16a34a', color: '#fff', cursor: 'pointer' }}>✓ Approve</button>
+                          <button onClick={(e) => { e.stopPropagation(); setApproval(b, 'reject'); }} title="Reject" style={{ padding: '3px 8px', fontFamily: MN, fontSize: 10, fontWeight: 700, borderRadius: 6, border: '1px solid #dc2626', background: '#fff', color: '#dc2626', cursor: 'pointer' }}>✗ Reject</button>
+                        </div>
+                      ) : (
+                        <div style={{ fontFamily: MN, fontSize: 9, color: '#cbd5e1' }}>{b.saved_by}</div>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
-        )}
+          </>
+          );
+        })()}
 
         {/* Form view */}
         {view === 'form' && (
