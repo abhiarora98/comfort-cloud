@@ -1529,6 +1529,14 @@ function ProductionTab({mob,user,role}){
           const secTotal=secEntries.reduce((s,e)=>s+e.qty,0);
           if(secTotal===0)return null;
           const secMats={};secEntries.forEach(e=>{secMats[e.material]=(secMats[e.material]||0)+e.qty;});
+          const isSheet=sec.id==="sheet";
+          const byColor={};const byModel={};
+          if(isSheet){
+            secEntries.forEach(e=>{
+              if(e.color)byColor[e.color]=(byColor[e.color]||0)+e.qty;
+              if(e.modelBacking)byModel[e.modelBacking]=(byModel[e.modelBacking]||0)+e.qty;
+            });
+          }
           return <div key={sec.id} style={{background:"#fff",borderRadius:10,border:"1px solid #E5E7EB",padding:"16px 18px"}}>
             <div style={{fontFamily:MN,fontSize:10,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94A3B8",marginBottom:8}}>{sec.label}</div>
             <div style={{fontFamily:MN,fontSize:20,fontWeight:700,color:"#0F172A",marginBottom:10}}>{Math.round(secTotal).toLocaleString("en-IN")} kg</div>
@@ -1538,6 +1546,22 @@ function ProductionTab({mob,user,role}){
                 <span style={{fontFamily:MN,fontSize:12,fontWeight:600,color:"#0F172A"}}>{Math.round(q)} kg</span>
               </div>
             )}
+            {isSheet&&Object.keys(byColor).length>0&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #F1F5F9"}}>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>By Colour</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                {Object.entries(byColor).sort((a,b)=>b[1]-a[1]).map(([c,q])=>
+                  <span key={c} style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"3px 8px",borderRadius:12}}>{c} · {Math.round(q)} kg</span>
+                )}
+              </div>
+            </div>}
+            {isSheet&&Object.keys(byModel).length>0&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #F1F5F9"}}>
+              <div style={{fontFamily:MN,fontSize:9,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",color:"#94A3B8",marginBottom:6}}>By Model & Backing</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                {Object.entries(byModel).sort((a,b)=>b[1]-a[1]).map(([m,q])=>
+                  <span key={m} style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#0D9488",background:"#F0FDFA",padding:"3px 8px",borderRadius:12}}>{m} · {Math.round(q)} kg</span>
+                )}
+              </div>
+            </div>}
           </div>;
         })}
       </div>}
@@ -1558,6 +1582,7 @@ function ProductionTab({mob,user,role}){
                 {e.product&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#D97706",background:"#FEF3C7",padding:"2px 6px",borderRadius:4}}>{e.product}</span>}
                 {e.shift&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:e.shift.startsWith("Day")?"#B45309":"#1E40AF",background:e.shift.startsWith("Day")?"#FEF3C7":"#DBEAFE",padding:"2px 6px",borderRadius:4}}>{e.shift.startsWith("Day")?"☀ Day":"🌙 Night"}</span>}
                 {e.color&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#2563EB",background:"#EFF6FF",padding:"2px 6px",borderRadius:4}}>{e.color}</span>}
+                {e.modelBacking&&<span style={{fontFamily:MN,fontSize:10,fontWeight:600,color:"#0D9488",background:"#F0FDFA",padding:"2px 6px",borderRadius:4}}>{e.modelBacking}</span>}
                 <span style={{fontSize:11,fontWeight:500,color:"#475569",minWidth:80}}>{e.section}</span>
                 <span style={{fontSize:12,fontWeight:600,color:"#0F172A",flex:1,minWidth:80}}>{e.material}</span>
                 <span style={{fontFamily:MN,fontSize:13,fontWeight:700,color:"#0F172A"}}>{e.qty} kg</span>
