@@ -46,7 +46,11 @@ const PENDING_REASON = 'No matching entry found in Tally';
 const COL_ALIASES = {
   date:     ['date', 'voucherdate', 'billdate', 'invoicedate', 'supplierinvoicedate', 'dated'],
   supplier: ['supplier', 'party', 'partyname', 'partyledger', 'partyledgername', 'vendor', 'name'],
-  bill_no:  ['supplierinvoiceno', 'supplierinvoicenumber', 'invoiceno', 'invoicenumber', 'billno', 'billnumber', 'voucherno', 'vouchernumber', 'reference', 'refno', 'ref'],
+  // Two distinct identifier columns. Tally typically has BOTH "Voucher No."
+  // (its own internal sequence) and "Supplier Invoice No." (vendor's). Some
+  // rows have only one filled. We detect vouchers when either is present.
+  voucher_no: ['voucherno', 'vouchernumber'],
+  invoice_no: ['supplierinvoiceno', 'supplierinvoicenumber', 'invoiceno', 'invoicenumber', 'billno', 'billnumber', 'reference', 'refno', 'ref'],
   description: ['narration', 'description', 'remarks'],
   // Optional GST columns — pulled if present, never required.
   gst_amount: ['gstamount', 'taxamount', 'totaltax', 'gst', 'tax', 'gsttotal'],
@@ -55,10 +59,10 @@ const COL_ALIASES = {
   igst:       ['igst', 'igstamount'],
   gst_number: ['gstnumber', 'gstin', 'gstinuin', 'gstno', 'partygstin', 'partygst'],
   hsn:        ['hsn', 'hsncode', 'hsnno', 'hsnsac'],
-  // Optional item-level columns. When present, rows are grouped by bill_no
-  // into a single bill with an items[] array. "Particulars" is included as
-  // a fallback for Tally Columnar Purchase Register exports where stock
-  // items appear in that column alongside a separate Supplier column.
+  // Optional item-level columns. When present, rows under a voucher are
+  // collected as line items. "Particulars" is a fallback for Tally
+  // Columnar Purchase Register exports where stock items appear in that
+  // column alongside a separate Supplier column.
   item:       ['stockitem', 'itemname', 'productname', 'product', 'particulars'],
   qty:        ['quantity', 'qty', 'billedquantity'],
   rate:       ['rate', 'unitrate', 'unitprice'],
@@ -122,8 +126,12 @@ async function parseTallyFile(file) {
   for (const [k, aliases] of Object.entries(COL_ALIASES)) {
     ix[k] = findCol(normHeaders, aliases);
   }
-  const missing = ['date', 'supplier', 'bill_no'].filter(k => ix[k] < 0);
-  if (missing.length) return { rows: [], error: `Missing columns: ${missing.join(', ')}` };
+  // Need supplier and at least one identifier column; date carries forward.
+  const missingCore = ['date', 'supplier'].filter(k => ix[k] < 0);
+  if (missingCore.length) return { rows: [], error: `Missing columns: ${missingCore.join(', ')}` };
+  if (ix.voucher_no < 0 && ix.invoice_no < 0) {
+    return { rows: [], error: 'Missing column: Voucher No / Supplier Invoice No / Bill No' };
+  }
   const amtIdxs = AMOUNT_CANDIDATES.map(a => normHeaders.indexOf(a)).filter(i => i >= 0);
   if (!amtIdxs.length) return { rows: [], error: 'No amount column (try Total, Amount, Credit, Debit, or Value)' };
 
@@ -132,47 +140,57 @@ async function parseTallyFile(file) {
   const text = (r, c) => String(get(r, c) ?? '').trim();
   const moneyStr = (n) => Math.abs(n) > 0 ? Math.abs(n).toString() : '';
 
-  const groups = new Map();
+  // --- State machine over the rows -------------------------------------
+  // Walk top-to-bottom. A row that has (Voucher No OR Supplier Invoice
+  // No) AND a Supplier starts a new purchase. Push the in-flight purchase
+  // before reassigning, and once more after the loop.
+  const allPurchases = [];
+  let currentPurchase = null;
+  let lastDate = '';   // carry forward when Tally leaves Date blank
+  let invoiceRowsDetected = 0;
   let skipped = 0;
-  let parsedInvoices = 0;
 
-  // Detect a new voucher row by Voucher No / Bill No OR Supplier presence —
-  // never just by Date, because Tally exports sometimes leave Date blank on
-  // a voucher row and that used to make the row's items merge into the
-  // previous voucher.
-  let parent = null;
-  let voucherIdx = 0;
+  function flushCurrent() {
+    if (currentPurchase) {
+      allPurchases.push(currentPurchase);
+      currentPurchase = null;
+    }
+  }
 
   for (let i = headerIdx + 1; i < aoa.length; i++) {
     const r = aoa[i];
-    const rowSupplier = text(r, ix.supplier);
-    const rowBillNo   = text(r, ix.bill_no);
-    const rowDate     = toIsoDate(get(r, ix.date));
-    const itemName    = text(r, ix.item);
-    const isVoucherRow = !!(rowBillNo || rowSupplier);
+    const rowSupplier  = text(r, ix.supplier);
+    const rowVoucherNo = text(r, ix.voucher_no);
+    const rowInvoiceNo = text(r, ix.invoice_no);
+    const rowRef       = rowVoucherNo || rowInvoiceNo; // either identifier
+    const rowDate      = toIsoDate(get(r, ix.date));
+    const itemName     = text(r, ix.item);
+    if (rowDate) lastDate = rowDate;
+
+    const isVoucherRow = !!(rowRef && rowSupplier);
 
     if (isVoucherRow) {
-      voucherIdx++;
-      parent = {
-        idx: voucherIdx,
-        supplier: rowSupplier || (parent && parent.supplier) || '',
-        bill_no: rowBillNo || `auto-r${i + 1}`,
-        bill_no_real: !!rowBillNo,
-        date: rowDate || (parent && parent.date) || '',
-      };
-      parsedInvoices++;
-      groups.set(parent.idx, {
-        date: parent.date,
-        supplier_original: parent.supplier,
-        bill_no: parent.bill_no,
+      // Push the previous voucher before starting a new one.
+      flushCurrent();
+      invoiceRowsDetected++;
+      const billNo = rowVoucherNo || rowInvoiceNo || `auto-r${i + 1}`;
+      currentPurchase = {
+        date: rowDate || lastDate,
+        supplier_original: rowSupplier,
+        bill_no: billNo,
         amount: 0, gst_amount: 0, gstObj: {}, items: [],
         description: '',
-      });
-    } else if (!parent) {
+        // Carry the supplier on the in-flight voucher so item-row checks
+        // can compare against it.
+        _supplier: rowSupplier,
+      };
+    } else if (!currentPurchase) {
+      // Garbage rows before the first voucher (titles, blank lines).
       skipped++;
       continue;
     } else if (!itemName) {
-      // No identifiers AND no item — likely a totals/separator row. Skip.
+      // Continuation row with neither identifiers nor an item — separator
+      // or grand-total. Skip.
       skipped++;
       continue;
     }
@@ -192,18 +210,13 @@ async function parseTallyFile(file) {
     const hsn = text(r, ix.hsn);
 
     let item = null;
-    // Item rows only: a row that did NOT start a new voucher and has an
-    // item name. Defensive: skip if the item name matches the voucher's
-    // supplier (Tally sometimes writes the supplier name in Particulars
-    // on a continuation row).
+    // Item rows only: a continuation row with an item name. Defensive:
+    // skip if Particulars matches the supplier (Tally sometimes echoes
+    // the supplier name there).
     const isItemRow = !isVoucherRow && itemName;
-    const looksLikeSupplier = isItemRow && parent && parent.supplier
-      && normItemKey(itemName) === normItemKey(parent.supplier);
+    const looksLikeSupplier = isItemRow && currentPurchase._supplier
+      && normItemKey(itemName) === normItemKey(currentPurchase._supplier);
     if (isItemRow && !looksLikeSupplier) {
-      // Item amount: prefer the explicit per-line column ("Value" / "Item
-      // Value" / "Line Amount"). If missing, scan the row for the largest
-      // numeric cell — but skip the bill-total columns (those carry the
-      // grand total, repeated on every row) and obvious non-amount cells.
       let itemAmt = Math.abs(num(get(r, ix.item_value)));
       if (!itemAmt) {
         const skipIdxs = new Set([
@@ -229,29 +242,28 @@ async function parseTallyFile(file) {
     }
     const description = text(r, ix.description);
 
-    // Each voucher gets its own group keyed by its monotonic index.
-    // No merging across voucher boundaries.
-    const g = groups.get(parent.idx);
-    if (amount > g.amount) g.amount = amount;
-    if (gstTotal > g.gst_amount) g.gst_amount = gstTotal;
-    if (cgst && !g.gstObj.cgst) g.gstObj.cgst = String(cgst);
-    if (sgst && !g.gstObj.sgst) g.gstObj.sgst = String(sgst);
-    if (igst && !g.gstObj.igst) g.gstObj.igst = String(igst);
-    if (gstNumber && !g.gstObj.gst_number) g.gstObj.gst_number = gstNumber;
-    if (hsn && !g.gstObj.hsn) g.gstObj.hsn = hsn;
-    if (description && !g.description) g.description = description;
-    if (item) g.items.push(item);
+    if (amount > currentPurchase.amount) currentPurchase.amount = amount;
+    if (gstTotal > currentPurchase.gst_amount) currentPurchase.gst_amount = gstTotal;
+    if (cgst && !currentPurchase.gstObj.cgst) currentPurchase.gstObj.cgst = String(cgst);
+    if (sgst && !currentPurchase.gstObj.sgst) currentPurchase.gstObj.sgst = String(sgst);
+    if (igst && !currentPurchase.gstObj.igst) currentPurchase.gstObj.igst = String(igst);
+    if (gstNumber && !currentPurchase.gstObj.gst_number) currentPurchase.gstObj.gst_number = gstNumber;
+    if (hsn && !currentPurchase.gstObj.hsn) currentPurchase.gstObj.hsn = hsn;
+    if (description && !currentPurchase.description) currentPurchase.description = description;
+    if (item) currentPurchase.items.push(item);
   }
+  flushCurrent(); // flush the very last in-flight purchase
+  // ---------------------------------------------------------------------
 
   const rows = [];
   let zeroAmount = 0;
   let itemLines = 0;
   let billsWithItems = 0;
-  // Detect duplicate ingest-keys (supplier|bill_no|date) — these are real
-  // collisions that the bulk endpoint will dedupe, NOT parser-side merging.
+  // Detect duplicate ingest-keys (supplier|bill_no|date). These survive
+  // the parser as distinct purchases but would dedupe inside ingest.
   const idSeen = new Map();
   let duplicateBillIds = 0;
-  for (const g of groups.values()) {
+  for (const g of allPurchases) {
     let amount = g.amount;
     if (!amount && g.items.length) {
       amount = g.items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
@@ -276,15 +288,20 @@ async function parseTallyFile(file) {
   }
 
   const totalRows = aoa.length - headerIdx - 1;
+  const totalPurchasesCreated = allPurchases.length;
   const result = {
     rows, skipped, zeroAmount, itemLines, billsWithItems,
-    totalRows, parsedInvoices, duplicateBillIds,
+    totalRows, parsedInvoices: invoiceRowsDetected,
+    totalPurchasesCreated, duplicateBillIds,
     error: null,
   };
   console.log('parseTallyFile:', {
-    totalRows, parsedInvoices, skipped,
+    totalRows, invoiceRowsDetected, totalPurchasesCreated, skipped,
     zeroAmount, itemLines, billsWithItems, duplicateBillIds,
   });
+  if (invoiceRowsDetected !== totalPurchasesCreated) {
+    console.warn('parseTallyFile: invoice rows detected != purchases created — flushCurrent missed something');
+  }
   return result;
 }
 // ------------------------------------------------------------------------
@@ -669,7 +686,7 @@ export default function PurchasesPage() {
     setUploading(true); setSyncMsg('');
     try {
       const parsed = await parseTallyFile(file);
-      const { rows, error, skipped, zeroAmount, itemLines, billsWithItems, totalRows, parsedInvoices, duplicateBillIds } = parsed;
+      const { rows, error, skipped, zeroAmount, itemLines, billsWithItems, totalRows, parsedInvoices, totalPurchasesCreated, duplicateBillIds } = parsed;
       if (error) throw new Error(error);
       if (rows.length === 0) throw new Error('No valid rows found');
       const items = rows.map(r => ({
@@ -688,7 +705,10 @@ export default function PurchasesPage() {
       if (!data.ok) throw new Error(data.error || 'Bulk save failed');
       const { created, duplicate, errors } = data.summary;
       if (created > 0) await fetchBills();
-      console.log('Upload summary:', { totalRows, parsedInvoices, created, duplicate, errors, duplicateBillIds, skipped });
+      console.log('Upload summary:', {
+        totalRows, invoiceRowsDetected: parsedInvoices, totalPurchasesCreated,
+        created, duplicate, errors, duplicateBillIds, skipped,
+      });
       const skipNote = skipped ? ` · ${skipped} skipped` : '';
       const zeroNote = zeroAmount ? ` · ${zeroAmount} no-amount` : '';
       const itemNote = itemLines ? ` · ${itemLines} items in ${billsWithItems} bills` : ' · 0 items';
