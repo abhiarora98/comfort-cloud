@@ -145,17 +145,20 @@ async function parseTallyFile(file) {
   const moneyStr = (n) => Math.abs(n) > 0 ? Math.abs(n).toString() : '';
 
   // --- State machine over the rows -------------------------------------
-  // Group purely by changes in the trimmed voucher value:
-  //   voucher = trim(Voucher No || Supplier Invoice No)
-  //   if the row's voucher differs from the previous row's voucher,
-  //     flush the current purchase and start a new one.
-  // Empty voucher cells fall back to a row-index sentinel so they can
-  // never accidentally merge into the previous voucher. Date / Supplier
-  // / Particulars / Voucher Type are NOT used for detection.
+  // Multi-signal grouping. A row starts a new invoice when EITHER:
+  //   (a) the voucher changes:  rawVoucher && rawVoucher !== lastVoucher
+  //   (b) date+supplier change: hasDate && supplier && supplier !== lastSupplier
+  // (b) catches headers whose voucher cell is blank or which collide
+  // numerically with the previous voucher. (a) catches headers that
+  // share a supplier+date with the previous row but use a fresh
+  // voucher number (e.g. two consecutive same-day orders).
+  // Supplier comes from the dedicated Supplier column when filled,
+  // else falls back to Particulars on the same row. Comparisons are
+  // normalized so case / spacing / punctuation can't break matches.
   const allPurchases = [];
   let currentPurchase = null;
-  let lastVoucher = null;     // most recent non-empty voucher seen
-  let prevVoucher = null;     // voucher of the in-flight purchase
+  let lastVoucher = null;       // most recent non-empty voucher
+  let lastSupplier = null;      // most recent non-empty supplier (normalized)
   let invoiceRowsDetected = 0;
   let skipped = 0;
   const sampleVoucherRows = [];
@@ -181,44 +184,52 @@ async function parseTallyFile(file) {
     // Trim defensively — Tally sometimes sneaks in NBSPs / trailing
     // spaces that would otherwise break grouping.
     const rawVoucher = (rowVoucherNo || rowInvoiceNo).replace(/\s+/g, ' ').trim();
-    // Carry forward the last seen voucher when this row's voucher
-    // cells are blank (Tally's Columnar Purchase Register puts the
-    // voucher only on the header row in some export profiles).
-    const voucher = rawVoucher || lastVoucher;
+    // Supplier name: dedicated column preferred, Particulars as fallback.
+    const supplierRaw = rowSupplier || itemName || '';
+    const supplierKey = normItemKey(supplierRaw);
+    const hasDate = !!rowDate;
+
+    // Multi-signal change detection. Both signals are evaluated
+    // BEFORE updating lastVoucher / lastSupplier.
+    const voucherChanged  = !!rawVoucher && rawVoucher !== lastVoucher;
+    const supplierChanged = hasDate && !!supplierKey && supplierKey !== lastSupplier;
+    const isNewInvoice = voucherChanged || supplierChanged;
 
     if (sampleResolutions.length < 10) {
-      sampleResolutions.push({ row: i + 1, raw: rawVoucher, carried: !rawVoucher && !!lastVoucher, voucher, item: itemName, supplier: rowSupplier, date: rowDate });
+      sampleResolutions.push({
+        row: i + 1, raw: rawVoucher, supplier: supplierRaw, date: rowDate,
+        voucherChanged, supplierChanged, isNewInvoice,
+      });
     }
 
-    // Without a voucher and without a carried context, this row can't
-    // be attributed to any invoice — skip.
-    if (!voucher) {
-      if (sampleSkippedRows.length < 5) sampleSkippedRows.push({ row: i + 1, reason: 'no_voucher_context', item: itemName, supplier: rowSupplier });
-      skipped++;
-      continue;
-    }
-    if (rawVoucher) lastVoucher = rawVoucher;
-
-    if (voucher !== prevVoucher) {
-      // Voucher changed — push the previous purchase and start a new one.
+    if (isNewInvoice) {
       flushCurrent();
       invoiceRowsDetected++;
-      const supplier = rowSupplier || itemName || '';
+      // bill_no preference: this row's voucher → supplier+date synthetic.
+      // We do NOT fall back to lastVoucher here — that would collide with
+      // the previous invoice's bill_no when the new invoice was triggered
+      // purely by a supplier change.
+      const billNo = rawVoucher
+        || `${supplierKey || 'noref'}-${rowDate || `r${i + 1}`}`;
       if (sampleVoucherRows.length < 5) {
-        sampleVoucherRows.push({ row: i + 1, voucher: rowVoucherNo, invoice: rowInvoiceNo, supplier, date: rowDate });
+        sampleVoucherRows.push({ row: i + 1, voucher: rowVoucherNo, invoice: rowInvoiceNo, supplier: supplierRaw, date: rowDate, by: voucherChanged ? 'voucher' : 'supplier+date' });
       }
       currentPurchase = {
         date: rowDate || '',
-        supplier_original: supplier,
-        bill_no: voucher,
+        supplier_original: supplierRaw,
+        bill_no: billNo,
         amount: 0, gst_amount: 0, gstObj: {}, items: [],
         description: '',
-        _supplier: supplier,
+        _supplier: supplierRaw,
       };
-      prevVoucher = voucher;
+    } else if (!currentPurchase) {
+      // No invoice in flight and nothing in this row triggered one.
+      if (sampleSkippedRows.length < 5) sampleSkippedRows.push({ row: i + 1, reason: 'no_invoice_context', item: itemName, supplier: rowSupplier });
+      skipped++;
+      continue;
     } else {
-      // Same voucher as previous row — continuation. Backfill any
-      // identity fields that were blank on the first row.
+      // Continuation row — backfill identity fields that were blank
+      // on the header.
       if (!currentPurchase.date && rowDate) currentPurchase.date = rowDate;
       if (!currentPurchase.supplier_original && rowSupplier) {
         currentPurchase.supplier_original = rowSupplier;
@@ -282,6 +293,11 @@ async function parseTallyFile(file) {
         sampleItemRows.push({ row: i + 1, item: itemName, qty: text(r, ix.qty), rate: text(r, ix.rate) });
       }
     }
+
+    // Update tracking AFTER detection + processing — so the next row's
+    // change comparison sees this row's values.
+    if (rawVoucher) lastVoucher = rawVoucher;
+    if (supplierKey) lastSupplier = supplierKey;
   }
   flushCurrent(); // flush the very last in-flight purchase
   // ---------------------------------------------------------------------
