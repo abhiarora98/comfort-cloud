@@ -130,12 +130,11 @@ async function parseTallyFile(file) {
     ix[k] = findCol(normHeaders, aliases);
   }
   // Need supplier and at least one identifier column; date carries forward.
-  const missingCore = ['date', 'supplier', 'voucher_type'].filter(k => ix[k] < 0);
-  if (missingCore.length) {
-    return { rows: [], error: `Missing required columns: ${missingCore.join(', ')} — export needs Date, Supplier, and Voucher Type` };
-  }
   if (ix.voucher_no < 0 && ix.invoice_no < 0) {
-    return { rows: [], error: 'Missing column: Voucher No / Supplier Invoice No / Bill No' };
+    return { rows: [], error: 'Missing identifier column: Voucher No or Supplier Invoice No' };
+  }
+  if (ix.supplier < 0 && ix.item < 0) {
+    return { rows: [], error: 'Missing supplier-or-particulars column' };
   }
   const amtIdxs = AMOUNT_CANDIDATES.map(a => normHeaders.indexOf(a)).filter(i => i >= 0);
   if (!amtIdxs.length) return { rows: [], error: 'No amount column (try Total, Amount, Credit, Debit, or Value)' };
@@ -146,25 +145,22 @@ async function parseTallyFile(file) {
   const moneyStr = (n) => Math.abs(n) > 0 ? Math.abs(n).toString() : '';
 
   // --- State machine over the rows -------------------------------------
-  // Walk top-to-bottom. Detection rule for Tally Columnar Purchase
-  // Register (confirmed against the user's actual file):
-  //   header row = Date is filled AND Voucher Type === "Purchase"
-  //   item row   = Date is empty   AND Particulars is filled
-  // Voucher No / Supplier Invoice No are still read but used ONLY to
-  // populate bill_no — never for detection — so that copies of those
-  // columns onto item rows (which Tally sometimes does) can't trigger
-  // phantom vouchers. Particulars vs Supplier is also no longer used
-  // for detection because some export profiles leave the dedicated
-  // Supplier column blank or different on header rows.
+  // Group purely by changes in the trimmed voucher value:
+  //   voucher = trim(Voucher No || Supplier Invoice No)
+  //   if the row's voucher differs from the previous row's voucher,
+  //     flush the current purchase and start a new one.
+  // Empty voucher cells fall back to a row-index sentinel so they can
+  // never accidentally merge into the previous voucher. Date / Supplier
+  // / Particulars / Voucher Type are NOT used for detection.
   const allPurchases = [];
   let currentPurchase = null;
+  let prevVoucher = null;
   let invoiceRowsDetected = 0;
   let skipped = 0;
-  // Diagnostic samples — first few of each kind. Limited to 5 of each
-  // so the console stays useful when something looks off.
   const sampleVoucherRows = [];
   const sampleItemRows = [];
   const sampleSkippedRows = [];
+  const sampleResolutions = [];
 
   function flushCurrent() {
     if (currentPurchase) {
@@ -175,67 +171,85 @@ async function parseTallyFile(file) {
 
   for (let i = headerIdx + 1; i < aoa.length; i++) {
     const r = aoa[i];
-    const rowSupplier   = text(r, ix.supplier);
-    const rowVoucherNo  = text(r, ix.voucher_no);
-    const rowInvoiceNo  = text(r, ix.invoice_no);
-    const rowVoucherTyp = text(r, ix.voucher_type).toLowerCase();
-    const rowDate       = toIsoDate(get(r, ix.date));
-    const itemName      = text(r, ix.item); // Particulars
+    const rowSupplier  = text(r, ix.supplier);
+    const rowVoucherNo = text(r, ix.voucher_no);
+    const rowInvoiceNo = text(r, ix.invoice_no);
+    const rowDate      = toIsoDate(get(r, ix.date));
+    const itemName     = text(r, ix.item);
 
-    const isHeaderRow = !!rowDate && rowVoucherTyp === 'purchase';
-    const isItemRow   = !rowDate && !!itemName;
+    // Trim defensively — Tally sometimes sneaks in NBSPs / trailing
+    // spaces that would otherwise break grouping.
+    const voucher = (rowVoucherNo || rowInvoiceNo).replace(/\s+/g, ' ').trim();
+    const effectiveVoucher = voucher || `auto-r${i + 1}`;
 
-    if (isHeaderRow) {
-      // Push the previous voucher before starting a new one.
+    // Skip rows that have NOTHING usable — separators / blank lines.
+    if (!voucher && !itemName && !rowSupplier && !rowDate) {
+      if (sampleSkippedRows.length < 5) sampleSkippedRows.push({ row: i + 1, reason: 'all_empty' });
+      skipped++;
+      continue;
+    }
+
+    if (sampleResolutions.length < 10) {
+      sampleResolutions.push({ row: i + 1, voucher, effective: effectiveVoucher, item: itemName, supplier: rowSupplier, date: rowDate });
+    }
+
+    if (effectiveVoucher !== prevVoucher) {
+      // Voucher changed — push the previous purchase and start a new one.
       flushCurrent();
       invoiceRowsDetected++;
-      const billNo = rowVoucherNo || rowInvoiceNo || `auto-r${i + 1}`;
-      // Supplier from the dedicated column when filled, else fall back
-      // to Particulars — they're the same name on most header rows.
       const supplier = rowSupplier || itemName || '';
       if (sampleVoucherRows.length < 5) {
         sampleVoucherRows.push({ row: i + 1, voucher: rowVoucherNo, invoice: rowInvoiceNo, supplier, date: rowDate });
       }
       currentPurchase = {
-        date: rowDate,
+        date: rowDate || '',
         supplier_original: supplier,
-        bill_no: billNo,
+        bill_no: voucher || `auto-r${i + 1}`,
         amount: 0, gst_amount: 0, gstObj: {}, items: [],
         description: '',
         _supplier: supplier,
       };
-    } else if (!currentPurchase) {
-      // Garbage rows before the first voucher (titles, blank lines).
-      if (sampleSkippedRows.length < 5) sampleSkippedRows.push({ row: i + 1, reason: 'no_current_purchase', supplier: rowSupplier, item: itemName, date: rowDate });
-      skipped++;
-      continue;
-    } else if (!isItemRow) {
-      // Neither header nor item — separator, totals row, or partial row.
-      if (sampleSkippedRows.length < 5) sampleSkippedRows.push({ row: i + 1, reason: 'not_header_not_item', supplier: rowSupplier, item: itemName, date: rowDate });
-      skipped++;
-      continue;
-    } else if (sampleItemRows.length < 5) {
-      sampleItemRows.push({ row: i + 1, item: itemName, qty: text(r, ix.qty), rate: text(r, ix.rate) });
+      prevVoucher = effectiveVoucher;
+    } else {
+      // Same voucher as previous row — continuation. Backfill any
+      // identity fields that were blank on the first row.
+      if (!currentPurchase.date && rowDate) currentPurchase.date = rowDate;
+      if (!currentPurchase.supplier_original && rowSupplier) {
+        currentPurchase.supplier_original = rowSupplier;
+        currentPurchase._supplier = rowSupplier;
+      }
     }
 
-    // Pick first non-zero amount candidate.
+    // Aggregate amount / GST / GSTIN / HSN / description from this row.
     let amount = 0;
     for (const ai of amtIdxs) {
       const v = num(r[ai]);
       if (Math.abs(v) > 0) { amount = Math.abs(v); break; }
     }
-
     const cgst = Math.abs(num(get(r, ix.cgst)));
     const sgst = Math.abs(num(get(r, ix.sgst)));
     const igst = Math.abs(num(get(r, ix.igst)));
     const gstTotal = Math.abs(num(get(r, ix.gst_amount))) || (cgst + sgst + igst);
     const gstNumber = text(r, ix.gst_number);
     const hsn = text(r, ix.hsn);
+    const description = text(r, ix.description);
 
-    let item = null;
-    // isItemRow / partEqSup were already determined above. Build the
-    // line item from this row only when it actually qualifies.
-    if (isItemRow) {
+    if (amount > currentPurchase.amount) currentPurchase.amount = amount;
+    if (gstTotal > currentPurchase.gst_amount) currentPurchase.gst_amount = gstTotal;
+    if (cgst && !currentPurchase.gstObj.cgst) currentPurchase.gstObj.cgst = String(cgst);
+    if (sgst && !currentPurchase.gstObj.sgst) currentPurchase.gstObj.sgst = String(sgst);
+    if (igst && !currentPurchase.gstObj.igst) currentPurchase.gstObj.igst = String(igst);
+    if (gstNumber && !currentPurchase.gstObj.gst_number) currentPurchase.gstObj.gst_number = gstNumber;
+    if (hsn && !currentPurchase.gstObj.hsn) currentPurchase.gstObj.hsn = hsn;
+    if (description && !currentPurchase.description) currentPurchase.description = description;
+
+    // Append every row with Particulars as a line item, except when
+    // Particulars on this row equals the supplier (header line in the
+    // Columnar Purchase Register where Particulars carries the party
+    // name and would otherwise pollute items[]).
+    const looksLikeSupplier = itemName && currentPurchase._supplier
+      && normItemKey(itemName) === normItemKey(currentPurchase._supplier);
+    if (itemName && !looksLikeSupplier) {
       let itemAmt = Math.abs(num(get(r, ix.item_value)));
       if (!itemAmt) {
         const skipIdxs = new Set([
@@ -250,26 +264,18 @@ async function parseTallyFile(file) {
         }
         itemAmt = max;
       }
-      item = {
+      currentPurchase.items.push({
         name: itemName,
         qty: text(r, ix.qty),
         rate: moneyStr(num(get(r, ix.rate))),
         amount: itemAmt ? itemAmt.toString() : '',
         gst_pct: text(r, ix.item_gst_pct),
         hsn,
-      };
+      });
+      if (sampleItemRows.length < 5) {
+        sampleItemRows.push({ row: i + 1, item: itemName, qty: text(r, ix.qty), rate: text(r, ix.rate) });
+      }
     }
-    const description = text(r, ix.description);
-
-    if (amount > currentPurchase.amount) currentPurchase.amount = amount;
-    if (gstTotal > currentPurchase.gst_amount) currentPurchase.gst_amount = gstTotal;
-    if (cgst && !currentPurchase.gstObj.cgst) currentPurchase.gstObj.cgst = String(cgst);
-    if (sgst && !currentPurchase.gstObj.sgst) currentPurchase.gstObj.sgst = String(sgst);
-    if (igst && !currentPurchase.gstObj.igst) currentPurchase.gstObj.igst = String(igst);
-    if (gstNumber && !currentPurchase.gstObj.gst_number) currentPurchase.gstObj.gst_number = gstNumber;
-    if (hsn && !currentPurchase.gstObj.hsn) currentPurchase.gstObj.hsn = hsn;
-    if (description && !currentPurchase.description) currentPurchase.description = description;
-    if (item) currentPurchase.items.push(item);
   }
   flushCurrent(); // flush the very last in-flight purchase
   // ---------------------------------------------------------------------
@@ -327,6 +333,7 @@ async function parseTallyFile(file) {
     firstVouchers: sampleVoucherRows,
     firstItems: sampleItemRows,
     firstSkipped: sampleSkippedRows,
+    firstResolutions: sampleResolutions,
   });
   if (invoiceRowsDetected !== totalPurchasesCreated) {
     console.warn('parseTallyFile: invoice rows detected != purchases created — flushCurrent missed something');
