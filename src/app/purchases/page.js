@@ -159,6 +159,7 @@ export default function PurchasesPage() {
   const [classifying, setClassifying] = useState(false);
   const [editingCatId, setEditingCatId] = useState(null);
   const [recentlyApprovedId, setRecentlyApprovedId] = useState(null);
+  const [selectedBill, setSelectedBill] = useState(null);
   const classifyTimer = useRef(null);
   const w = useW();
   const mob = w < 768;
@@ -510,7 +511,7 @@ export default function PurchasesPage() {
                     <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', border: '1px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                        <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.supplier || b.supplier_original || '—'}</div>
+                        <button onClick={() => setSelectedBill(b)} title="View bill details" style={{ background: 'none', border: 'none', padding: 0, fontWeight: 600, fontSize: 13, color: '#0f172a', cursor: 'pointer', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', textDecoration: 'underline', textDecorationColor: '#cbd5e1', textUnderlineOffset: 3 }}>{b.supplier || b.supplier_original || '—'}</button>
                         {b.verified === 'mismatch' && <span title={b.mismatches} style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>}
                         {b.approval_status === 'pending' && <span style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>Pending</span>}
                         {b.approval_status === 'pending' && (() => {
@@ -675,6 +676,84 @@ export default function PurchasesPage() {
           );
         })()}
       </div>
+
+      {/* Bill details modal */}
+      {selectedBill && (() => {
+        const b = selectedBill;
+        const fmtDate = (s) => {
+          if (!s) return '—';
+          const d = new Date(s);
+          return isNaN(d.getTime()) ? s : d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+        };
+        const conf = parseFloat(b.confidence || '0');
+        const catColor = CAT_COLORS[b.category] || '#94a3b8';
+        const Row = ({ label, children }) => (
+          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 10, padding: '8px 0', borderBottom: '1px solid #f1f5f9', alignItems: 'baseline' }}>
+            <div style={{ fontFamily: MN, fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+            <div style={{ fontSize: 13, color: '#0f172a', wordBreak: 'break-word' }}>{children}</div>
+          </div>
+        );
+        return (
+          <div onClick={() => setSelectedBill(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', maxWidth: 520, width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: MN, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 4 }}>Bill Details</div>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.supplier || b.supplier_original || '—'}</div>
+                </div>
+                <button onClick={() => setSelectedBill(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#94a3b8', padding: 0, lineHeight: 1 }}>×</button>
+              </div>
+              <div style={{ padding: '8px 16px 16px', overflowY: 'auto' }}>
+                <Row label="Bill No">{b.bill_no || '—'}</Row>
+                <Row label="Date">{b.date || '—'}</Row>
+                <Row label="Amount">
+                  {b.amount
+                    ? <span style={{ fontFamily: MN, fontWeight: 700 }}>₹{Number(b.amount).toLocaleString('en-IN')}</span>
+                    : '—'}
+                </Row>
+                <Row label="Category">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: MN, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999, background: catColor + '18', color: catColor, border: `1px solid ${catColor}40`, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {CATEGORY_LABELS[b.category] || b.category || '—'}
+                    </span>
+                    {b.subcategory && <span style={{ fontFamily: MN, fontSize: 11, color: '#64748b' }}>· {b.subcategory}</span>}
+                    {b.classified_by && (
+                      <span style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>
+                        · {b.classified_by}{conf ? ` · ${Math.round(conf * 100)}%` : ''}
+                      </span>
+                    )}
+                  </div>
+                </Row>
+                {String(b.user_corrected).toUpperCase() === 'TRUE' && b.previous_category && (
+                  <Row label="Was">
+                    <span style={{ fontFamily: MN, fontSize: 11, color: '#64748b' }}>
+                      {CATEGORY_LABELS[b.previous_category] || b.previous_category} → corrected
+                    </span>
+                  </Row>
+                )}
+                <Row label="Source">{b.source || '—'}</Row>
+                <Row label="Tally match">{String(b.is_matched_with_tally).toUpperCase() === 'TRUE' ? 'Yes' : 'No'}</Row>
+                <Row label="Approval">
+                  {b.approval_status
+                    ? <>
+                        <span style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: b.approval_status === 'approved' ? '#166534' : b.approval_status === 'rejected' ? '#991b1b' : '#92400e' }}>
+                          {b.approval_status}
+                        </span>
+                        {b.approved_by && <span style={{ fontFamily: MN, fontSize: 11, color: '#64748b' }}> · by {b.approved_by}</span>}
+                        {b.approved_at && <span style={{ fontFamily: MN, fontSize: 11, color: '#94a3b8' }}> · {fmtDate(b.approved_at)}</span>}
+                      </>
+                    : '—'}
+                </Row>
+                {b.description && <Row label="Description">{b.description}</Row>}
+                {b.mismatches && <Row label="Mismatches"><span style={{ color: '#dc2626' }}>{b.mismatches}</span></Row>}
+                <Row label="Saved by">{b.saved_by || '—'}</Row>
+                <Row label="Saved at">{fmtDate(b.saved_at)}</Row>
+                <Row label="ID"><span style={{ fontFamily: MN, fontSize: 11, color: '#94a3b8', wordBreak: 'break-all' }}>{b.id || '—'}</span></Row>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
