@@ -291,6 +291,130 @@ async function parseTallyFile(file) {
 
 // --- Items aggregation (client-side) ------------------------------------
 
+// --- Tally entry flagging (client-side, heuristic) ----------------------
+// Surfaces entries that are likely wrong in Tally. All checks are local —
+// nothing is auto-rejected. The user investigates and fixes upstream.
+
+function computeItemMedianRates(bills) {
+  // Median rate per normalized item key, across all bills. Used as the
+  // "usual" benchmark for outlier detection. Requires >= 3 samples.
+  const buckets = new Map();
+  for (const b of bills) {
+    let items = [];
+    try { items = JSON.parse(b.items_json || '[]'); } catch {}
+    if (!Array.isArray(items)) continue;
+    for (const it of items) {
+      const rate = parseFloat(it.rate) || 0;
+      if (rate <= 0 || !it.name) continue;
+      const k = normItemKey(it.name);
+      if (!buckets.has(k)) buckets.set(k, []);
+      buckets.get(k).push(rate);
+    }
+  }
+  const medians = new Map();
+  for (const [k, rates] of buckets) {
+    if (rates.length < 3) continue;
+    rates.sort((a, b) => a - b);
+    const mid = Math.floor(rates.length / 2);
+    const med = rates.length % 2 ? rates[mid] : (rates[mid - 1] + rates[mid]) / 2;
+    medians.set(k, med);
+  }
+  return medians;
+}
+
+function computeBillFlags(bill, allBills, medianRates) {
+  const flags = [];
+  const myAmt = parseFloat(bill.amount) || 0;
+
+  // 1. Duplicate suspect — same supplier + date + total amount, but a
+  //    different bill_no. Two near-identical bills on the same day are
+  //    usually either real twin orders or a Tally double-entry. Either
+  //    way, worth a human glance.
+  if (myAmt > 0 && bill.supplier_key && bill.date && bill.bill_no) {
+    const dupes = allBills.filter(b =>
+      b.id !== bill.id &&
+      b.supplier_key === bill.supplier_key &&
+      b.date === bill.date &&
+      b.bill_no !== bill.bill_no &&
+      Math.abs((parseFloat(b.amount) || 0) - myAmt) < 1
+    );
+    if (dupes.length > 0) {
+      flags.push({
+        kind: 'duplicate',
+        severity: 'warn',
+        msg: `Possible duplicate of bill ${dupes[0].bill_no} (same supplier, date, amount).`,
+      });
+    }
+  }
+
+  // 2. Item-level checks
+  let items = [];
+  try { items = JSON.parse(bill.items_json || '[]'); } catch {}
+  if (!Array.isArray(items)) items = [];
+  let lineSum = 0;
+  for (const it of items) {
+    const qty = parseFloat(it.qty) || 0;
+    const rate = parseFloat(it.rate) || 0;
+    const amt = parseFloat(it.amount) || 0;
+    lineSum += amt;
+
+    // 2a. Math mismatch: qty × rate ≠ amount (2% or ₹1 tolerance)
+    if (qty > 0 && rate > 0 && amt > 0) {
+      const expected = qty * rate;
+      const tol = Math.max(1, expected * 0.02);
+      if (Math.abs(expected - amt) > tol) {
+        flags.push({
+          kind: 'math',
+          severity: 'warn',
+          msg: `${it.name}: ${qty} × ₹${rate} should be ₹${expected.toLocaleString('en-IN', { maximumFractionDigits: 2 })}, but recorded as ₹${amt.toLocaleString('en-IN')}.`,
+        });
+      }
+    }
+
+    // 2b. Suspiciously high rate (likely 1000× decimal slip)
+    if (rate > 10000) {
+      flags.push({
+        kind: 'high_rate',
+        severity: 'error',
+        msg: `${it.name}: rate ₹${rate.toLocaleString('en-IN')}/unit looks unusual — check if qty/rate were swapped or scaled.`,
+      });
+    }
+
+    // 2c. Outlier vs median rate for the same item
+    const k = normItemKey(it.name);
+    const med = medianRates.get(k);
+    if (med && rate > 0) {
+      const ratio = rate / med;
+      if (ratio >= 2 || ratio <= 0.5) {
+        flags.push({
+          kind: 'outlier_rate',
+          severity: 'info',
+          msg: `${it.name}: rate ₹${rate.toLocaleString('en-IN')} is ${ratio >= 2 ? `${ratio.toFixed(1)}×` : `${(1 / ratio).toFixed(1)}× lower than`} the usual ₹${med.toLocaleString('en-IN', { maximumFractionDigits: 0 })}.`,
+        });
+      }
+    }
+  }
+
+  // 3. Bill total mismatch — sum(items) far from amount (excluding GST).
+  //    Allow 5% slack to absorb GST and rounding when gst_amount is
+  //    missing on the bill row.
+  if (items.length >= 1 && lineSum > 0 && myAmt > 0) {
+    const gst = parseFloat(bill.gst_amount) || 0;
+    const expectedSubtotal = myAmt - gst;
+    const ratio = lineSum / expectedSubtotal;
+    if (Math.abs(ratio - 1) > 0.05 && Math.abs(lineSum - myAmt) > 5) {
+      flags.push({
+        kind: 'total_mismatch',
+        severity: 'info',
+        msg: `Items sum to ₹${lineSum.toLocaleString('en-IN', { maximumFractionDigits: 0 })}, bill total is ₹${myAmt.toLocaleString('en-IN')}${gst ? ` (GST ₹${gst.toLocaleString('en-IN')})` : ''}.`,
+      });
+    }
+  }
+
+  return flags;
+}
+// ------------------------------------------------------------------------
+
 function normItemKey(name) {
   return String(name || '')
     .toLowerCase()
@@ -776,7 +900,7 @@ export default function PurchasesPage() {
     } finally { setMapSaving(false); }
   };
 
-  const renderBillDetails = (b) => {
+  const renderBillDetails = (b, billFlags) => {
     const fmtDate = (s) => {
       if (!s) return '—';
       const d = new Date(s);
@@ -820,6 +944,25 @@ export default function PurchasesPage() {
             <span><span style={{ color: '#94a3b8' }}>Date</span> <span style={{ color: '#0f172a', fontWeight: 600 }}>{b.date || '—'}</span></span>
           </div>
         </div>
+
+        {/* 1b. Issues — only when computeBillFlags surfaced anything */}
+        {Array.isArray(billFlags) && billFlags.length > 0 && (
+          <div style={{ marginBottom: 20, padding: '12px 14px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 14 }}>⚠</span>
+              <div style={{ fontFamily: MN, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#9a3412' }}>
+                Potential issues in Tally ({billFlags.length})
+              </div>
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {billFlags.map((f, i) => (
+                <li key={i} style={{ fontSize: 12, color: f.severity === 'error' ? '#991b1b' : '#9a3412', lineHeight: 1.4 }}>
+                  {f.msg}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* 2. Items */}
         <div style={{ marginBottom: 20 }}>
@@ -1045,6 +1188,13 @@ export default function PurchasesPage() {
           const pending = bills.filter(b => b.approval_status === 'pending');
           const pendingCount = pending.length;
           const highCount = pending.filter(b => priorityFor(b.amount) === 'high').length;
+          const medianRates = computeItemMedianRates(bills);
+          const flagsByBill = new Map();
+          let flaggedCount = 0;
+          for (const b of bills) {
+            const fs = computeBillFlags(b, bills, medianRates);
+            if (fs.length) { flagsByBill.set(b.id, fs); flaggedCount++; }
+          }
           return (
           <>
           {pendingCount > 0 && (
@@ -1060,6 +1210,17 @@ export default function PurchasesPage() {
               )}
               <div style={{ fontFamily: MN, fontSize: 10, color: '#a16207', marginLeft: 'auto' }}>
                 Review below
+              </div>
+            </div>
+          )}
+          {flaggedCount > 0 && (
+            <div style={{ ...card, padding: '12px 16px', marginBottom: 12, background: '#fff7ed', border: '1px solid #fed7aa', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>⚠</span>
+              <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {flaggedCount} {flaggedCount === 1 ? 'bill has' : 'bills have'} potential issues in Tally
+              </div>
+              <div style={{ fontFamily: MN, fontSize: 10, color: '#c2410c', marginLeft: 'auto' }}>
+                Click a vendor name to inspect
               </div>
             </div>
           )}
@@ -1098,6 +1259,20 @@ export default function PurchasesPage() {
                           {b.supplier || b.supplier_original || '—'}
                         </button>
                         {b.verified === 'mismatch' && <span title={b.mismatches} style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>}
+                        {(() => {
+                          const fs = flagsByBill.get(b.id);
+                          if (!fs || !fs.length) return null;
+                          const tip = fs.map(f => `• ${f.msg}`).join('\n');
+                          const hasError = fs.some(f => f.severity === 'error');
+                          const palette = hasError
+                            ? { bg: '#fee2e2', color: '#991b1b', border: '#fecaca' }
+                            : { bg: '#fff7ed', color: '#9a3412', border: '#fed7aa' };
+                          return (
+                            <span title={tip} style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: palette.bg, color: palette.color, border: `1px solid ${palette.border}`, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>
+                              ⚠ {fs.length} {fs.length === 1 ? 'flag' : 'flags'}
+                            </span>
+                          );
+                        })()}
                         {b.approval_status === 'pending' && <span style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>Pending</span>}
                         {b.approval_status === 'pending' && (() => {
                           const p = PRIORITY[priorityFor(b.amount)];
@@ -1134,7 +1309,7 @@ export default function PurchasesPage() {
                       <span>Saved. Future invoices from this vendor will improve.</span>
                     </div>
                   )}
-                  {expandedId === b.id && renderBillDetails(b)}
+                  {expandedId === b.id && renderBillDetails(b, flagsByBill.get(b.id))}
                   </div>
                 ))}
               </div>
