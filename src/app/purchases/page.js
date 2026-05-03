@@ -46,9 +46,12 @@ const PENDING_REASON = 'No matching entry found in Tally';
 const COL_ALIASES = {
   date:     ['date', 'voucherdate', 'billdate', 'invoicedate', 'supplierinvoicedate', 'dated'],
   supplier: ['supplier', 'party', 'partyname', 'partyledger', 'partyledgername', 'vendor', 'name'],
-  // Two distinct identifier columns. Tally typically has BOTH "Voucher No."
-  // (its own internal sequence) and "Supplier Invoice No." (vendor's). Some
-  // rows have only one filled. We detect vouchers when either is present.
+  // Tally Columnar Purchase Register fills "Voucher Type" with "Purchase"
+  // on every header row and leaves it blank on item rows. Used as the
+  // primary signal for new-voucher detection.
+  voucher_type: ['vouchertype'],
+  // Two identifier columns — read but used ONLY for bill_no, never for
+  // detection (Tally sometimes copies these onto item rows).
   voucher_no: ['voucherno', 'vouchernumber'],
   invoice_no: ['supplierinvoiceno', 'supplierinvoicenumber', 'invoiceno', 'invoicenumber', 'billno', 'billnumber', 'reference', 'refno', 'ref'],
   description: ['narration', 'description', 'remarks'],
@@ -127,8 +130,10 @@ async function parseTallyFile(file) {
     ix[k] = findCol(normHeaders, aliases);
   }
   // Need supplier and at least one identifier column; date carries forward.
-  const missingCore = ['date', 'supplier'].filter(k => ix[k] < 0);
-  if (missingCore.length) return { rows: [], error: `Missing columns: ${missingCore.join(', ')}` };
+  const missingCore = ['date', 'supplier', 'voucher_type'].filter(k => ix[k] < 0);
+  if (missingCore.length) {
+    return { rows: [], error: `Missing required columns: ${missingCore.join(', ')} — export needs Date, Supplier, and Voucher Type` };
+  }
   if (ix.voucher_no < 0 && ix.invoice_no < 0) {
     return { rows: [], error: 'Missing column: Voucher No / Supplier Invoice No / Bill No' };
   }
@@ -142,13 +147,15 @@ async function parseTallyFile(file) {
 
   // --- State machine over the rows -------------------------------------
   // Walk top-to-bottom. Detection rule for Tally Columnar Purchase
-  // Register (per the actual file):
-  //   header row = Date is filled AND Particulars equals Supplier
-  //   item row   = Date is empty   AND Particulars is filled (not equal
-  //                                    to the carried supplier)
-  // Voucher No / Supplier Invoice No are used ONLY to populate bill_no
-  // — never for detection — so that copies of those columns onto item
-  // rows (which Tally sometimes does) can't trigger phantom vouchers.
+  // Register (confirmed against the user's actual file):
+  //   header row = Date is filled AND Voucher Type === "Purchase"
+  //   item row   = Date is empty   AND Particulars is filled
+  // Voucher No / Supplier Invoice No are still read but used ONLY to
+  // populate bill_no — never for detection — so that copies of those
+  // columns onto item rows (which Tally sometimes does) can't trigger
+  // phantom vouchers. Particulars vs Supplier is also no longer used
+  // for detection because some export profiles leave the dedicated
+  // Supplier column blank or different on header rows.
   const allPurchases = [];
   let currentPurchase = null;
   let invoiceRowsDetected = 0;
@@ -168,32 +175,34 @@ async function parseTallyFile(file) {
 
   for (let i = headerIdx + 1; i < aoa.length; i++) {
     const r = aoa[i];
-    const rowSupplier  = text(r, ix.supplier);
-    const rowVoucherNo = text(r, ix.voucher_no);
-    const rowInvoiceNo = text(r, ix.invoice_no);
-    const rowDate      = toIsoDate(get(r, ix.date));
-    const itemName     = text(r, ix.item); // Particulars
+    const rowSupplier   = text(r, ix.supplier);
+    const rowVoucherNo  = text(r, ix.voucher_no);
+    const rowInvoiceNo  = text(r, ix.invoice_no);
+    const rowVoucherTyp = text(r, ix.voucher_type).toLowerCase();
+    const rowDate       = toIsoDate(get(r, ix.date));
+    const itemName      = text(r, ix.item); // Particulars
 
-    const partEqSup = !!(rowSupplier && itemName)
-      && normItemKey(rowSupplier) === normItemKey(itemName);
-    const isHeaderRow = !!rowDate && partEqSup;
-    const isItemRow   = !rowDate && !!itemName && !partEqSup;
+    const isHeaderRow = !!rowDate && rowVoucherTyp === 'purchase';
+    const isItemRow   = !rowDate && !!itemName;
 
     if (isHeaderRow) {
       // Push the previous voucher before starting a new one.
       flushCurrent();
       invoiceRowsDetected++;
       const billNo = rowVoucherNo || rowInvoiceNo || `auto-r${i + 1}`;
+      // Supplier from the dedicated column when filled, else fall back
+      // to Particulars — they're the same name on most header rows.
+      const supplier = rowSupplier || itemName || '';
       if (sampleVoucherRows.length < 5) {
-        sampleVoucherRows.push({ row: i + 1, voucher: rowVoucherNo, invoice: rowInvoiceNo, supplier: rowSupplier, date: rowDate });
+        sampleVoucherRows.push({ row: i + 1, voucher: rowVoucherNo, invoice: rowInvoiceNo, supplier, date: rowDate });
       }
       currentPurchase = {
         date: rowDate,
-        supplier_original: rowSupplier,
+        supplier_original: supplier,
         bill_no: billNo,
         amount: 0, gst_amount: 0, gstObj: {}, items: [],
         description: '',
-        _supplier: rowSupplier,
+        _supplier: supplier,
       };
     } else if (!currentPurchase) {
       // Garbage rows before the first voucher (titles, blank lines).
@@ -310,8 +319,8 @@ async function parseTallyFile(file) {
     zeroAmount, itemLines, billsWithItems, duplicateBillIds,
   });
   console.log('parseTallyFile columns:', {
-    voucher_no: ix.voucher_no, invoice_no: ix.invoice_no,
-    supplier: ix.supplier, item: ix.item, date: ix.date,
+    date: ix.date, voucher_type: ix.voucher_type, supplier: ix.supplier,
+    item: ix.item, voucher_no: ix.voucher_no, invoice_no: ix.invoice_no,
     headerNames: aoa[headerIdx],
   });
   console.log('parseTallyFile samples:', {
