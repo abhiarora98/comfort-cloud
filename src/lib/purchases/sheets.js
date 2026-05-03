@@ -89,6 +89,29 @@ export const TABS = {
       'corrected_by',
     ],
   },
+  raw_materials: {
+    name: 'RAW_MATERIALS',
+    headers: [
+      'company_id',
+      'canonical_name',
+      'category',
+      'unit',
+      'notes',
+      'created_by',
+      'created_at',
+    ],
+  },
+  item_aliases: {
+    name: 'ITEM_ALIASES',
+    headers: [
+      'company_id',
+      'raw_name',
+      'canonical_name',
+      'source',
+      'mapped_by',
+      'mapped_at',
+    ],
+  },
 };
 
 const _ensured = new Set();
