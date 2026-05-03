@@ -189,6 +189,26 @@ async function parseTallyFile(file) {
     const supplierKey = normItemKey(supplierRaw);
     const hasDate = !!rowDate;
 
+    // Skip Tally footer rows. Tally exports end with a "Grand Total"
+    // line carrying the file's totals across the amount columns. With
+    // no Date and no Voucher it would otherwise fall through to the
+    // continuation branch and inflate the last real invoice's amount
+    // (and add a "Grand Total" line item).
+    if (!hasDate && !rawVoucher && itemName) {
+      const norm = itemName.trim().toLowerCase();
+      if (
+        /^(grand\s+)?total(s)?$/.test(norm) ||
+        /^net\s+total$/.test(norm) ||
+        /^sub\s*total$/.test(norm) ||
+        /^closing\s+balance$/.test(norm) ||
+        /^opening\s+balance$/.test(norm)
+      ) {
+        if (sampleSkippedRows.length < 5) sampleSkippedRows.push({ row: i + 1, reason: 'totals_row', item: itemName });
+        skipped++;
+        continue;
+      }
+    }
+
     // Multi-signal change detection. Both signals are evaluated
     // BEFORE updating lastVoucher / lastSupplier.
     const voucherChanged  = !!rawVoucher && rawVoucher !== lastVoucher;
