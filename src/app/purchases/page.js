@@ -146,15 +146,8 @@ function parsePurchasesCSV(csv) {
 
 export default function PurchasesPage() {
   const { user, isLoaded } = useUser();
-  const [photo, setPhoto] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
   const [form, setForm] = useState({ supplier: '', billNo: '', date: '', amount: '', notes: '', category: '' });
-  const [photoUrl, setPhotoUrl] = useState('');
-  const [photoBase64, setPhotoBase64] = useState('');
   const [saving, setSaving] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [mismatchWarning, setMismatchWarning] = useState(null);
-  const [selectedBill, setSelectedBill] = useState(null);
   const [saveError, setSaveError] = useState('');
   const [bills, setBills] = useState([]);
   const [loadingBills, setLoadingBills] = useState(true);
@@ -301,48 +294,11 @@ export default function PurchasesPage() {
     </div>
   );
 
-  const handlePhoto = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setPhoto(file);
-    setPhotoPreview(URL.createObjectURL(file));
-    try {
-      const base64 = await new Promise((res, rej) => {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-          const MAX = 1024;
-          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          URL.revokeObjectURL(url);
-          res(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
-        };
-        img.onerror = rej;
-        img.src = url;
-      });
-      setPhotoBase64(base64);
-    } catch { /* ignore */ }
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const up = await fetch('/api/upload-bill-photo', { method: 'POST', body: fd });
-      const upData = await up.json();
-      if (upData.url) setPhotoUrl(upData.url);
-    } catch { /* photo upload failed silently */ }
-  };
-
-  const doSave = async (mismatches) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setSaving(true);
     setSaveError('');
-    setMismatchWarning(null);
     try {
-      const verified = !photoBase64 ? 'no-photo' : mismatches && mismatches.length > 0 ? 'mismatch' : 'ok';
-      const mismatchText = mismatches && mismatches.length > 0
-        ? mismatches.map(m => `${m.field}: entered "${m.entered}" but bill shows "${m.onBill}"`).join('; ')
-        : '';
       const payload = {
         company_id: COMPANY_ID,
         date: form.date,
@@ -350,10 +306,7 @@ export default function PurchasesPage() {
         bill_no: form.billNo,
         amount: form.amount,
         description: form.notes,
-        source: photoUrl || photoBase64 ? 'invoice' : 'manual',
-        photo_url: photoUrl,
-        verified,
-        mismatches: mismatchText,
+        source: 'invoice',
         saved_by: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
         user_category: form.category || undefined,
       };
@@ -366,34 +319,11 @@ export default function PurchasesPage() {
       if (!data.ok) throw new Error(data.error || 'Save failed');
       await fetchBills();
       setView('history');
-      setPhoto(null); setPhotoPreview(null); setPhotoUrl(''); setPhotoBase64('');
       setForm({ supplier: '', billNo: '', date: '', amount: '', notes: '', category: '' });
       setSuggestion(null);
     } catch (err) {
       setSaveError(err.message || 'Failed to save. Try again.');
     } finally { setSaving(false); }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (photoBase64) {
-      setVerifying(true);
-      try {
-        const resp = await fetch('/api/verify-bill', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: photoBase64, mediaType: 'image/jpeg', form }),
-        });
-        const result = await resp.json();
-        if (!result.match && result.mismatches && result.mismatches.length > 0) {
-          setMismatchWarning(result.mismatches);
-          setVerifying(false);
-          return;
-        }
-      } catch { /* verify failed, proceed with save */ }
-      setVerifying(false);
-    }
-    await doSave([]);
   };
 
   const setApproval = async (bill, action) => {
@@ -576,11 +506,8 @@ export default function PurchasesPage() {
               <div>
                 {bills.map((b, i) => (
                   <div key={b.id || i} style={{ borderBottom: i < bills.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                  <div onClick={() => setSelectedBill(b)} style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', background: b.approval_status === 'pending' ? '#fffbeb' : 'transparent' }}>
-                    {b.photo_url
-                      ? <img src={b.photo_url} alt="Bill" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }} />
-                      : <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', border: '1px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
-                    }
+                  <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, background: b.approval_status === 'pending' ? '#fffbeb' : 'transparent' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', border: '1px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                         <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.supplier || b.supplier_original || '—'}</div>
@@ -632,31 +559,8 @@ export default function PurchasesPage() {
 
         {/* Form view */}
         {view === 'form' && (
-          <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap: 16 }}>
-
-            {/* Photo upload */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ ...card, padding: 16 }}>
-                <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 14 }}>Bill Photo</div>
-                {photoPreview ? (
-                  <div style={{ position: 'relative' }}>
-                    <img src={photoPreview} alt="Bill" style={{ width: '100%', borderRadius: 8, border: '1px solid #e2e8f0', maxHeight: mob ? 260 : 340, objectFit: 'contain' }} />
-                    <button onClick={() => { setPhoto(null); setPhotoPreview(null); }} style={{ position: 'absolute', top: 8, right: 8, background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, width: 28, height: 28, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
-                  </div>
-                ) : (
-                  <label style={{ display: 'block', border: '2px dashed #e2e8f0', borderRadius: 10, padding: mob ? '32px 16px' : '40px 20px', textAlign: 'center', cursor: 'pointer', background: '#f8fafc' }}>
-                    <input type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
-                    <div style={{ fontSize: 36, marginBottom: 10 }}>📷</div>
-                    <div style={{ fontFamily: MN, fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 4 }}>Take or Upload Photo</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8' }}>Tap to use camera or choose file</div>
-                  </label>
-                )}
-                {photo && <div style={{ marginTop: 10, fontFamily: MN, fontSize: 10, color: '#059669', textAlign: 'center' }}>✓ Photo attached — fill details below</div>}
-                <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-              </div>
-            </div>
-
-            {/* Form */}
+          <div style={{ maxWidth: 520, margin: '0 auto' }}>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
             <div style={{ ...card, padding: 16 }}>
               <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 20 }}>Bill Details</div>
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -707,10 +611,8 @@ export default function PurchasesPage() {
                   <textarea style={{ ...input, minHeight: 80, resize: 'vertical' }} placeholder="Any additional notes..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
                 </div>
                 {saveError && <div style={{ fontFamily: MN, fontSize: 11, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 8 }}>{saveError}</div>}
-                <button type="submit" disabled={saving || verifying} style={{ background: (saving || verifying) ? '#94a3b8' : 'linear-gradient(135deg,#0c1222,#1a2744)', color: '#fff', border: 'none', padding: '13px', borderRadius: 8, fontFamily: MN, fontSize: 12, fontWeight: 700, cursor: (saving || verifying) ? 'not-allowed' : 'pointer', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  {verifying ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />Verifying...</>
-                  : saving ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />Saving...</>
-                  : 'Save Bill'}
+                <button type="submit" disabled={saving} style={{ background: saving ? '#94a3b8' : 'linear-gradient(135deg,#0c1222,#1a2744)', color: '#fff', border: 'none', padding: '13px', borderRadius: 8, fontFamily: MN, fontSize: 12, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  {saving ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />Saving...</> : 'Save Bill'}
                 </button>
               </form>
             </div>
@@ -773,53 +675,6 @@ export default function PurchasesPage() {
           );
         })()}
       </div>
-
-      {/* Mismatch warning modal */}
-      {mismatchWarning && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 12, maxWidth: 420, width: '100%', overflow: 'hidden' }}>
-            <div style={{ background: '#fef3c7', padding: '14px 16px', borderBottom: '1px solid #fde68a', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <div style={{ fontSize: 20 }}>⚠️</div>
-              <div>
-                <div style={{ fontFamily: MN, fontSize: 12, fontWeight: 700, color: '#92400e' }}>Data Mismatch Detected</div>
-                <div style={{ fontSize: 12, color: '#78350f', marginTop: 2 }}>The entered details don't match the bill photo.</div>
-              </div>
-            </div>
-            <div style={{ padding: 16 }}>
-              {mismatchWarning.map((m, i) => (
-                <div key={i} style={{ marginBottom: 10, padding: '10px 12px', background: '#fef2f2', borderRadius: 8, border: '1px solid #fecaca' }}>
-                  <div style={{ fontFamily: MN, fontSize: 10, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', marginBottom: 4 }}>{m.field}</div>
-                  <div style={{ fontSize: 12 }}>Entered: <strong>{m.entered}</strong></div>
-                  <div style={{ fontSize: 12 }}>On bill: <strong>{m.onBill}</strong></div>
-                </div>
-              ))}
-              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                <button onClick={() => setMismatchWarning(null)} style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', fontFamily: MN, fontSize: 11, fontWeight: 700, cursor: 'pointer', color: '#0f172a' }}>Fix Details</button>
-                <button onClick={() => doSave(mismatchWarning)} style={{ flex: 1, padding: '10px', borderRadius: 8, border: 'none', background: '#dc2626', color: '#fff', fontFamily: MN, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Save Anyway</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Photo modal */}
-      {selectedBill && (
-        <div onClick={() => setSelectedBill(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', maxWidth: 500, width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 13 }}>{selectedBill.supplier || selectedBill.supplier_original}</div>
-                <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{selectedBill.bill_no} · {selectedBill.date}</div>
-              </div>
-              <button onClick={() => setSelectedBill(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#94a3b8', padding: 4 }}>×</button>
-            </div>
-            {selectedBill.photo_url
-              ? <img src={selectedBill.photo_url} alt="Bill" style={{ width: '100%', objectFit: 'contain', maxHeight: 'calc(90vh - 60px)' }} />
-              : <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8', fontFamily: MN, fontSize: 12 }}>No photo attached to this bill</div>
-            }
-          </div>
-        </div>
-      )}
     </div>
   );
 }
