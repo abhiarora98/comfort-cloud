@@ -29,7 +29,11 @@ export async function listAliases(company_id) {
 export async function findAlias(company_id, raw_name) {
   const key = normRawKey(raw_name);
   const rows = await listAliases(company_id);
-  return rows.find((r) => normRawKey(r.raw_name) === key) || null;
+  const matches = rows.filter((r) => normRawKey(r.raw_name) === key);
+  if (!matches.length) return null;
+  // Latest wins — supports re-mapping by appending a fresh row.
+  matches.sort((a, b) => String(b.mapped_at).localeCompare(String(a.mapped_at)));
+  return matches[0];
 }
 
 // Append-only: ITEM_ALIASES doubles as audit log.

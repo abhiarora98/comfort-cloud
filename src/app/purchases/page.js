@@ -1271,11 +1271,23 @@ export default function PurchasesPage() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
                             <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{it.display_name}</div>
-                            {canonical ? (
-                              <span title={`Mapped to ${canonical}`} style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>→ {canonical}</span>
-                            ) : (
-                              <button onClick={() => isOpen ? closeMappingPicker() : openMappingPicker(it)} style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: isOpen ? '#0f172a' : '#eff6ff', color: isOpen ? '#fff' : '#1e40af', border: `1px solid ${isOpen ? '#0f172a' : '#bfdbfe'}`, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0, cursor: 'pointer' }}>{isOpen ? 'Cancel' : 'Map →'}</button>
-                            )}
+                            {(() => {
+                              if (!canonical) {
+                                return <button onClick={() => isOpen ? closeMappingPicker() : openMappingPicker(it)} style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: isOpen ? '#0f172a' : '#eff6ff', color: isOpen ? '#fff' : '#1e40af', border: `1px solid ${isOpen ? '#0f172a' : '#bfdbfe'}`, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0, cursor: 'pointer' }}>{isOpen ? 'Cancel' : 'Map →'}</button>;
+                              }
+                              const tier = it.bills_count >= 5 ? 'silent' : it.bills_count >= 3 ? 'auto' : 'provisional';
+                              const palette = tier === 'provisional'
+                                ? { bg: '#fef3c7', color: '#92400e', border: '#fde68a', sym: '~', word: 'Suggested' }
+                                : { bg: '#dcfce7', color: '#166534', border: '#bbf7d0', sym: '→', word: 'Mapped' };
+                              const ttl = `${palette.word}: ${canonical} · ${it.bills_count} ${it.bills_count === 1 ? 'use' : 'uses'}${tier === 'silent' ? ' · auto' : ''} · click Change to override`;
+                              return (
+                                <span title={ttl} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                                  <span style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: palette.bg, color: palette.color, border: `1px solid ${palette.border}`, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{palette.sym} {canonical}</span>
+                                  {tier === 'silent' && <span title="auto-mapped" style={{ fontFamily: MN, fontSize: 9, color: '#94a3b8' }}>·auto</span>}
+                                  <button onClick={() => isOpen ? closeMappingPicker() : openMappingPicker(it)} style={{ background: 'none', border: 'none', padding: tier === 'silent' ? '0 2px' : '0 4px', fontFamily: MN, fontSize: 9, fontWeight: 700, color: tier === 'provisional' ? '#92400e' : '#64748b', textDecoration: 'underline', textDecorationStyle: 'dotted', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{isOpen ? 'Cancel' : 'Change'}</button>
+                                </span>
+                              );
+                            })()}
                             {reorderPill && <span title={`Avg ${it.avg_interval_days?.toFixed(0)} days · last ${it.days_since_last} days ago`} style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: reorderPill.bg, color: reorderPill.color, border: `1px solid ${reorderPill.border}`, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>{reorderPill.label}</span>}
                           </div>
                           <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>
@@ -1308,7 +1320,11 @@ export default function PurchasesPage() {
                       {isOpen && (
                         <div style={{ padding: '12px 16px 16px', background: '#f8fafc', borderTop: '1px dashed #e2e8f0' }}>
                           <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 600, color: '#475569', marginBottom: 10 }}>
-                            Map &ldquo;<span style={{ color: '#0f172a', fontWeight: 700 }}>{it.display_name}</span>&rdquo; to:
+                            {canonical ? (
+                              <>Change &ldquo;<span style={{ color: '#0f172a', fontWeight: 700 }}>{it.display_name}</span>&rdquo; from <span style={{ color: '#166534', fontWeight: 700 }}>{canonical}</span> to:</>
+                            ) : (
+                              <>Map &ldquo;<span style={{ color: '#0f172a', fontWeight: 700 }}>{it.display_name}</span>&rdquo; to:</>
+                            )}
                           </div>
                           {mapState.loading ? (
                             <div style={{ fontFamily: MN, fontSize: 11, color: '#94a3b8' }}>Looking up suggestions…</div>
@@ -1316,19 +1332,27 @@ export default function PurchasesPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                               {mapState.suggestions.length > 0 && (
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                  {mapState.suggestions.map((s, idx) => (
-                                    <button key={s.canonical_name} disabled={mapSaving} onClick={() => confirmMapping(it.display_name, s.canonical_name, 'ai_suggested')} title={s.reason} style={{ background: idx === 0 ? '#dcfce7' : '#fff', color: idx === 0 ? '#166534' : '#0f172a', border: `1px solid ${idx === 0 ? '#bbf7d0' : '#e2e8f0'}`, padding: '6px 12px', borderRadius: 999, fontFamily: MN, fontSize: 11, fontWeight: 700, cursor: mapSaving ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                      {idx === 0 && <span>✓</span>}
-                                      <span>{s.canonical_name}</span>
-                                      <span style={{ color: '#94a3b8', fontWeight: 500 }}>{Math.round((s.confidence || 0) * 100)}%</span>
-                                    </button>
-                                  ))}
+                                  {mapState.suggestions.map((s, idx) => {
+                                    const isCurrent = canonical === s.canonical_name;
+                                    const isHero = idx === 0 && !canonical; // first suggestion only "hero" when nothing is mapped yet
+                                    return (
+                                      <button key={s.canonical_name} disabled={mapSaving || isCurrent} onClick={() => confirmMapping(it.display_name, s.canonical_name, 'ai_suggested')} title={isCurrent ? 'Current mapping' : s.reason} style={{ background: isCurrent ? '#e2e8f0' : isHero ? '#dcfce7' : '#fff', color: isCurrent ? '#475569' : isHero ? '#166534' : '#0f172a', border: `1px solid ${isCurrent ? '#cbd5e1' : isHero ? '#bbf7d0' : '#e2e8f0'}`, padding: '6px 12px', borderRadius: 999, fontFamily: MN, fontSize: 11, fontWeight: 700, cursor: (mapSaving || isCurrent) ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                        {isCurrent ? <span>•</span> : isHero ? <span>✓</span> : null}
+                                        <span>{s.canonical_name}</span>
+                                        <span style={{ color: '#94a3b8', fontWeight: 500 }}>{isCurrent ? 'current' : `${Math.round((s.confidence || 0) * 100)}%`}</span>
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               )}
                               {productionMaterials.length > 0 ? (
-                                <select style={{ ...input, padding: '8px 12px', fontSize: 12 }} defaultValue="" onChange={(e) => { if (e.target.value) confirmMapping(it.display_name, e.target.value, 'user_picked'); }}>
-                                  <option value="">Pick from production materials…</option>
-                                  {productionMaterials.map(m => <option key={m} value={m}>{m}</option>)}
+                                <select style={{ ...input, padding: '8px 12px', fontSize: 12 }} defaultValue="" onChange={(e) => { if (e.target.value && e.target.value !== canonical) confirmMapping(it.display_name, e.target.value, 'user_picked'); }}>
+                                  <option value="">{canonical ? 'Or pick a different material…' : 'Pick from production materials…'}</option>
+                                  {productionMaterials.map(m => (
+                                    <option key={m} value={m} disabled={m === canonical}>
+                                      {m}{m === canonical ? '  (current)' : ''}
+                                    </option>
+                                  ))}
                                 </select>
                               ) : (
                                 <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>No production materials available yet.</div>
