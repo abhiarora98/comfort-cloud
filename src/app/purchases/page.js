@@ -134,12 +134,14 @@ async function parseTallyFile(file) {
 
   const groups = new Map();
   let skipped = 0;
+  let parsedInvoices = 0;
 
-  // Tally Columnar Purchase Register typically has one "header" row per
-  // voucher (with Date/Supplier/Bill No filled) followed by item rows
-  // where those identifier columns are blank. Carry the last voucher's
-  // identity forward so item rows attribute to the right bill.
+  // Detect a new voucher row by Voucher No / Bill No OR Supplier presence —
+  // never just by Date, because Tally exports sometimes leave Date blank on
+  // a voucher row and that used to make the row's items merge into the
+  // previous voucher.
   let parent = null;
+  let voucherIdx = 0;
 
   for (let i = headerIdx + 1; i < aoa.length; i++) {
     const r = aoa[i];
@@ -147,10 +149,25 @@ async function parseTallyFile(file) {
     const rowBillNo   = text(r, ix.bill_no);
     const rowDate     = toIsoDate(get(r, ix.date));
     const itemName    = text(r, ix.item);
-    const hasAllIds   = rowSupplier && rowBillNo && rowDate;
+    const isVoucherRow = !!(rowBillNo || rowSupplier);
 
-    if (hasAllIds) {
-      parent = { supplier: rowSupplier, bill_no: rowBillNo, date: rowDate };
+    if (isVoucherRow) {
+      voucherIdx++;
+      parent = {
+        idx: voucherIdx,
+        supplier: rowSupplier || (parent && parent.supplier) || '',
+        bill_no: rowBillNo || `auto-r${i + 1}`,
+        bill_no_real: !!rowBillNo,
+        date: rowDate || (parent && parent.date) || '',
+      };
+      parsedInvoices++;
+      groups.set(parent.idx, {
+        date: parent.date,
+        supplier_original: parent.supplier,
+        bill_no: parent.bill_no,
+        amount: 0, gst_amount: 0, gstObj: {}, items: [],
+        description: '',
+      });
     } else if (!parent) {
       skipped++;
       continue;
@@ -159,10 +176,6 @@ async function parseTallyFile(file) {
       skipped++;
       continue;
     }
-
-    const supplier = parent.supplier;
-    const bill_no  = parent.bill_no;
-    const date     = parent.date;
 
     // Pick first non-zero amount candidate.
     let amount = 0;
@@ -179,11 +192,11 @@ async function parseTallyFile(file) {
     const hsn = text(r, ix.hsn);
 
     let item = null;
-    // Item rows only: Date column must be EMPTY (parent voucher rows have
-    // Date filled and their Particulars cell is usually the supplier name,
-    // not a stock item). Defensive: even with empty Date, ignore the row
-    // if Particulars matches the carried-over supplier name.
-    const isItemRow = itemName && !rowDate;
+    // Item rows only: a row that did NOT start a new voucher and has an
+    // item name. Defensive: skip if the item name matches the voucher's
+    // supplier (Tally sometimes writes the supplier name in Particulars
+    // on a continuation row).
+    const isItemRow = !isVoucherRow && itemName;
     const looksLikeSupplier = isItemRow && parent && parent.supplier
       && normItemKey(itemName) === normItemKey(parent.supplier);
     if (isItemRow && !looksLikeSupplier) {
@@ -216,15 +229,9 @@ async function parseTallyFile(file) {
     }
     const description = text(r, ix.description);
 
-    const key = `${supplier}|${bill_no}|${date}`;
-    if (!groups.has(key)) {
-      groups.set(key, {
-        date, supplier_original: supplier, bill_no,
-        amount: 0, gst_amount: 0, gstObj: {}, items: [],
-        description: '',
-      });
-    }
-    const g = groups.get(key);
+    // Each voucher gets its own group keyed by its monotonic index.
+    // No merging across voucher boundaries.
+    const g = groups.get(parent.idx);
     if (amount > g.amount) g.amount = amount;
     if (gstTotal > g.gst_amount) g.gst_amount = gstTotal;
     if (cgst && !g.gstObj.cgst) g.gstObj.cgst = String(cgst);
@@ -240,6 +247,10 @@ async function parseTallyFile(file) {
   let zeroAmount = 0;
   let itemLines = 0;
   let billsWithItems = 0;
+  // Detect duplicate ingest-keys (supplier|bill_no|date) — these are real
+  // collisions that the bulk endpoint will dedupe, NOT parser-side merging.
+  const idSeen = new Map();
+  let duplicateBillIds = 0;
   for (const g of groups.values()) {
     let amount = g.amount;
     if (!amount && g.items.length) {
@@ -248,6 +259,10 @@ async function parseTallyFile(file) {
     if (!amount) zeroAmount++;
     if (g.items.length) { itemLines += g.items.length; billsWithItems++; }
     const gst_details = Object.keys(g.gstObj).length ? JSON.stringify(g.gstObj) : '';
+    const idKey = `${g.supplier_original}|${g.bill_no}|${g.date}`;
+    const occ = (idSeen.get(idKey) || 0) + 1;
+    idSeen.set(idKey, occ);
+    if (occ > 1) duplicateBillIds++;
     rows.push({
       date: g.date,
       supplier_original: g.supplier_original,
@@ -260,7 +275,17 @@ async function parseTallyFile(file) {
     });
   }
 
-  return { rows, skipped, zeroAmount, itemLines, billsWithItems, error: null };
+  const totalRows = aoa.length - headerIdx - 1;
+  const result = {
+    rows, skipped, zeroAmount, itemLines, billsWithItems,
+    totalRows, parsedInvoices, duplicateBillIds,
+    error: null,
+  };
+  console.log('parseTallyFile:', {
+    totalRows, parsedInvoices, skipped,
+    zeroAmount, itemLines, billsWithItems, duplicateBillIds,
+  });
+  return result;
 }
 // ------------------------------------------------------------------------
 
@@ -519,7 +544,8 @@ export default function PurchasesPage() {
     if (!file) return;
     setUploading(true); setSyncMsg('');
     try {
-      const { rows, error, skipped, zeroAmount, itemLines, billsWithItems } = await parseTallyFile(file);
+      const parsed = await parseTallyFile(file);
+      const { rows, error, skipped, zeroAmount, itemLines, billsWithItems, totalRows, parsedInvoices, duplicateBillIds } = parsed;
       if (error) throw new Error(error);
       if (rows.length === 0) throw new Error('No valid rows found');
       const items = rows.map(r => ({
@@ -538,10 +564,12 @@ export default function PurchasesPage() {
       if (!data.ok) throw new Error(data.error || 'Bulk save failed');
       const { created, duplicate, errors } = data.summary;
       if (created > 0) await fetchBills();
+      console.log('Upload summary:', { totalRows, parsedInvoices, created, duplicate, errors, duplicateBillIds, skipped });
       const skipNote = skipped ? ` · ${skipped} skipped` : '';
       const zeroNote = zeroAmount ? ` · ${zeroAmount} no-amount` : '';
       const itemNote = itemLines ? ` · ${itemLines} items in ${billsWithItems} bills` : ' · 0 items';
-      setSyncMsg(`✓ ${created} new · ${duplicate} dup · ${errors} err${skipNote}${zeroNote}${itemNote}`);
+      const dupNote = duplicateBillIds ? ` · ⚠ ${duplicateBillIds} dup ID` : '';
+      setSyncMsg(`✓ ${parsedInvoices} invoices from ${totalRows} rows · ${created} new · ${duplicate} dup · ${errors} err${dupNote}${skipNote}${zeroNote}${itemNote}`);
     } catch (err) {
       setSyncMsg('⚠ ' + (err.message || 'Upload failed'));
     } finally {
