@@ -45,7 +45,6 @@ const PENDING_REASON = 'No matching entry found in Tally';
 const COL_ALIASES = {
   date:     ['date', 'voucherdate', 'billdate', 'invoicedate', 'dated'],
   supplier: ['supplier', 'party', 'partyname', 'partyledger', 'partyledgername', 'vendor', 'name'],
-  amount:   ['amount', 'value', 'grossamount', 'netamount', 'total', 'amountrs', 'debit', 'credit'],
   bill_no:  ['billno', 'billnumber', 'voucherno', 'vouchernumber', 'invoiceno', 'invoicenumber', 'reference', 'refno', 'ref'],
   // Optional GST columns — pulled if present, never required.
   gst_amount: ['gstamount', 'taxamount', 'totaltax', 'gst', 'tax', 'gsttotal'],
@@ -54,20 +53,28 @@ const COL_ALIASES = {
   igst:       ['igst', 'igstamount'],
   gst_number: ['gstnumber', 'gstin', 'gstno', 'partygstin', 'partygst'],
   hsn:        ['hsn', 'hsncode', 'hsnno', 'hsnsac'],
+  // Optional item-level columns. When present, rows are grouped by bill_no
+  // into a single bill with an items[] array.
+  item:       ['stockitem', 'itemname', 'productname', 'product'],
+  qty:        ['quantity', 'qty', 'billedquantity'],
+  rate:       ['rate', 'unitrate', 'unitprice'],
+  item_value: ['itemvalue', 'lineamount', 'linetotal'],
+  item_gst_pct: ['gstpercent', 'gstrate', 'taxrate'],
 };
-const REQUIRED_COLS = ['date', 'supplier', 'amount', 'bill_no'];
+// Try in order; first non-zero per row wins. Order matters for purchase
+// daybooks where Credit holds the bill total and Debit is 0.
+const AMOUNT_CANDIDATES = ['amount', 'grossamount', 'netamount', 'total', 'amountrs', 'credit', 'debit', 'value'];
 
 function normHeader(h) {
   return String(h || '').toLowerCase().replace(/[\s_\-./]/g, '').trim();
 }
 
-function pickColumns(headers) {
-  const map = {};
-  for (const [key, aliases] of Object.entries(COL_ALIASES)) {
-    const idx = headers.findIndex(h => aliases.includes(normHeader(h)));
-    if (idx >= 0) map[key] = idx;
+function findCol(normHeaders, aliases) {
+  for (const a of aliases) {
+    const i = normHeaders.indexOf(a);
+    if (i >= 0) return i;
   }
-  return map;
+  return -1;
 }
 
 function toIsoDate(v) {
@@ -102,44 +109,101 @@ async function parseTallyFile(file) {
   if (!ws) return { rows: [], error: 'No sheet in file' };
   const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: '' });
   if (aoa.length < 2) return { rows: [], error: 'No data rows' };
-  // Header is the first row with at least 3 non-empty cells (skips report titles).
   let headerIdx = aoa.findIndex(r => r.filter(c => String(c).trim()).length >= 3);
   if (headerIdx < 0) headerIdx = 0;
-  const headers = aoa[headerIdx];
-  const colMap = pickColumns(headers);
-  const missing = REQUIRED_COLS.filter(k => colMap[k] === undefined);
+  const normHeaders = aoa[headerIdx].map(normHeader);
+
+  const ix = {};
+  for (const [k, aliases] of Object.entries(COL_ALIASES)) {
+    ix[k] = findCol(normHeaders, aliases);
+  }
+  const missing = ['date', 'supplier', 'bill_no'].filter(k => ix[k] < 0);
   if (missing.length) return { rows: [], error: `Missing columns: ${missing.join(', ')}` };
-  const num = (v) => String(v ?? '').replace(/[^\d.\-]/g, '');
-  const cell = (r, k) => colMap[k] !== undefined ? r[colMap[k]] : undefined;
-  const rows = [];
+  const amtIdxs = AMOUNT_CANDIDATES.map(a => normHeaders.indexOf(a)).filter(i => i >= 0);
+  if (!amtIdxs.length) return { rows: [], error: 'No amount column (try Total, Amount, Credit, Debit, or Value)' };
+
+  const num = (v) => parseFloat(String(v ?? '').replace(/[^\d.\-]/g, '')) || 0;
+  const get = (r, c) => c >= 0 ? r[c] : undefined;
+  const text = (r, c) => String(get(r, c) ?? '').trim();
+  const moneyStr = (n) => Math.abs(n) > 0 ? Math.abs(n).toString() : '';
+
+  const groups = new Map();
   let skipped = 0;
+
   for (let i = headerIdx + 1; i < aoa.length; i++) {
     const r = aoa[i];
-    const supplier = String(cell(r, 'supplier') ?? '').trim();
-    const bill_no  = String(cell(r, 'bill_no')  ?? '').trim();
-    const date     = toIsoDate(cell(r, 'date'));
-    const amount   = num(cell(r, 'amount'));
+    const supplier = text(r, ix.supplier);
+    const bill_no  = text(r, ix.bill_no);
+    const date     = toIsoDate(get(r, ix.date));
     if (!supplier || !bill_no || !date) { skipped++; continue; }
-    const cgst = num(cell(r, 'cgst'));
-    const sgst = num(cell(r, 'sgst'));
-    const igst = num(cell(r, 'igst'));
-    const gst_amount =
-      num(cell(r, 'gst_amount')) ||
-      ((cgst || sgst || igst)
-        ? String((parseFloat(cgst || 0) + parseFloat(sgst || 0) + parseFloat(igst || 0)) || '')
-        : '');
-    const gst_number = String(cell(r, 'gst_number') ?? '').trim();
-    const hsn = String(cell(r, 'hsn') ?? '').trim();
-    const gstObj = {};
-    if (cgst) gstObj.cgst = cgst;
-    if (sgst) gstObj.sgst = sgst;
-    if (igst) gstObj.igst = igst;
-    if (gst_number) gstObj.gst_number = gst_number;
-    if (hsn) gstObj.hsn = hsn;
-    const gst_details = Object.keys(gstObj).length ? JSON.stringify(gstObj) : '';
-    rows.push({ date, supplier_original: supplier, amount, bill_no, gst_amount, gst_details });
+
+    // Pick first non-zero amount candidate.
+    let amount = 0;
+    for (const ai of amtIdxs) {
+      const v = num(r[ai]);
+      if (Math.abs(v) > 0) { amount = Math.abs(v); break; }
+    }
+
+    const cgst = Math.abs(num(get(r, ix.cgst)));
+    const sgst = Math.abs(num(get(r, ix.sgst)));
+    const igst = Math.abs(num(get(r, ix.igst)));
+    const gstTotal = Math.abs(num(get(r, ix.gst_amount))) || (cgst + sgst + igst);
+    const gstNumber = text(r, ix.gst_number);
+    const hsn = text(r, ix.hsn);
+
+    const itemName = text(r, ix.item);
+    let item = null;
+    if (itemName) {
+      const itemAmt = Math.abs(num(get(r, ix.item_value))) || amount;
+      item = {
+        name: itemName,
+        qty: text(r, ix.qty),
+        rate: moneyStr(num(get(r, ix.rate))),
+        amount: itemAmt ? itemAmt.toString() : '',
+        gst_pct: text(r, ix.item_gst_pct),
+        hsn,
+      };
+    }
+
+    const key = `${supplier}|${bill_no}|${date}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        date, supplier_original: supplier, bill_no,
+        amount: 0, gst_amount: 0, gstObj: {}, items: [],
+      });
+    }
+    const g = groups.get(key);
+    if (amount > g.amount) g.amount = amount;
+    if (gstTotal > g.gst_amount) g.gst_amount = gstTotal;
+    if (cgst && !g.gstObj.cgst) g.gstObj.cgst = String(cgst);
+    if (sgst && !g.gstObj.sgst) g.gstObj.sgst = String(sgst);
+    if (igst && !g.gstObj.igst) g.gstObj.igst = String(igst);
+    if (gstNumber && !g.gstObj.gst_number) g.gstObj.gst_number = gstNumber;
+    if (hsn && !g.gstObj.hsn) g.gstObj.hsn = hsn;
+    if (item) g.items.push(item);
   }
-  return { rows, skipped, error: null };
+
+  const rows = [];
+  let zeroAmount = 0;
+  for (const g of groups.values()) {
+    let amount = g.amount;
+    if (!amount && g.items.length) {
+      amount = g.items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
+    }
+    if (!amount) zeroAmount++;
+    const gst_details = Object.keys(g.gstObj).length ? JSON.stringify(g.gstObj) : '';
+    rows.push({
+      date: g.date,
+      supplier_original: g.supplier_original,
+      bill_no: g.bill_no,
+      amount: amount ? amount.toString() : '',
+      gst_amount: g.gst_amount ? g.gst_amount.toString() : '',
+      gst_details,
+      items: g.items.length ? g.items : undefined,
+    });
+  }
+
+  return { rows, skipped, zeroAmount, error: null };
 }
 // ------------------------------------------------------------------------
 
@@ -244,7 +308,7 @@ export default function PurchasesPage() {
     if (!file) return;
     setUploading(true); setSyncMsg('');
     try {
-      const { rows, error, skipped } = await parseTallyFile(file);
+      const { rows, error, skipped, zeroAmount } = await parseTallyFile(file);
       if (error) throw new Error(error);
       if (rows.length === 0) throw new Error('No valid rows found');
       const items = rows.map(r => ({
@@ -264,7 +328,8 @@ export default function PurchasesPage() {
       const { created, duplicate, errors } = data.summary;
       if (created > 0) await fetchBills();
       const skipNote = skipped ? ` · ${skipped} skipped` : '';
-      setSyncMsg(`✓ ${created} new · ${duplicate} dup · ${errors} err${skipNote}`);
+      const zeroNote = zeroAmount ? ` · ${zeroAmount} no-amount` : '';
+      setSyncMsg(`✓ ${created} new · ${duplicate} dup · ${errors} err${skipNote}${zeroNote}`);
     } catch (err) {
       setSyncMsg('⚠ ' + (err.message || 'Upload failed'));
     } finally {
