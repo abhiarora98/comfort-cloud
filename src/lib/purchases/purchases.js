@@ -72,6 +72,10 @@ export async function ingestPurchase(input, { savedBy } = {}) {
     approval_status,
     approved_by: '',
     approved_at: '',
+    gst_amount: input.gst_amount || '',
+    gst_details: input.gst_details
+      ? (typeof input.gst_details === 'string' ? input.gst_details : JSON.stringify(input.gst_details))
+      : '',
   };
   validatePurchase(purchase);
 

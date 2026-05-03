@@ -54,6 +54,8 @@ export const TABS = {
       'approval_status',
       'approved_by',
       'approved_at',
+      'gst_amount',
+      'gst_details',
     ],
   },
   vendors: {

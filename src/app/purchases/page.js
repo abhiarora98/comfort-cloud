@@ -47,7 +47,15 @@ const COL_ALIASES = {
   supplier: ['supplier', 'party', 'partyname', 'partyledger', 'partyledgername', 'vendor', 'name'],
   amount:   ['amount', 'value', 'grossamount', 'netamount', 'total', 'amountrs', 'debit', 'credit'],
   bill_no:  ['billno', 'billnumber', 'voucherno', 'vouchernumber', 'invoiceno', 'invoicenumber', 'reference', 'refno', 'ref'],
+  // Optional GST columns — pulled if present, never required.
+  gst_amount: ['gstamount', 'taxamount', 'totaltax', 'gst', 'tax', 'gsttotal'],
+  cgst:       ['cgst', 'cgstamount'],
+  sgst:       ['sgst', 'sgstamount'],
+  igst:       ['igst', 'igstamount'],
+  gst_number: ['gstnumber', 'gstin', 'gstno', 'partygstin', 'partygst'],
+  hsn:        ['hsn', 'hsncode', 'hsnno', 'hsnsac'],
 };
+const REQUIRED_COLS = ['date', 'supplier', 'amount', 'bill_no'];
 
 function normHeader(h) {
   return String(h || '').toLowerCase().replace(/[\s_\-./]/g, '').trim();
@@ -99,19 +107,37 @@ async function parseTallyFile(file) {
   if (headerIdx < 0) headerIdx = 0;
   const headers = aoa[headerIdx];
   const colMap = pickColumns(headers);
-  const missing = ['date', 'supplier', 'amount', 'bill_no'].filter(k => colMap[k] === undefined);
+  const missing = REQUIRED_COLS.filter(k => colMap[k] === undefined);
   if (missing.length) return { rows: [], error: `Missing columns: ${missing.join(', ')}` };
+  const num = (v) => String(v ?? '').replace(/[^\d.\-]/g, '');
+  const cell = (r, k) => colMap[k] !== undefined ? r[colMap[k]] : undefined;
   const rows = [];
   let skipped = 0;
   for (let i = headerIdx + 1; i < aoa.length; i++) {
     const r = aoa[i];
-    const supplier = String(r[colMap.supplier] ?? '').trim();
-    const bill_no  = String(r[colMap.bill_no]  ?? '').trim();
-    const date     = toIsoDate(r[colMap.date]);
-    const amountRaw = String(r[colMap.amount] ?? '').trim();
-    const amount    = amountRaw.replace(/[^\d.\-]/g, '');
+    const supplier = String(cell(r, 'supplier') ?? '').trim();
+    const bill_no  = String(cell(r, 'bill_no')  ?? '').trim();
+    const date     = toIsoDate(cell(r, 'date'));
+    const amount   = num(cell(r, 'amount'));
     if (!supplier || !bill_no || !date) { skipped++; continue; }
-    rows.push({ date, supplier_original: supplier, amount, bill_no });
+    const cgst = num(cell(r, 'cgst'));
+    const sgst = num(cell(r, 'sgst'));
+    const igst = num(cell(r, 'igst'));
+    const gst_amount =
+      num(cell(r, 'gst_amount')) ||
+      ((cgst || sgst || igst)
+        ? String((parseFloat(cgst || 0) + parseFloat(sgst || 0) + parseFloat(igst || 0)) || '')
+        : '');
+    const gst_number = String(cell(r, 'gst_number') ?? '').trim();
+    const hsn = String(cell(r, 'hsn') ?? '').trim();
+    const gstObj = {};
+    if (cgst) gstObj.cgst = cgst;
+    if (sgst) gstObj.sgst = sgst;
+    if (igst) gstObj.igst = igst;
+    if (gst_number) gstObj.gst_number = gst_number;
+    if (hsn) gstObj.hsn = hsn;
+    const gst_details = Object.keys(gstObj).length ? JSON.stringify(gstObj) : '';
+    rows.push({ date, supplier_original: supplier, amount, bill_no, gst_amount, gst_details });
   }
   return { rows, skipped, error: null };
 }
@@ -159,7 +185,7 @@ export default function PurchasesPage() {
   const [classifying, setClassifying] = useState(false);
   const [editingCatId, setEditingCatId] = useState(null);
   const [recentlyApprovedId, setRecentlyApprovedId] = useState(null);
-  const [selectedBill, setSelectedBill] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
   const classifyTimer = useRef(null);
   const w = useW();
   const mob = w < 768;
@@ -379,6 +405,144 @@ export default function PurchasesPage() {
   const input = { width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 13, fontFamily: SN, outline: 'none', color: '#1e293b', boxSizing: 'border-box' };
   const labelStyle = { fontFamily: MN, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 6, display: 'block' };
 
+  const renderBillDetails = (b) => {
+    const fmtDate = (s) => {
+      if (!s) return '—';
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? s : d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    };
+    let items = [];
+    try { if (b.items_json) items = JSON.parse(b.items_json); } catch {}
+    if (!Array.isArray(items)) items = [];
+    let gst = {};
+    try { if (b.gst_details) gst = JSON.parse(b.gst_details); } catch {}
+    if (!gst || typeof gst !== 'object') gst = {};
+    const conf = parseFloat(b.confidence || '0');
+    const catColor = CAT_COLORS[b.category] || '#94a3b8';
+    const grand = parseFloat(b.amount || '0') || 0;
+    const gstAmt = parseFloat(b.gst_amount || '0') || 0;
+    const subtotal = grand && gstAmt ? grand - gstAmt : null;
+
+    const sectionHeader = { fontFamily: MN, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8 };
+    const Row = ({ label, children }) => (
+      <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 10, padding: '4px 0', alignItems: 'baseline' }}>
+        <div style={{ fontFamily: MN, fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+        <div style={{ fontSize: 12, color: '#0f172a', wordBreak: 'break-word' }}>{children}</div>
+      </div>
+    );
+    const cellTh = { fontFamily: MN, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#94a3b8', textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' };
+    const cellTd = { fontSize: 12, color: '#0f172a', padding: '6px 8px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'top' };
+
+    return (
+      <div style={{ padding: '14px 16px', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap: 16 }}>
+          <div>
+            <div style={sectionHeader}>Identity</div>
+            <Row label="Supplier">{b.supplier_original || b.supplier || '—'}</Row>
+            <Row label="Bill no">{b.bill_no || '—'}</Row>
+            <Row label="Date">{b.date || '—'}</Row>
+            <Row label="Source">{b.source || '—'}</Row>
+            <Row label="Tally match">{String(b.is_matched_with_tally).toUpperCase() === 'TRUE' ? 'Yes' : 'No'}</Row>
+            {gst.gst_number && <Row label="GSTIN">{gst.gst_number}</Row>}
+            {gst.hsn && <Row label="HSN/SAC">{gst.hsn}</Row>}
+          </div>
+          <div>
+            <div style={sectionHeader}>Amounts</div>
+            {subtotal !== null && <Row label="Subtotal"><span style={{ fontFamily: MN }}>₹{subtotal.toLocaleString('en-IN')}</span></Row>}
+            {gstAmt > 0 && <Row label="GST total"><span style={{ fontFamily: MN }}>₹{gstAmt.toLocaleString('en-IN')}</span></Row>}
+            {gst.cgst && <Row label="CGST"><span style={{ fontFamily: MN }}>₹{Number(gst.cgst).toLocaleString('en-IN')}</span></Row>}
+            {gst.sgst && <Row label="SGST"><span style={{ fontFamily: MN }}>₹{Number(gst.sgst).toLocaleString('en-IN')}</span></Row>}
+            {gst.igst && <Row label="IGST"><span style={{ fontFamily: MN }}>₹{Number(gst.igst).toLocaleString('en-IN')}</span></Row>}
+            <Row label="Grand total"><span style={{ fontFamily: MN, fontWeight: 700 }}>{grand ? `₹${grand.toLocaleString('en-IN')}` : '—'}</span></Row>
+          </div>
+        </div>
+
+        {items.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div style={sectionHeader}>Items ({items.length})</div>
+            <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={cellTh}>#</th>
+                    <th style={cellTh}>Item</th>
+                    <th style={cellTh}>HSN</th>
+                    <th style={{ ...cellTh, textAlign: 'right' }}>Qty</th>
+                    <th style={{ ...cellTh, textAlign: 'right' }}>Rate</th>
+                    <th style={{ ...cellTh, textAlign: 'right' }}>GST %</th>
+                    <th style={{ ...cellTh, textAlign: 'right' }}>GST ₹</th>
+                    <th style={{ ...cellTh, textAlign: 'right' }}>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((it, idx) => (
+                    <tr key={idx}>
+                      <td style={{ ...cellTd, color: '#94a3b8', fontFamily: MN, fontSize: 11 }}>{idx + 1}</td>
+                      <td style={cellTd}>{it.name || '—'}</td>
+                      <td style={{ ...cellTd, fontFamily: MN, fontSize: 11, color: '#64748b' }}>{it.hsn || '—'}</td>
+                      <td style={{ ...cellTd, textAlign: 'right', fontFamily: MN }}>{it.qty || '—'}</td>
+                      <td style={{ ...cellTd, textAlign: 'right', fontFamily: MN }}>{it.rate ? `₹${Number(it.rate).toLocaleString('en-IN')}` : '—'}</td>
+                      <td style={{ ...cellTd, textAlign: 'right', fontFamily: MN }}>{it.gst_pct != null ? `${it.gst_pct}%` : '—'}</td>
+                      <td style={{ ...cellTd, textAlign: 'right', fontFamily: MN }}>{it.gst_amount ? `₹${Number(it.gst_amount).toLocaleString('en-IN')}` : '—'}</td>
+                      <td style={{ ...cellTd, textAlign: 'right', fontFamily: MN, fontWeight: 700 }}>{it.amount ? `₹${Number(it.amount).toLocaleString('en-IN')}` : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap: 16, marginTop: 16 }}>
+          <div>
+            <div style={sectionHeader}>Classification</div>
+            <Row label="Category">
+              <span style={{ fontFamily: MN, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: catColor + '18', color: catColor, border: `1px solid ${catColor}40`, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {CATEGORY_LABELS[b.category] || b.category || '—'}
+              </span>
+              {b.subcategory && <span style={{ fontFamily: MN, fontSize: 11, color: '#64748b', marginLeft: 6 }}>· {b.subcategory}</span>}
+            </Row>
+            <Row label="Confidence">
+              <span style={{ fontFamily: MN }}>{b.classified_by || '—'}{conf ? ` · ${Math.round(conf * 100)}%` : ''}</span>
+            </Row>
+            {String(b.user_corrected).toUpperCase() === 'TRUE' && b.previous_category && (
+              <Row label="Was">
+                <span style={{ fontFamily: MN, fontSize: 11, color: '#64748b' }}>
+                  {CATEGORY_LABELS[b.previous_category] || b.previous_category} → corrected
+                </span>
+              </Row>
+            )}
+          </div>
+          <div>
+            <div style={sectionHeader}>Approval &amp; audit</div>
+            <Row label="Approval">
+              {b.approval_status
+                ? <>
+                    <span style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: b.approval_status === 'approved' ? '#166534' : b.approval_status === 'rejected' ? '#991b1b' : '#92400e' }}>
+                      {b.approval_status}
+                    </span>
+                    {b.approved_by && <span style={{ fontFamily: MN, fontSize: 11, color: '#64748b' }}> · {b.approved_by}</span>}
+                  </>
+                : '—'}
+            </Row>
+            {b.approval_status && b.approved_at && <Row label="Acted at">{fmtDate(b.approved_at)}</Row>}
+            <Row label="Saved by">{b.saved_by || '—'}</Row>
+            <Row label="Saved at">{fmtDate(b.saved_at)}</Row>
+            <Row label="ID"><span style={{ fontFamily: MN, fontSize: 11, color: '#94a3b8', wordBreak: 'break-all' }}>{b.id || '—'}</span></Row>
+          </div>
+        </div>
+
+        {(b.description || b.mismatches) && (
+          <div style={{ marginTop: 16 }}>
+            <div style={sectionHeader}>Notes</div>
+            {b.description && <div style={{ fontSize: 12, color: '#0f172a', marginBottom: 6 }}>{b.description}</div>}
+            {b.mismatches && <div style={{ fontSize: 12, color: '#dc2626' }}>{b.mismatches}</div>}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderCategoryChip = (b, { interactive }) => {
     const cat = b.category;
     const conf = parseFloat(b.confidence || '0');
@@ -511,7 +675,10 @@ export default function PurchasesPage() {
                     <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', border: '1px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                        <button onClick={() => setSelectedBill(b)} title="View bill details" style={{ background: 'none', border: 'none', padding: 0, fontWeight: 600, fontSize: 13, color: '#0f172a', cursor: 'pointer', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', textDecoration: 'underline', textDecorationColor: '#cbd5e1', textUnderlineOffset: 3 }}>{b.supplier || b.supplier_original || '—'}</button>
+                        <button onClick={() => setExpandedId(prev => prev === b.id ? null : b.id)} title="Show / hide details" style={{ background: 'none', border: 'none', padding: 0, fontWeight: 600, fontSize: 13, color: '#0f172a', cursor: 'pointer', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', textDecoration: 'underline', textDecorationColor: '#cbd5e1', textUnderlineOffset: 3, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8', transform: expandedId === b.id ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s', display: 'inline-block' }}>▸</span>
+                          {b.supplier || b.supplier_original || '—'}
+                        </button>
                         {b.verified === 'mismatch' && <span title={b.mismatches} style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>}
                         {b.approval_status === 'pending' && <span style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>Pending</span>}
                         {b.approval_status === 'pending' && (() => {
@@ -549,6 +716,7 @@ export default function PurchasesPage() {
                       <span>Saved. Future invoices from this vendor will improve.</span>
                     </div>
                   )}
+                  {expandedId === b.id && renderBillDetails(b)}
                   </div>
                 ))}
               </div>
@@ -676,84 +844,6 @@ export default function PurchasesPage() {
           );
         })()}
       </div>
-
-      {/* Bill details modal */}
-      {selectedBill && (() => {
-        const b = selectedBill;
-        const fmtDate = (s) => {
-          if (!s) return '—';
-          const d = new Date(s);
-          return isNaN(d.getTime()) ? s : d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
-        };
-        const conf = parseFloat(b.confidence || '0');
-        const catColor = CAT_COLORS[b.category] || '#94a3b8';
-        const Row = ({ label, children }) => (
-          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 10, padding: '8px 0', borderBottom: '1px solid #f1f5f9', alignItems: 'baseline' }}>
-            <div style={{ fontFamily: MN, fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
-            <div style={{ fontSize: 13, color: '#0f172a', wordBreak: 'break-word' }}>{children}</div>
-          </div>
-        );
-        return (
-          <div onClick={() => setSelectedBill(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-            <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', maxWidth: 520, width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '14px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontFamily: MN, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 4 }}>Bill Details</div>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.supplier || b.supplier_original || '—'}</div>
-                </div>
-                <button onClick={() => setSelectedBill(null)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#94a3b8', padding: 0, lineHeight: 1 }}>×</button>
-              </div>
-              <div style={{ padding: '8px 16px 16px', overflowY: 'auto' }}>
-                <Row label="Bill No">{b.bill_no || '—'}</Row>
-                <Row label="Date">{b.date || '—'}</Row>
-                <Row label="Amount">
-                  {b.amount
-                    ? <span style={{ fontFamily: MN, fontWeight: 700 }}>₹{Number(b.amount).toLocaleString('en-IN')}</span>
-                    : '—'}
-                </Row>
-                <Row label="Category">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontFamily: MN, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999, background: catColor + '18', color: catColor, border: `1px solid ${catColor}40`, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      {CATEGORY_LABELS[b.category] || b.category || '—'}
-                    </span>
-                    {b.subcategory && <span style={{ fontFamily: MN, fontSize: 11, color: '#64748b' }}>· {b.subcategory}</span>}
-                    {b.classified_by && (
-                      <span style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>
-                        · {b.classified_by}{conf ? ` · ${Math.round(conf * 100)}%` : ''}
-                      </span>
-                    )}
-                  </div>
-                </Row>
-                {String(b.user_corrected).toUpperCase() === 'TRUE' && b.previous_category && (
-                  <Row label="Was">
-                    <span style={{ fontFamily: MN, fontSize: 11, color: '#64748b' }}>
-                      {CATEGORY_LABELS[b.previous_category] || b.previous_category} → corrected
-                    </span>
-                  </Row>
-                )}
-                <Row label="Source">{b.source || '—'}</Row>
-                <Row label="Tally match">{String(b.is_matched_with_tally).toUpperCase() === 'TRUE' ? 'Yes' : 'No'}</Row>
-                <Row label="Approval">
-                  {b.approval_status
-                    ? <>
-                        <span style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: b.approval_status === 'approved' ? '#166534' : b.approval_status === 'rejected' ? '#991b1b' : '#92400e' }}>
-                          {b.approval_status}
-                        </span>
-                        {b.approved_by && <span style={{ fontFamily: MN, fontSize: 11, color: '#64748b' }}> · by {b.approved_by}</span>}
-                        {b.approved_at && <span style={{ fontFamily: MN, fontSize: 11, color: '#94a3b8' }}> · {fmtDate(b.approved_at)}</span>}
-                      </>
-                    : '—'}
-                </Row>
-                {b.description && <Row label="Description">{b.description}</Row>}
-                {b.mismatches && <Row label="Mismatches"><span style={{ color: '#dc2626' }}>{b.mismatches}</span></Row>}
-                <Row label="Saved by">{b.saved_by || '—'}</Row>
-                <Row label="Saved at">{fmtDate(b.saved_at)}</Row>
-                <Row label="ID"><span style={{ fontFamily: MN, fontSize: 11, color: '#94a3b8', wordBreak: 'break-all' }}>{b.id || '—'}</span></Row>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }
