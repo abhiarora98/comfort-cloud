@@ -186,6 +186,22 @@ export async function appendRow(tab, obj) {
   });
 }
 
+// Single-batch append for many objects. One Sheets API call regardless
+// of array size — used by /api/purchases/bulk to avoid per-row latency
+// stacking up against the function timeout.
+export async function appendRows(tab, objs) {
+  if (!objs || objs.length === 0) return;
+  await ensureTab(tab);
+  const sheets = await getSheetsClient();
+  const values = objs.map((obj) => tab.headers.map((h) => serializeValue(obj[h])));
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: `${tab.name}!A1`,
+    valueInputOption: 'RAW',
+    requestBody: { values },
+  });
+}
+
 export async function updateRow(tab, rowNumber, partial) {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({

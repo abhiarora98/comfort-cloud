@@ -1,4 +1,4 @@
-import { ingestPurchase } from '../../../../lib/purchases/purchases.js';
+import { ingestPurchasesBulk } from '../../../../lib/purchases/purchases.js';
 
 export const maxDuration = 60;
 
@@ -13,25 +13,8 @@ export async function POST(req) {
       );
     }
     const savedBy = body && !Array.isArray(body) ? body.saved_by : undefined;
-    const results = [];
-    // Sequential — keeps Sheets writes ordered and avoids vendor-cache races.
-    for (const input of items) {
-      try {
-        const r = await ingestPurchase(
-          { ...input, saved_by: input.saved_by || savedBy },
-          { savedBy: input.saved_by || savedBy },
-        );
-        results.push({ id: r.id, status: r.status });
-      } catch (e) {
-        results.push({ status: 'error', error: e.message });
-      }
-    }
-    const summary = {
-      created: results.filter((r) => r.status === 'created').length,
-      duplicate: results.filter((r) => r.status === 'duplicate').length,
-      errors: results.filter((r) => r.status === 'error').length,
-    };
-    return Response.json({ ok: true, summary, results });
+    const { summary, results, errors } = await ingestPurchasesBulk(items, { savedBy });
+    return Response.json({ ok: true, summary, results, errors });
   } catch (e) {
     console.error('POST /api/purchases/bulk:', e);
     return Response.json({ ok: false, error: e.message }, { status: 400 });
