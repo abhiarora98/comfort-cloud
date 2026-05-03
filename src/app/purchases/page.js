@@ -141,19 +141,20 @@ async function parseTallyFile(file) {
   const moneyStr = (n) => Math.abs(n) > 0 ? Math.abs(n).toString() : '';
 
   // --- State machine over the rows -------------------------------------
-  // Walk top-to-bottom. A row that has (Voucher No OR Supplier Invoice
-  // No) starts a new purchase — identifier presence alone is sufficient,
-  // because item / continuation rows in Tally exports never carry these
-  // columns. The Supplier column is preferred for the supplier name, but
-  // we fall back to Particulars when the dedicated Supplier column is
-  // blank (which happens in some Tally export profiles).
+  // Walk top-to-bottom. Detection rule for Tally Columnar Purchase
+  // Register (per the actual file):
+  //   header row = Date is filled AND Particulars equals Supplier
+  //   item row   = Date is empty   AND Particulars is filled (not equal
+  //                                    to the carried supplier)
+  // Voucher No / Supplier Invoice No are used ONLY to populate bill_no
+  // — never for detection — so that copies of those columns onto item
+  // rows (which Tally sometimes does) can't trigger phantom vouchers.
   const allPurchases = [];
   let currentPurchase = null;
-  let lastDate = '';   // carry forward when Tally leaves Date blank
   let invoiceRowsDetected = 0;
   let skipped = 0;
-  // Diagnostic samples — first few of each kind to help diagnose if the
-  // count is still off. Limited to 5 of each so the console stays useful.
+  // Diagnostic samples — first few of each kind. Limited to 5 of each
+  // so the console stays useful when something looks off.
   const sampleVoucherRows = [];
   const sampleItemRows = [];
   const sampleSkippedRows = [];
@@ -170,44 +171,38 @@ async function parseTallyFile(file) {
     const rowSupplier  = text(r, ix.supplier);
     const rowVoucherNo = text(r, ix.voucher_no);
     const rowInvoiceNo = text(r, ix.invoice_no);
-    const rowRef       = rowVoucherNo || rowInvoiceNo; // either identifier
     const rowDate      = toIsoDate(get(r, ix.date));
-    const itemName     = text(r, ix.item);
-    if (rowDate) lastDate = rowDate;
+    const itemName     = text(r, ix.item); // Particulars
 
-    // Identifier alone is enough. Continuation / item rows never carry a
-    // voucher or invoice number in Tally's column layouts.
-    const isVoucherRow = !!rowRef;
+    const partEqSup = !!(rowSupplier && itemName)
+      && normItemKey(rowSupplier) === normItemKey(itemName);
+    const isHeaderRow = !!rowDate && partEqSup;
+    const isItemRow   = !rowDate && !!itemName && !partEqSup;
 
-    if (isVoucherRow) {
+    if (isHeaderRow) {
       // Push the previous voucher before starting a new one.
       flushCurrent();
       invoiceRowsDetected++;
       const billNo = rowVoucherNo || rowInvoiceNo || `auto-r${i + 1}`;
-      // Supplier column preferred; fall back to Particulars on this row.
-      const supplier = rowSupplier || itemName || '';
       if (sampleVoucherRows.length < 5) {
-        sampleVoucherRows.push({ row: i + 1, voucher: rowVoucherNo, invoice: rowInvoiceNo, supplier, date: rowDate || lastDate });
+        sampleVoucherRows.push({ row: i + 1, voucher: rowVoucherNo, invoice: rowInvoiceNo, supplier: rowSupplier, date: rowDate });
       }
       currentPurchase = {
-        date: rowDate || lastDate,
-        supplier_original: supplier,
+        date: rowDate,
+        supplier_original: rowSupplier,
         bill_no: billNo,
         amount: 0, gst_amount: 0, gstObj: {}, items: [],
         description: '',
-        // Carry the supplier on the in-flight voucher so item-row checks
-        // can compare against it.
-        _supplier: supplier,
+        _supplier: rowSupplier,
       };
     } else if (!currentPurchase) {
       // Garbage rows before the first voucher (titles, blank lines).
-      if (sampleSkippedRows.length < 5) sampleSkippedRows.push({ row: i + 1, reason: 'no_current_purchase', supplier: rowSupplier, item: itemName });
+      if (sampleSkippedRows.length < 5) sampleSkippedRows.push({ row: i + 1, reason: 'no_current_purchase', supplier: rowSupplier, item: itemName, date: rowDate });
       skipped++;
       continue;
-    } else if (!itemName) {
-      // Continuation row with neither identifiers nor an item — separator
-      // or grand-total. Skip.
-      if (sampleSkippedRows.length < 5) sampleSkippedRows.push({ row: i + 1, reason: 'no_item_name', supplier: rowSupplier });
+    } else if (!isItemRow) {
+      // Neither header nor item — separator, totals row, or partial row.
+      if (sampleSkippedRows.length < 5) sampleSkippedRows.push({ row: i + 1, reason: 'not_header_not_item', supplier: rowSupplier, item: itemName, date: rowDate });
       skipped++;
       continue;
     } else if (sampleItemRows.length < 5) {
@@ -229,13 +224,9 @@ async function parseTallyFile(file) {
     const hsn = text(r, ix.hsn);
 
     let item = null;
-    // Item rows only: a continuation row with an item name. Defensive:
-    // skip if Particulars matches the supplier (Tally sometimes echoes
-    // the supplier name there).
-    const isItemRow = !isVoucherRow && itemName;
-    const looksLikeSupplier = isItemRow && currentPurchase._supplier
-      && normItemKey(itemName) === normItemKey(currentPurchase._supplier);
-    if (isItemRow && !looksLikeSupplier) {
+    // isItemRow / partEqSup were already determined above. Build the
+    // line item from this row only when it actually qualifies.
+    if (isItemRow) {
       let itemAmt = Math.abs(num(get(r, ix.item_value)));
       if (!itemAmt) {
         const skipIdxs = new Set([
