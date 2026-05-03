@@ -158,7 +158,24 @@ async function parseTallyFile(file) {
     const itemName = text(r, ix.item);
     let item = null;
     if (itemName) {
-      const itemAmt = Math.abs(num(get(r, ix.item_value))) || amount;
+      // Item amount: prefer the explicit per-line column ("Value" / "Item
+      // Value" / "Line Amount"). If missing, scan the row for the largest
+      // numeric cell — but skip the bill-total columns (those carry the
+      // grand total, repeated on every row) and obvious non-amount cells.
+      let itemAmt = Math.abs(num(get(r, ix.item_value)));
+      if (!itemAmt) {
+        const skipIdxs = new Set([
+          ...amtIdxs,
+          ix.cgst, ix.sgst, ix.igst, ix.gst_amount, ix.qty, ix.rate,
+        ].filter(i => i >= 0));
+        let max = 0;
+        for (let ci = 0; ci < r.length; ci++) {
+          if (skipIdxs.has(ci)) continue;
+          const v = Math.abs(num(r[ci]));
+          if (v > max) max = v;
+        }
+        itemAmt = max;
+      }
       item = {
         name: itemName,
         qty: text(r, ix.qty),
@@ -215,6 +232,118 @@ async function parseTallyFile(file) {
 }
 // ------------------------------------------------------------------------
 
+// --- Items aggregation (client-side) ------------------------------------
+
+function normItemKey(name) {
+  return String(name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function avgIntervalDays(dates) {
+  // dates: array of YYYY-MM-DD strings (already filtered to non-empty).
+  const uniq = [...new Set(dates)].sort();
+  if (uniq.length < 2) return null;
+  let sum = 0;
+  for (let i = 1; i < uniq.length; i++) {
+    const a = new Date(uniq[i - 1] + 'T00:00:00');
+    const b = new Date(uniq[i] + 'T00:00:00');
+    sum += (b - a) / (1000 * 60 * 60 * 24);
+  }
+  return sum / (uniq.length - 1);
+}
+
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return null;
+  return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function aggregateItems(bills) {
+  // groups: key → { display_name, lines: [{bill, line}] }
+  const groups = new Map();
+  for (const b of bills) {
+    if (!b.items_json) continue;
+    let items;
+    try { items = JSON.parse(b.items_json); } catch { continue; }
+    if (!Array.isArray(items)) continue;
+    for (const it of items) {
+      if (!it || !it.name) continue;
+      const key = normItemKey(it.name);
+      if (!key) continue;
+      if (!groups.has(key)) {
+        groups.set(key, { key, display_name: String(it.name).trim(), lines: [] });
+      }
+      groups.get(key).lines.push({ bill: b, line: it });
+    }
+  }
+
+  const result = [];
+  for (const g of groups.values()) {
+    // Sort lines by bill date, oldest → newest. Missing dates last.
+    const sorted = g.lines.slice().sort((a, b) => {
+      const da = a.bill.date || '9999-99-99';
+      const db = b.bill.date || '9999-99-99';
+      return da.localeCompare(db);
+    });
+    const total_qty = sorted.reduce((s, l) => s + (parseFloat(l.line.qty) || 0), 0);
+    const total_spend = sorted.reduce((s, l) => s + (parseFloat(l.line.amount) || 0), 0);
+    const billIds = new Set(sorted.map(l => l.bill.id || `${l.bill.supplier_key}|${l.bill.bill_no}|${l.bill.date}`));
+    const last = sorted[sorted.length - 1];
+    const last_date = last?.bill.date || '';
+    const last_rate = parseFloat(last?.line.rate) || 0;
+    const last_vendor = last?.bill.supplier || last?.bill.supplier_original || '';
+
+    // Rate change vs the most recent prior purchase that has a rate.
+    let prev_rate = 0;
+    for (let i = sorted.length - 2; i >= 0; i--) {
+      const r = parseFloat(sorted[i].line.rate) || 0;
+      if (r > 0) { prev_rate = r; break; }
+    }
+    const rate_change_pct = (prev_rate > 0 && last_rate > 0)
+      ? ((last_rate - prev_rate) / prev_rate) * 100
+      : null;
+
+    // Distinct vendors, ordered by recency (most recent first).
+    const seen = new Set();
+    const vendors_recent = [];
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      const v = sorted[i].bill.supplier || sorted[i].bill.supplier_original;
+      if (!v || seen.has(v)) continue;
+      seen.add(v);
+      vendors_recent.push(v);
+    }
+    const other_vendors = vendors_recent.slice(1, 3); // up to 2 beyond last_vendor
+    const more_vendors = Math.max(0, vendors_recent.length - 1 - other_vendors.length);
+
+    const dates = sorted.map(l => l.bill.date).filter(Boolean);
+    const avg_interval_days = avgIntervalDays(dates);
+    const days_since_last = daysSince(last_date);
+
+    let reorder = null;
+    if (avg_interval_days != null && avg_interval_days >= 7 && days_since_last != null) {
+      if (days_since_last > 2 * avg_interval_days) reorder = 'overdue';
+      else if (days_since_last > 1.5 * avg_interval_days) reorder = 'due';
+    }
+
+    result.push({
+      key: g.key,
+      display_name: g.display_name,
+      total_qty, total_spend,
+      bills_count: billIds.size,
+      last_date, last_rate, last_vendor,
+      other_vendors, more_vendors,
+      avg_interval_days, days_since_last,
+      rate_change_pct, reorder,
+    });
+  }
+  return result;
+}
+// ------------------------------------------------------------------------
+
 function useW(){const[w,setW]=useState(typeof window!=='undefined'?window.innerWidth:1200);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);return w;}
 
 function parseCSVLine(line) {
@@ -245,6 +374,7 @@ function parsePurchasesCSV(csv) {
 export default function PurchasesPage() {
   const { user, isLoaded } = useUser();
   const [form, setForm] = useState({ supplier: '', billNo: '', date: '', amount: '', notes: '', category: '' });
+  const [formItems, setFormItems] = useState([]); // [{name, qty, rate, gst_pct}]
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [bills, setBills] = useState([]);
@@ -252,7 +382,8 @@ export default function PurchasesPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [view, setView] = useState('history'); // 'history' | 'form' | 'insights'
+  const [view, setView] = useState('history'); // 'history' | 'form' | 'items' | 'insights'
+  const [itemSort, setItemSort] = useState('recent'); // 'recent' | 'spend' | 'name' | 'stale'
   const [suggestion, setSuggestion] = useState(null); // { category, confidence, classified_by, reasons }
   const [classifying, setClassifying] = useState(false);
   const [editingCatId, setEditingCatId] = useState(null);
@@ -399,6 +530,15 @@ export default function PurchasesPage() {
     setSaving(true);
     setSaveError('');
     try {
+      const cleanItems = formItems
+        .map(it => ({
+          name: (it.name || '').trim(),
+          qty: (it.qty || '').trim(),
+          rate: (it.rate || '').trim(),
+          gst_pct: (it.gst_pct || '').trim(),
+          amount: ((parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)).toString().replace(/^0$/, ''),
+        }))
+        .filter(it => it.name);
       const payload = {
         company_id: COMPANY_ID,
         date: form.date,
@@ -409,6 +549,7 @@ export default function PurchasesPage() {
         source: 'invoice',
         saved_by: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
         user_category: form.category || undefined,
+        items: cleanItems.length ? cleanItems : undefined,
       };
       const resp = await fetch('/api/purchases', {
         method: 'POST',
@@ -420,6 +561,7 @@ export default function PurchasesPage() {
       await fetchBills();
       setView('history');
       setForm({ supplier: '', billNo: '', date: '', amount: '', notes: '', category: '' });
+      setFormItems([]);
       setSuggestion(null);
     } catch (err) {
       setSaveError(err.message || 'Failed to save. Try again.');
@@ -671,9 +813,9 @@ export default function PurchasesPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {!mob && <>
-            {['history','insights'].map(v => (
+            {['history','items','insights'].map(v => (
               <button key={v} onClick={() => setView(v)} style={{ background: view===v ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '5px 12px', borderRadius: 8, fontSize: 11, fontFamily: MN, cursor: 'pointer' }}>
-                {v==='history' ? `History (${bills.length})` : 'Insights'}
+                {v==='history' ? `History (${bills.length})` : v==='items' ? 'Items' : 'Insights'}
               </button>
             ))}
             <button onClick={() => setView('form')} style={{ background: '#d97706', border: 'none', color: '#fff', padding: '5px 12px', borderRadius: 8, fontSize: 11, fontFamily: MN, cursor: 'pointer', fontWeight: 700 }}>+ Add Bill</button>
@@ -685,9 +827,9 @@ export default function PurchasesPage() {
       {/* Mobile tab bar */}
       {mob && view !== 'form' && (
         <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
-          {['history','insights'].map(v => (
+          {['history','items','insights'].map(v => (
             <button key={v} onClick={() => setView(v)} style={{ flex: 1, padding: '12px', border: 'none', background: 'none', fontFamily: MN, fontSize: 12, fontWeight: view===v ? 700 : 500, color: view===v ? '#0f172a' : '#94a3b8', borderBottom: view===v ? '2px solid #d97706' : '2px solid transparent', cursor: 'pointer' }}>
-              {v==='history' ? `History (${bills.length})` : 'Insights'}
+              {v==='history' ? `History (${bills.length})` : v==='items' ? 'Items' : 'Insights'}
             </button>
           ))}
         </div>
@@ -849,6 +991,31 @@ export default function PurchasesPage() {
                   )}
                 </div>
                 <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>Items <span style={{ textTransform: 'none', color: '#cbd5e1', fontWeight: 500 }}>(optional)</span></label>
+                    <button type="button" onClick={() => setFormItems(prev => [...prev, { name: '', qty: '', rate: '', gst_pct: '' }])} style={{ background: 'none', border: '1px solid #e2e8f0', color: '#475569', padding: '3px 10px', borderRadius: 6, fontFamily: MN, fontSize: 10, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>+ Add</button>
+                  </div>
+                  {formItems.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <datalist id="item-name-list">
+                        {[...new Set(bills.flatMap(b => {
+                          try { const xs = JSON.parse(b.items_json || '[]'); return Array.isArray(xs) ? xs.map(x => x.name).filter(Boolean) : []; }
+                          catch { return []; }
+                        }))].map(n => <option key={n} value={n} />)}
+                      </datalist>
+                      {formItems.map((it, i) => (
+                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 60px 28px', gap: 6, alignItems: 'center' }}>
+                          <input list="item-name-list" placeholder="Item name" value={it.name} onChange={e => setFormItems(prev => prev.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} style={{ ...input, padding: '6px 10px', fontSize: 12 }} />
+                          <input placeholder="Qty" value={it.qty} onChange={e => setFormItems(prev => prev.map((x, j) => j === i ? { ...x, qty: e.target.value } : x))} style={{ ...input, padding: '6px 10px', fontSize: 12, fontFamily: MN, textAlign: 'right' }} />
+                          <input placeholder="Rate ₹" value={it.rate} onChange={e => setFormItems(prev => prev.map((x, j) => j === i ? { ...x, rate: e.target.value } : x))} style={{ ...input, padding: '6px 10px', fontSize: 12, fontFamily: MN, textAlign: 'right' }} />
+                          <input placeholder="GST %" value={it.gst_pct} onChange={e => setFormItems(prev => prev.map((x, j) => j === i ? { ...x, gst_pct: e.target.value } : x))} style={{ ...input, padding: '6px 10px', fontSize: 12, fontFamily: MN, textAlign: 'right' }} />
+                          <button type="button" onClick={() => setFormItems(prev => prev.filter((_, j) => j !== i))} title="Remove" style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 16, padding: 0, lineHeight: 1 }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
                   <label style={labelStyle}>Notes</label>
                   <textarea style={{ ...input, minHeight: 80, resize: 'vertical' }} placeholder="Any additional notes..." value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
                 </div>
@@ -860,6 +1027,96 @@ export default function PurchasesPage() {
             </div>
           </div>
         )}
+
+        {/* Items view */}
+        {view === 'items' && (() => {
+          const items = aggregateItems(bills);
+          const sorted = items.slice().sort((a, b) => {
+            if (itemSort === 'name') return a.display_name.localeCompare(b.display_name);
+            if (itemSort === 'spend') return (b.total_spend || 0) - (a.total_spend || 0);
+            if (itemSort === 'stale') return (b.days_since_last ?? -1) - (a.days_since_last ?? -1);
+            // 'recent' default — newest purchase first
+            return (b.last_date || '').localeCompare(a.last_date || '');
+          });
+          const dueCount = items.filter(i => i.reorder).length;
+          const overdueCount = items.filter(i => i.reorder === 'overdue').length;
+          const sortBtn = (key, label) => (
+            <button key={key} onClick={() => setItemSort(key)} style={{ background: itemSort === key ? '#0f172a' : 'transparent', color: itemSort === key ? '#fff' : '#475569', border: '1px solid #e2e8f0', padding: '4px 10px', borderRadius: 6, fontFamily: MN, fontSize: 10, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</button>
+          );
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {dueCount > 0 && (
+                <div style={{ ...card, padding: '12px 16px', background: overdueCount > 0 ? '#fee2e2' : '#fef3c7', border: `1px solid ${overdueCount > 0 ? '#fecaca' : '#fde68a'}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 18 }}>⏳</span>
+                  <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, color: overdueCount > 0 ? '#991b1b' : '#92400e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {dueCount} {dueCount === 1 ? 'item' : 'items'} due to reorder{overdueCount > 0 ? ` · ${overdueCount} overdue` : ''}
+                  </div>
+                </div>
+              )}
+              <div style={{ ...card, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginRight: 4 }}>Sort</div>
+                {sortBtn('recent', 'Most Recent')}
+                {sortBtn('spend', 'Top Spend')}
+                {sortBtn('stale', 'Stalest')}
+                {sortBtn('name', 'Name A-Z')}
+                <div style={{ marginLeft: 'auto', fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{items.length} items</div>
+              </div>
+              {items.length === 0 ? (
+                <div style={{ ...card, padding: 48, textAlign: 'center' }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>📦</div>
+                  <div style={{ fontFamily: MN, fontSize: 12, color: '#94a3b8' }}>No item-level data yet</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Upload a Tally Columnar Purchase Register that includes Stock Item / Particulars columns.</div>
+                </div>
+              ) : (
+                <div style={{ ...card, overflow: 'hidden' }}>
+                  {sorted.map((it, i) => {
+                    const reorderPill = it.reorder === 'overdue'
+                      ? { label: 'Overdue',     bg: '#fee2e2', color: '#991b1b', border: '#fecaca' }
+                      : it.reorder === 'due'
+                        ? { label: 'Reorder due', bg: '#fef3c7', color: '#92400e', border: '#fde68a' }
+                        : null;
+                    return (
+                      <div key={it.key} style={{ padding: '12px 16px', borderBottom: i < sorted.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', border: '1px solid #e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📦</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
+                            <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{it.display_name}</div>
+                            {reorderPill && <span title={`Avg ${it.avg_interval_days?.toFixed(0)} days · last ${it.days_since_last} days ago`} style={{ fontFamily: MN, fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: reorderPill.bg, color: reorderPill.color, border: `1px solid ${reorderPill.border}`, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>{reorderPill.label}</span>}
+                          </div>
+                          <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>
+                            Last: {it.last_date || '—'}{it.days_since_last != null ? ` · ${it.days_since_last}d ago` : ''}
+                            {it.avg_interval_days != null && ` · every ~${it.avg_interval_days.toFixed(0)}d`}
+                            {' · '}{it.bills_count} {it.bills_count === 1 ? 'bill' : 'bills'}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {it.last_vendor || '—'}
+                            {it.other_vendors.length > 0 && (
+                              <span style={{ color: '#94a3b8' }}> · also {it.other_vendors.join(', ')}{it.more_vendors > 0 ? ` +${it.more_vendors} more` : ''}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                          <div style={{ fontFamily: MN, fontSize: 13, fontWeight: 700, color: '#0f172a' }}>₹{it.total_spend.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                          {it.total_qty > 0 && <div style={{ fontFamily: MN, fontSize: 10, color: '#64748b' }}>{it.total_qty.toLocaleString('en-IN')} units</div>}
+                          {it.last_rate > 0 && (
+                            <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <span>@ ₹{it.last_rate.toLocaleString('en-IN')}</span>
+                              {it.rate_change_pct != null && Math.abs(it.rate_change_pct) >= 0.5 && (
+                                <span style={{ color: it.rate_change_pct > 0 ? '#dc2626' : '#059669', fontWeight: 700 }}>
+                                  {it.rate_change_pct > 0 ? '↑' : '↓'}{Math.abs(it.rate_change_pct).toFixed(1)}%
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Insights view */}
         {view === 'insights' && (() => {
