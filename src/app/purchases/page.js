@@ -154,7 +154,8 @@ async function parseTallyFile(file) {
   // / Particulars / Voucher Type are NOT used for detection.
   const allPurchases = [];
   let currentPurchase = null;
-  let prevVoucher = null;
+  let lastVoucher = null;     // most recent non-empty voucher seen
+  let prevVoucher = null;     // voucher of the in-flight purchase
   let invoiceRowsDetected = 0;
   let skipped = 0;
   const sampleVoucherRows = [];
@@ -179,21 +180,26 @@ async function parseTallyFile(file) {
 
     // Trim defensively — Tally sometimes sneaks in NBSPs / trailing
     // spaces that would otherwise break grouping.
-    const voucher = (rowVoucherNo || rowInvoiceNo).replace(/\s+/g, ' ').trim();
-    const effectiveVoucher = voucher || `auto-r${i + 1}`;
+    const rawVoucher = (rowVoucherNo || rowInvoiceNo).replace(/\s+/g, ' ').trim();
+    // Carry forward the last seen voucher when this row's voucher
+    // cells are blank (Tally's Columnar Purchase Register puts the
+    // voucher only on the header row in some export profiles).
+    const voucher = rawVoucher || lastVoucher;
 
-    // Skip rows that have NOTHING usable — separators / blank lines.
-    if (!voucher && !itemName && !rowSupplier && !rowDate) {
-      if (sampleSkippedRows.length < 5) sampleSkippedRows.push({ row: i + 1, reason: 'all_empty' });
+    if (sampleResolutions.length < 10) {
+      sampleResolutions.push({ row: i + 1, raw: rawVoucher, carried: !rawVoucher && !!lastVoucher, voucher, item: itemName, supplier: rowSupplier, date: rowDate });
+    }
+
+    // Without a voucher and without a carried context, this row can't
+    // be attributed to any invoice — skip.
+    if (!voucher) {
+      if (sampleSkippedRows.length < 5) sampleSkippedRows.push({ row: i + 1, reason: 'no_voucher_context', item: itemName, supplier: rowSupplier });
       skipped++;
       continue;
     }
+    if (rawVoucher) lastVoucher = rawVoucher;
 
-    if (sampleResolutions.length < 10) {
-      sampleResolutions.push({ row: i + 1, voucher, effective: effectiveVoucher, item: itemName, supplier: rowSupplier, date: rowDate });
-    }
-
-    if (effectiveVoucher !== prevVoucher) {
+    if (voucher !== prevVoucher) {
       // Voucher changed — push the previous purchase and start a new one.
       flushCurrent();
       invoiceRowsDetected++;
@@ -204,12 +210,12 @@ async function parseTallyFile(file) {
       currentPurchase = {
         date: rowDate || '',
         supplier_original: supplier,
-        bill_no: voucher || `auto-r${i + 1}`,
+        bill_no: voucher,
         amount: 0, gst_amount: 0, gstObj: {}, items: [],
         description: '',
         _supplier: supplier,
       };
-      prevVoucher = effectiveVoucher;
+      prevVoucher = voucher;
     } else {
       // Same voucher as previous row — continuation. Backfill any
       // identity fields that were blank on the first row.
