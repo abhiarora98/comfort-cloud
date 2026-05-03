@@ -632,128 +632,175 @@ export default function PurchasesPage() {
     let gst = {};
     try { if (b.gst_details) gst = JSON.parse(b.gst_details); } catch {}
     if (!gst || typeof gst !== 'object') gst = {};
+
     const conf = parseFloat(b.confidence || '0');
     const catColor = CAT_COLORS[b.category] || '#94a3b8';
     const grand = parseFloat(b.amount || '0') || 0;
-    const gstAmt = parseFloat(b.gst_amount || '0') || 0;
-    const subtotal = grand && gstAmt ? grand - gstAmt : null;
+    const cgst = parseFloat(gst.cgst) || 0;
+    const sgst = parseFloat(gst.sgst) || 0;
+    const igst = parseFloat(gst.igst) || 0;
+    const gstAmt = parseFloat(b.gst_amount || '0') || (cgst + sgst + igst);
+    const subtotal = grand && gstAmt ? grand - gstAmt : grand;
+    const matchedTally = String(b.is_matched_with_tally).toUpperCase() === 'TRUE';
+    const isPending = b.approval_status === 'pending';
+    const wasCorrected = String(b.user_corrected).toUpperCase() === 'TRUE';
 
-    const sectionHeader = { fontFamily: MN, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8 };
-    const Row = ({ label, children }) => (
-      <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 10, padding: '4px 0', alignItems: 'baseline' }}>
-        <div style={{ fontFamily: MN, fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-        <div style={{ fontSize: 12, color: '#0f172a', wordBreak: 'break-word' }}>{children}</div>
-      </div>
-    );
-    const cellTh = { fontFamily: MN, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#94a3b8', textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' };
-    const cellTd = { fontSize: 12, color: '#0f172a', padding: '6px 8px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'top' };
+    const sectionLabel = { fontFamily: MN, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 10 };
+    const cellTh = { fontFamily: MN, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#94a3b8', textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap', background: '#f8fafc' };
+    const cellTd = { fontSize: 13, color: '#0f172a', padding: '10px', borderBottom: '1px solid #f1f5f9', verticalAlign: 'top' };
+    const sumRow = { display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontFamily: MN, fontSize: 12, color: '#64748b' };
 
     return (
-      <div style={{ padding: '14px 16px', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap: 16 }}>
-          <div>
-            <div style={sectionHeader}>Identity</div>
-            <Row label="Supplier">{b.supplier_original || b.supplier || '—'}</Row>
-            <Row label="Bill no">{b.bill_no || '—'}</Row>
-            <Row label="Date">{b.date || '—'}</Row>
-            <Row label="Source">{b.source || '—'}</Row>
-            <Row label="Tally match">{String(b.is_matched_with_tally).toUpperCase() === 'TRUE' ? 'Yes' : 'No'}</Row>
-            {gst.gst_number && <Row label="GSTIN">{gst.gst_number}</Row>}
-            {gst.hsn && <Row label="HSN/SAC">{gst.hsn}</Row>}
+      <div style={{ padding: mob ? '20px 16px' : '24px 28px', background: '#fff', borderTop: '1px solid #e2e8f0' }}>
+
+        {/* 1. Header */}
+        <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', marginBottom: 6, lineHeight: 1.3 }}>
+            {b.supplier_original || b.supplier || '—'}
           </div>
-          <div>
-            <div style={sectionHeader}>Amounts</div>
-            {subtotal !== null && <Row label="Subtotal"><span style={{ fontFamily: MN }}>₹{subtotal.toLocaleString('en-IN')}</span></Row>}
-            {gstAmt > 0 && <Row label="GST total"><span style={{ fontFamily: MN }}>₹{gstAmt.toLocaleString('en-IN')}</span></Row>}
-            {gst.cgst && <Row label="CGST"><span style={{ fontFamily: MN }}>₹{Number(gst.cgst).toLocaleString('en-IN')}</span></Row>}
-            {gst.sgst && <Row label="SGST"><span style={{ fontFamily: MN }}>₹{Number(gst.sgst).toLocaleString('en-IN')}</span></Row>}
-            {gst.igst && <Row label="IGST"><span style={{ fontFamily: MN }}>₹{Number(gst.igst).toLocaleString('en-IN')}</span></Row>}
-            <Row label="Grand total"><span style={{ fontFamily: MN, fontWeight: 700 }}>{grand ? `₹${grand.toLocaleString('en-IN')}` : '—'}</span></Row>
+          <div style={{ fontFamily: MN, fontSize: 11, color: '#64748b', display: 'flex', flexWrap: 'wrap', gap: '6px 18px' }}>
+            {gst.gst_number && <span><span style={{ color: '#94a3b8' }}>GSTIN</span> <span style={{ color: '#0f172a' }}>{gst.gst_number}</span></span>}
+            <span><span style={{ color: '#94a3b8' }}>Bill No</span> <span style={{ color: '#0f172a', fontWeight: 600 }}>{b.bill_no || '—'}</span></span>
+            <span><span style={{ color: '#94a3b8' }}>Date</span> <span style={{ color: '#0f172a', fontWeight: 600 }}>{b.date || '—'}</span></span>
           </div>
         </div>
 
-        {items.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <div style={sectionHeader}>Items ({items.length})</div>
-            <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff' }}>
+        {/* 2. Items */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={sectionLabel}>Items{items.length ? ` (${items.length})` : ''}</div>
+          {items.length > 0 ? (
+            <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 8 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
                     <th style={cellTh}>#</th>
                     <th style={cellTh}>Item</th>
-                    <th style={cellTh}>HSN</th>
                     <th style={{ ...cellTh, textAlign: 'right' }}>Qty</th>
                     <th style={{ ...cellTh, textAlign: 'right' }}>Rate</th>
-                    <th style={{ ...cellTh, textAlign: 'right' }}>GST %</th>
-                    <th style={{ ...cellTh, textAlign: 'right' }}>GST ₹</th>
                     <th style={{ ...cellTh, textAlign: 'right' }}>Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((it, idx) => (
                     <tr key={idx}>
-                      <td style={{ ...cellTd, color: '#94a3b8', fontFamily: MN, fontSize: 11 }}>{idx + 1}</td>
-                      <td style={cellTd}>{it.name || '—'}</td>
-                      <td style={{ ...cellTd, fontFamily: MN, fontSize: 11, color: '#64748b' }}>{it.hsn || '—'}</td>
+                      <td style={{ ...cellTd, color: '#94a3b8', fontFamily: MN, fontSize: 11, width: 32 }}>{idx + 1}</td>
+                      <td style={cellTd}>
+                        <div style={{ fontWeight: 500 }}>{it.name || '—'}</div>
+                        {(it.hsn || it.gst_pct) && (
+                          <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
+                            {it.hsn && <span>HSN {it.hsn}</span>}
+                            {it.hsn && it.gst_pct && <span> · </span>}
+                            {it.gst_pct && <span>GST {it.gst_pct}%</span>}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ ...cellTd, textAlign: 'right', fontFamily: MN }}>{it.qty || '—'}</td>
                       <td style={{ ...cellTd, textAlign: 'right', fontFamily: MN }}>{it.rate ? `₹${Number(it.rate).toLocaleString('en-IN')}` : '—'}</td>
-                      <td style={{ ...cellTd, textAlign: 'right', fontFamily: MN }}>{it.gst_pct != null ? `${it.gst_pct}%` : '—'}</td>
-                      <td style={{ ...cellTd, textAlign: 'right', fontFamily: MN }}>{it.gst_amount ? `₹${Number(it.gst_amount).toLocaleString('en-IN')}` : '—'}</td>
                       <td style={{ ...cellTd, textAlign: 'right', fontFamily: MN, fontWeight: 700 }}>{it.amount ? `₹${Number(it.amount).toLocaleString('en-IN')}` : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
+          ) : (
+            <div style={{ padding: '14px 16px', background: '#f8fafc', border: '1px dashed #e2e8f0', borderRadius: 8, fontFamily: MN, fontSize: 11, color: '#94a3b8', textAlign: 'center' }}>
+              No item-level breakdown for this bill
+            </div>
+          )}
+        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap: 16, marginTop: 16 }}>
-          <div>
-            <div style={sectionHeader}>Classification</div>
-            <Row label="Category">
-              <span style={{ fontFamily: MN, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: catColor + '18', color: catColor, border: `1px solid ${catColor}40`, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {CATEGORY_LABELS[b.category] || b.category || '—'}
-              </span>
-              {b.subcategory && <span style={{ fontFamily: MN, fontSize: 11, color: '#64748b', marginLeft: 6 }}>· {b.subcategory}</span>}
-            </Row>
-            <Row label="Confidence">
-              <span style={{ fontFamily: MN }}>{b.classified_by || '—'}{conf ? ` · ${Math.round(conf * 100)}%` : ''}</span>
-            </Row>
-            {String(b.user_corrected).toUpperCase() === 'TRUE' && b.previous_category && (
-              <Row label="Was">
-                <span style={{ fontFamily: MN, fontSize: 11, color: '#64748b' }}>
-                  {CATEGORY_LABELS[b.previous_category] || b.previous_category} → corrected
-                </span>
-              </Row>
+        {/* 3. Summary */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20 }}>
+          <div style={{ minWidth: mob ? '100%' : 280 }}>
+            {(gstAmt > 0 || cgst > 0 || sgst > 0 || igst > 0) && (
+              <div style={sumRow}>
+                <span>Subtotal</span>
+                <span style={{ color: '#0f172a' }}>₹{subtotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
+              </div>
             )}
-          </div>
-          <div>
-            <div style={sectionHeader}>Approval &amp; audit</div>
-            <Row label="Approval">
-              {b.approval_status
-                ? <>
-                    <span style={{ fontFamily: MN, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: b.approval_status === 'approved' ? '#166534' : b.approval_status === 'rejected' ? '#991b1b' : '#92400e' }}>
-                      {b.approval_status}
-                    </span>
-                    {b.approved_by && <span style={{ fontFamily: MN, fontSize: 11, color: '#64748b' }}> · {b.approved_by}</span>}
-                  </>
-                : '—'}
-            </Row>
-            {b.approval_status && b.approved_at && <Row label="Acted at">{fmtDate(b.approved_at)}</Row>}
-            <Row label="Saved by">{b.saved_by || '—'}</Row>
-            <Row label="Saved at">{fmtDate(b.saved_at)}</Row>
-            <Row label="ID"><span style={{ fontFamily: MN, fontSize: 11, color: '#94a3b8', wordBreak: 'break-all' }}>{b.id || '—'}</span></Row>
+            {cgst > 0 && <div style={sumRow}><span>CGST</span><span style={{ color: '#0f172a' }}>₹{cgst.toLocaleString('en-IN')}</span></div>}
+            {sgst > 0 && <div style={sumRow}><span>SGST</span><span style={{ color: '#0f172a' }}>₹{sgst.toLocaleString('en-IN')}</span></div>}
+            {igst > 0 && <div style={sumRow}><span>IGST</span><span style={{ color: '#0f172a' }}>₹{igst.toLocaleString('en-IN')}</span></div>}
+            {!cgst && !sgst && !igst && gstAmt > 0 && (
+              <div style={sumRow}><span>GST</span><span style={{ color: '#0f172a' }}>₹{gstAmt.toLocaleString('en-IN')}</span></div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 4px', borderTop: '1px solid #e2e8f0', marginTop: 6, fontFamily: MN, fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+              <span>Total</span>
+              <span>{grand ? `₹${grand.toLocaleString('en-IN')}` : '—'}</span>
+            </div>
           </div>
         </div>
 
-        {(b.description || b.mismatches) && (
-          <div style={{ marginTop: 16 }}>
-            <div style={sectionHeader}>Notes</div>
-            {b.description && <div style={{ fontSize: 12, color: '#0f172a', marginBottom: 6 }}>{b.description}</div>}
-            {b.mismatches && <div style={{ fontSize: 12, color: '#dc2626' }}>{b.mismatches}</div>}
+        {/* 4. Intelligence */}
+        <div style={{ marginBottom: 16, padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ fontFamily: MN, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8' }}>Category</div>
+            <select
+              value={b.category || ''}
+              onChange={(e) => updateBillCategory(b, e.target.value)}
+              style={{ padding: '5px 10px', fontFamily: MN, fontSize: 11, fontWeight: 700, color: catColor, background: catColor + '12', border: `1px solid ${catColor}40`, borderRadius: 999, textTransform: 'uppercase', letterSpacing: '0.04em', cursor: 'pointer', outline: 'none' }}
+            >
+              <option value="" disabled>—</option>
+              {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
+            </select>
+            {b.classified_by && (
+              <div style={{ fontFamily: MN, fontSize: 11, color: '#64748b' }}>
+                via {b.classified_by}{conf ? ` · ${Math.round(conf * 100)}%` : ''}
+                {wasCorrected && b.previous_category && (
+                  <span style={{ color: '#94a3b8' }}> · was {CATEGORY_LABELS[b.previous_category] || b.previous_category}</span>
+                )}
+              </div>
+            )}
           </div>
-        )}
+          <div style={{ marginTop: 10, fontFamily: MN, fontSize: 11, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {matchedTally ? (
+              <><span style={{ color: '#16a34a' }}>✓</span><span style={{ color: '#166534' }}>Matched with Tally</span></>
+            ) : b.source === 'invoice' ? (
+              <><span style={{ color: '#d97706' }}>⚠</span><span style={{ color: '#a16207' }}>No matching entry in Tally</span></>
+            ) : (
+              <><span style={{ color: '#94a3b8' }}>·</span><span style={{ color: '#94a3b8' }}>Source: {b.source || '—'}</span></>
+            )}
+          </div>
+        </div>
+
+        {/* 5. Actions */}
+        {isPending ? (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+            <button onClick={() => setApproval(b, 'approve')} style={{ padding: '10px 20px', fontFamily: MN, fontSize: 11, fontWeight: 700, borderRadius: 8, border: '1px solid #16a34a', background: '#16a34a', color: '#fff', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>✓ Approve</button>
+            <button onClick={() => setApproval(b, 'reject')} style={{ padding: '10px 20px', fontFamily: MN, fontSize: 11, fontWeight: 700, borderRadius: 8, border: '1px solid #dc2626', background: '#fff', color: '#dc2626', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>✗ Reject</button>
+          </div>
+        ) : b.approval_status ? (
+          <div style={{ marginBottom: 16, fontFamily: MN, fontSize: 11, color: '#64748b' }}>
+            <span style={{ fontWeight: 700, textTransform: 'uppercase', color: b.approval_status === 'approved' ? '#166534' : '#991b1b' }}>{b.approval_status}</span>
+            {b.approved_by && <span> by {b.approved_by}</span>}
+            {b.approved_at && <span style={{ color: '#94a3b8' }}> · {fmtDate(b.approved_at)}</span>}
+          </div>
+        ) : null}
+
+        {/* 6. Advanced (collapsed) */}
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ cursor: 'pointer', fontFamily: MN, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', userSelect: 'none', listStyle: 'none', padding: '6px 0' }}>
+            <span>Advanced ▾</span>
+          </summary>
+          <div style={{ marginTop: 6, paddingTop: 10, borderTop: '1px solid #f1f5f9', display: 'grid', gridTemplateColumns: '120px 1fr', gap: '6px 12px', fontFamily: MN, fontSize: 11 }}>
+            <span style={{ color: '#94a3b8' }}>Source</span>
+            <span style={{ color: '#0f172a' }}>{b.source || '—'}</span>
+            <span style={{ color: '#94a3b8' }}>Saved by</span>
+            <span style={{ color: '#0f172a' }}>{b.saved_by || '—'}</span>
+            <span style={{ color: '#94a3b8' }}>Saved at</span>
+            <span style={{ color: '#0f172a' }}>{fmtDate(b.saved_at)}</span>
+            {b.description && <>
+              <span style={{ color: '#94a3b8' }}>Notes</span>
+              <span style={{ fontFamily: SN, fontSize: 12, color: '#0f172a' }}>{b.description}</span>
+            </>}
+            {b.mismatches && <>
+              <span style={{ color: '#94a3b8' }}>Mismatches</span>
+              <span style={{ color: '#dc2626' }}>{b.mismatches}</span>
+            </>}
+            <span style={{ color: '#94a3b8' }}>ID</span>
+            <span style={{ color: '#94a3b8', wordBreak: 'break-all' }}>{b.id || '—'}</span>
+          </div>
+        </details>
       </div>
     );
   };
