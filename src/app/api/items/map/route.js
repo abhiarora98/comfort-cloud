@@ -1,7 +1,5 @@
-import {
-  addAlias,
-  ensureRawMaterial,
-} from '../../../../lib/purchases/items.js';
+import { addAlias } from '../../../../lib/purchases/items.js';
+import { getProductionMaterials } from '../../../../lib/purchases/productionMaterials.js';
 
 export const maxDuration = 30;
 
@@ -14,9 +12,6 @@ export async function POST(req) {
       canonical_name,
       source = 'user_picked',
       mapped_by = '',
-      category = '',
-      unit = '',
-      notes = '',
     } = body || {};
 
     if (!company_id || !raw_name || !canonical_name) {
@@ -26,20 +21,16 @@ export async function POST(req) {
       );
     }
 
-    // create_new also seeds RAW_MATERIALS so the canonical becomes
-    // selectable from the dropdown for future mappings.
-    if (source === 'create_new') {
-      await ensureRawMaterial({
-        company_id,
-        canonical_name,
-        category,
-        unit,
-        notes,
-        created_by: mapped_by,
-      });
+    // No free text — canonical must come from the production materials list.
+    const { materials } = await getProductionMaterials();
+    if (!materials.includes(canonical_name)) {
+      return Response.json(
+        { ok: false, error: `canonical_name "${canonical_name}" is not a known production material` },
+        { status: 400 },
+      );
     }
-    await addAlias({ company_id, raw_name, canonical_name, source, mapped_by });
 
+    await addAlias({ company_id, raw_name, canonical_name, source, mapped_by });
     return Response.json({ ok: true, canonical_name });
   } catch (e) {
     console.error('POST /api/items/map:', e);

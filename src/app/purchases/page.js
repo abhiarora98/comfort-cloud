@@ -6,7 +6,6 @@ const MN = "'DM Mono', monospace";
 const SN = "'Instrument Sans', sans-serif";
 const SHEET_ID = '1CQS5w9VLTjHcZ9Gzw3P6wGgZ0K6YDKuL1Ux42LQeRSQ';
 const PURCHASES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=PURCHASES_V2`;
-const RAW_MATERIALS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=RAW_MATERIALS`;
 const ITEM_ALIASES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=ITEM_ALIASES`;
 
 const COMPANY_ID = 'comfort';
@@ -432,11 +431,10 @@ export default function PurchasesPage() {
   const [editingCatId, setEditingCatId] = useState(null);
   const [recentlyApprovedId, setRecentlyApprovedId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
-  const [rawMaterials, setRawMaterials] = useState([]); // [{canonical_name, category, unit, ...}]
+  const [productionMaterials, setProductionMaterials] = useState([]); // string[]
   const [aliases, setAliases] = useState([]);           // [{raw_name, canonical_name, ...}]
   const [mappingKey, setMappingKey] = useState(null);   // normalized item key currently being mapped
-  const [mapState, setMapState] = useState({ loading: false, suggestions: [], mode: 'pick' }); // mode: 'pick' | 'create'
-  const [mapDraft, setMapDraft] = useState({ canonical_name: '', category: '', unit: '' });
+  const [mapState, setMapState] = useState({ loading: false, suggestions: [] });
   const [mapSaving, setMapSaving] = useState(false);
   const classifyTimer = useRef(null);
   const w = useW();
@@ -454,12 +452,10 @@ export default function PurchasesPage() {
 
   const fetchMappings = useCallback(async () => {
     try {
-      const [rm, al] = await Promise.all([
-        fetch(RAW_MATERIALS_URL, { cache: 'no-store' }).then(r => r.text()).catch(() => ''),
+      const [matsRes, aliasCsv] = await Promise.all([
+        fetch('/api/production-materials', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ materials: [] })),
         fetch(ITEM_ALIASES_URL, { cache: 'no-store' }).then(r => r.text()).catch(() => ''),
       ]);
-      // parsePurchasesCSV expects supplier or bill_no to keep rows; pass our
-      // own loose parse via the existing primitives.
       const parseLoose = (csv) => {
         const lines = (csv || '').trim().split('\n');
         if (lines.length < 2) return [];
@@ -471,10 +467,10 @@ export default function PurchasesPage() {
           return obj;
         });
       };
-      setRawMaterials(parseLoose(rm).filter(r => r.canonical_name));
-      setAliases(parseLoose(al).filter(r => r.raw_name && r.canonical_name));
+      setProductionMaterials(Array.isArray(matsRes.materials) ? matsRes.materials : []);
+      setAliases(parseLoose(aliasCsv).filter(r => r.raw_name && r.canonical_name));
     } catch {
-      setRawMaterials([]); setAliases([]);
+      setProductionMaterials([]); setAliases([]);
     }
   }, []);
 
@@ -708,10 +704,8 @@ export default function PurchasesPage() {
   })();
 
   const openMappingPicker = async (item) => {
-    const k = item.key;
-    setMappingKey(k);
-    setMapState({ loading: true, suggestions: [], mode: 'pick' });
-    setMapDraft({ canonical_name: '', category: '', unit: '' });
+    setMappingKey(item.key);
+    setMapState({ loading: true, suggestions: [] });
     try {
       const r = await fetch('/api/items/match', {
         method: 'POST',
@@ -719,19 +713,18 @@ export default function PurchasesPage() {
         body: JSON.stringify({ company_id: COMPANY_ID, raw_name: item.display_name }),
       });
       const data = await r.json();
-      setMapState({ loading: false, suggestions: data.suggestions || [], mode: 'pick' });
+      setMapState({ loading: false, suggestions: data.suggestions || [] });
     } catch {
-      setMapState({ loading: false, suggestions: [], mode: 'pick' });
+      setMapState({ loading: false, suggestions: [] });
     }
   };
 
   const closeMappingPicker = () => {
     setMappingKey(null);
-    setMapState({ loading: false, suggestions: [], mode: 'pick' });
-    setMapDraft({ canonical_name: '', category: '', unit: '' });
+    setMapState({ loading: false, suggestions: [] });
   };
 
-  const confirmMapping = async (rawName, canonical, source = 'user_picked', extra = {}) => {
+  const confirmMapping = async (rawName, canonical, source = 'user_picked') => {
     if (!canonical) return;
     setMapSaving(true);
     try {
@@ -744,7 +737,6 @@ export default function PurchasesPage() {
           canonical_name: canonical,
           source,
           mapped_by: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-          ...extra,
         }),
       });
       const data = await r.json();
@@ -1320,21 +1312,6 @@ export default function PurchasesPage() {
                           </div>
                           {mapState.loading ? (
                             <div style={{ fontFamily: MN, fontSize: 11, color: '#94a3b8' }}>Looking up suggestions…</div>
-                          ) : mapState.mode === 'create' ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                              <input autoFocus style={{ ...input, padding: '8px 12px', fontSize: 13 }} placeholder="Canonical name (e.g. DOP Oil)" value={mapDraft.canonical_name} onChange={(e) => setMapDraft(d => ({ ...d, canonical_name: e.target.value }))} />
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                <select style={{ ...input, padding: '8px 12px', fontSize: 12 }} value={mapDraft.category} onChange={(e) => setMapDraft(d => ({ ...d, category: e.target.value }))}>
-                                  <option value="">Category…</option>
-                                  {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
-                                </select>
-                                <input style={{ ...input, padding: '8px 12px', fontSize: 12 }} placeholder="Unit (kg, L, pcs)" value={mapDraft.unit} onChange={(e) => setMapDraft(d => ({ ...d, unit: e.target.value }))} />
-                              </div>
-                              <div style={{ display: 'flex', gap: 8 }}>
-                                <button disabled={mapSaving || !mapDraft.canonical_name.trim()} onClick={() => confirmMapping(it.display_name, mapDraft.canonical_name.trim(), 'create_new', { category: mapDraft.category, unit: mapDraft.unit })} style={{ background: (mapSaving || !mapDraft.canonical_name.trim()) ? '#94a3b8' : '#0f172a', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: 6, fontFamily: MN, fontSize: 11, fontWeight: 700, cursor: (mapSaving || !mapDraft.canonical_name.trim()) ? 'not-allowed' : 'pointer' }}>{mapSaving ? 'Saving…' : 'Create & Map'}</button>
-                                <button onClick={() => setMapState(s => ({ ...s, mode: 'pick' }))} style={{ background: 'none', border: '1px solid #e2e8f0', color: '#475569', padding: '8px 14px', borderRadius: 6, fontFamily: MN, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Back</button>
-                              </div>
-                            </div>
                           ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                               {mapState.suggestions.length > 0 && (
@@ -1348,20 +1325,14 @@ export default function PurchasesPage() {
                                   ))}
                                 </div>
                               )}
-                              {rawMaterials.length > 0 && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <select style={{ ...input, padding: '8px 12px', fontSize: 12, flex: 1 }} defaultValue="" onChange={(e) => { if (e.target.value) confirmMapping(it.display_name, e.target.value, 'user_picked'); }}>
-                                    <option value="">Or pick from RAW_MATERIALS…</option>
-                                    {rawMaterials.map(m => <option key={m.canonical_name} value={m.canonical_name}>{m.canonical_name}{m.category ? ` · ${m.category}` : ''}</option>)}
-                                  </select>
-                                </div>
+                              {productionMaterials.length > 0 ? (
+                                <select style={{ ...input, padding: '8px 12px', fontSize: 12 }} defaultValue="" onChange={(e) => { if (e.target.value) confirmMapping(it.display_name, e.target.value, 'user_picked'); }}>
+                                  <option value="">Pick from production materials…</option>
+                                  {productionMaterials.map(m => <option key={m} value={m}>{m}</option>)}
+                                </select>
+                              ) : (
+                                <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>No production materials available yet.</div>
                               )}
-                              <div style={{ display: 'flex', gap: 8 }}>
-                                <button onClick={() => setMapState(s => ({ ...s, mode: 'create' }))} style={{ background: 'none', border: '1px dashed #cbd5e1', color: '#475569', padding: '8px 14px', borderRadius: 6, fontFamily: MN, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>+ Create new canonical</button>
-                                {mapState.suggestions.length === 0 && rawMaterials.length === 0 && (
-                                  <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8', alignSelf: 'center' }}>No canonicals yet — create one to start</div>
-                                )}
-                              </div>
                             </div>
                           )}
                         </div>

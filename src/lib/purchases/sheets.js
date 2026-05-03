@@ -89,18 +89,6 @@ export const TABS = {
       'corrected_by',
     ],
   },
-  raw_materials: {
-    name: 'RAW_MATERIALS',
-    headers: [
-      'company_id',
-      'canonical_name',
-      'category',
-      'unit',
-      'notes',
-      'created_by',
-      'created_at',
-    ],
-  },
   item_aliases: {
     name: 'ITEM_ALIASES',
     headers: [

@@ -11,14 +11,7 @@ export function normRawKey(name) {
 }
 
 const CACHE_MS = 60_000;
-let rmCache = { t: 0, rows: null };
 let aliasCache = { t: 0, rows: null };
-
-async function allRaw() {
-  if (rmCache.rows && Date.now() - rmCache.t < CACHE_MS) return rmCache.rows;
-  rmCache = { t: Date.now(), rows: await readRows(TABS.raw_materials) };
-  return rmCache.rows;
-}
 
 async function allAliases() {
   if (aliasCache.rows && Date.now() - aliasCache.t < CACHE_MS) return aliasCache.rows;
@@ -26,13 +19,7 @@ async function allAliases() {
   return aliasCache.rows;
 }
 
-function invalidateRaw() { rmCache = { t: 0, rows: null }; }
 function invalidateAliases() { aliasCache = { t: 0, rows: null }; }
-
-export async function listRawMaterials(company_id) {
-  const rows = await allRaw();
-  return rows.filter((r) => r.company_id === company_id);
-}
 
 export async function listAliases(company_id) {
   const rows = await allAliases();
@@ -45,35 +32,7 @@ export async function findAlias(company_id, raw_name) {
   return rows.find((r) => normRawKey(r.raw_name) === key) || null;
 }
 
-// Insert into RAW_MATERIALS only when canonical is genuinely new.
-export async function ensureRawMaterial({
-  company_id,
-  canonical_name,
-  category = '',
-  unit = '',
-  notes = '',
-  created_by = '',
-}) {
-  const name = String(canonical_name || '').trim();
-  if (!name) throw new Error('canonical_name required');
-  const existing = (await listRawMaterials(company_id)).find(
-    (r) => normRawKey(r.canonical_name) === normRawKey(name),
-  );
-  if (existing) return existing;
-  await appendRow(TABS.raw_materials, {
-    company_id,
-    canonical_name: name,
-    category,
-    unit,
-    notes,
-    created_by,
-    created_at: new Date().toISOString(),
-  });
-  invalidateRaw();
-  return { company_id, canonical_name: name, category, unit, notes, created_by };
-}
-
-// Insert into ITEM_ALIASES. raw_name is stored as-typed; lookups normalize.
+// Append-only: ITEM_ALIASES doubles as audit log.
 export async function addAlias({
   company_id,
   raw_name,

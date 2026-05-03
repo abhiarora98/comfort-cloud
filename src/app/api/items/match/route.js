@@ -1,9 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk';
 import {
   findAlias,
-  listRawMaterials,
   normRawKey,
 } from '../../../../lib/purchases/items.js';
+import { getProductionMaterials } from '../../../../lib/purchases/productionMaterials.js';
 
 export const maxDuration = 30;
 
@@ -20,8 +20,7 @@ export async function POST(req) {
       return Response.json({ ok: false, error: 'company_id and raw_name required' }, { status: 400 });
     }
 
-    // If we already have a confirmed alias, surface it as a definite match —
-    // no AI call needed.
+    // Already-mapped items short-circuit (no AI call).
     const existing = await findAlias(company_id, raw_name);
     if (existing) {
       return Response.json({
@@ -32,19 +31,18 @@ export async function POST(req) {
       });
     }
 
-    const materials = await listRawMaterials(company_id);
-    if (materials.length === 0) {
-      return Response.json({ ok: true, suggestions: [], reason: 'no canonicals defined yet' });
+    const { materials } = await getProductionMaterials();
+    if (!materials || materials.length === 0) {
+      return Response.json({ ok: true, suggestions: [], reason: 'no production materials found' });
     }
 
-    // Quick local pass: if normalized raw_name exactly equals a canonical,
-    // return it as the top suggestion without calling the AI.
+    // Cheap exact-normalized match before falling back to the AI.
     const rawKey = normRawKey(raw_name);
-    const exact = materials.find((m) => normRawKey(m.canonical_name) === rawKey);
+    const exact = materials.find((m) => normRawKey(m) === rawKey);
     if (exact) {
       return Response.json({
         ok: true,
-        suggestions: [{ canonical_name: exact.canonical_name, confidence: 0.99, reason: 'exact normalized match' }],
+        suggestions: [{ canonical_name: exact, confidence: 0.99, reason: 'exact normalized match' }],
       });
     }
 
@@ -52,14 +50,12 @@ export async function POST(req) {
       return Response.json({ ok: true, suggestions: [], reason: 'no ANTHROPIC_API_KEY' });
     }
 
-    const list = materials
-      .map((m) => `- ${m.canonical_name}${m.category ? ` (${m.category})` : ''}`)
-      .join('\n');
-    const prompt = `Match a noisy purchase item name to a canonical raw material. Return up to 3 best matches from the list below, ordered by confidence. If nothing matches with reasonable confidence, return an empty array.
+    const list = materials.map((m) => `- ${m}`).join('\n');
+    const prompt = `Match a noisy purchase item name to a raw material from the production list. Return up to 3 best matches, ordered by confidence. If nothing matches with reasonable confidence, return an empty array.
 
 Raw item name from invoice: "${raw_name}"
 
-Canonical raw materials:
+Production raw materials:
 ${list}
 
 Return ONLY valid JSON in this shape:
@@ -76,7 +72,7 @@ Return ONLY valid JSON in this shape:
     if (m) {
       try { parsed = JSON.parse(m[0]); } catch { /* fall through */ }
     }
-    const validNames = new Set(materials.map((x) => x.canonical_name));
+    const validNames = new Set(materials);
     const suggestions = (parsed.suggestions || [])
       .filter((s) => s && validNames.has(s.canonical_name))
       .slice(0, 3)
