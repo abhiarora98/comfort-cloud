@@ -43,27 +43,31 @@ const PENDING_REASON = 'No matching entry found in Tally';
 
 // --- Manual Tally upload parser (CSV/Excel) -----------------------------
 const COL_ALIASES = {
-  date:     ['date', 'voucherdate', 'billdate', 'invoicedate', 'dated'],
+  date:     ['date', 'voucherdate', 'billdate', 'invoicedate', 'supplierinvoicedate', 'dated'],
   supplier: ['supplier', 'party', 'partyname', 'partyledger', 'partyledgername', 'vendor', 'name'],
-  bill_no:  ['billno', 'billnumber', 'voucherno', 'vouchernumber', 'invoiceno', 'invoicenumber', 'reference', 'refno', 'ref'],
+  bill_no:  ['supplierinvoiceno', 'supplierinvoicenumber', 'invoiceno', 'invoicenumber', 'billno', 'billnumber', 'voucherno', 'vouchernumber', 'reference', 'refno', 'ref'],
+  description: ['narration', 'description', 'remarks'],
   // Optional GST columns — pulled if present, never required.
   gst_amount: ['gstamount', 'taxamount', 'totaltax', 'gst', 'tax', 'gsttotal'],
   cgst:       ['cgst', 'cgstamount'],
   sgst:       ['sgst', 'sgstamount'],
   igst:       ['igst', 'igstamount'],
-  gst_number: ['gstnumber', 'gstin', 'gstno', 'partygstin', 'partygst'],
+  gst_number: ['gstnumber', 'gstin', 'gstinuin', 'gstno', 'partygstin', 'partygst'],
   hsn:        ['hsn', 'hsncode', 'hsnno', 'hsnsac'],
   // Optional item-level columns. When present, rows are grouped by bill_no
-  // into a single bill with an items[] array.
-  item:       ['stockitem', 'itemname', 'productname', 'product'],
+  // into a single bill with an items[] array. "Particulars" is included as
+  // a fallback for Tally Columnar Purchase Register exports where stock
+  // items appear in that column alongside a separate Supplier column.
+  item:       ['stockitem', 'itemname', 'productname', 'product', 'particulars'],
   qty:        ['quantity', 'qty', 'billedquantity'],
   rate:       ['rate', 'unitrate', 'unitprice'],
-  item_value: ['itemvalue', 'lineamount', 'linetotal'],
+  item_value: ['itemvalue', 'lineamount', 'linetotal', 'value'],
   item_gst_pct: ['gstpercent', 'gstrate', 'taxrate'],
 };
-// Try in order; first non-zero per row wins. Order matters for purchase
-// daybooks where Credit holds the bill total and Debit is 0.
-const AMOUNT_CANDIDATES = ['amount', 'grossamount', 'netamount', 'total', 'amountrs', 'credit', 'debit', 'value'];
+// Try in order; first non-zero per row wins. Order matters: in Tally
+// Columnar Purchase Register the bill total lives in "Gross Total" and is
+// repeated on every line, while "Value" is per-item value.
+const AMOUNT_CANDIDATES = ['grosstotal', 'grossamount', 'netamount', 'amount', 'total', 'amountrs', 'credit', 'debit', 'value'];
 
 function normHeader(h) {
   return String(h || '').toLowerCase().replace(/[\s_\-./]/g, '').trim();
@@ -164,12 +168,14 @@ async function parseTallyFile(file) {
         hsn,
       };
     }
+    const description = text(r, ix.description);
 
     const key = `${supplier}|${bill_no}|${date}`;
     if (!groups.has(key)) {
       groups.set(key, {
         date, supplier_original: supplier, bill_no,
         amount: 0, gst_amount: 0, gstObj: {}, items: [],
+        description: '',
       });
     }
     const g = groups.get(key);
@@ -180,6 +186,7 @@ async function parseTallyFile(file) {
     if (igst && !g.gstObj.igst) g.gstObj.igst = String(igst);
     if (gstNumber && !g.gstObj.gst_number) g.gstObj.gst_number = gstNumber;
     if (hsn && !g.gstObj.hsn) g.gstObj.hsn = hsn;
+    if (description && !g.description) g.description = description;
     if (item) g.items.push(item);
   }
 
@@ -199,6 +206,7 @@ async function parseTallyFile(file) {
       amount: amount ? amount.toString() : '',
       gst_amount: g.gst_amount ? g.gst_amount.toString() : '',
       gst_details,
+      description: g.description || '',
       items: g.items.length ? g.items : undefined,
     });
   }
