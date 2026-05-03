@@ -178,7 +178,14 @@ async function parseTallyFile(file) {
     const hsn = text(r, ix.hsn);
 
     let item = null;
-    if (itemName) {
+    // Item rows only: Date column must be EMPTY (parent voucher rows have
+    // Date filled and their Particulars cell is usually the supplier name,
+    // not a stock item). Defensive: even with empty Date, ignore the row
+    // if Particulars matches the carried-over supplier name.
+    const isItemRow = itemName && !rowDate;
+    const looksLikeSupplier = isItemRow && parent && parent.supplier
+      && normItemKey(itemName) === normItemKey(parent.supplier);
+    if (isItemRow && !looksLikeSupplier) {
       // Item amount: prefer the explicit per-line column ("Value" / "Item
       // Value" / "Line Amount"). If missing, scan the row for the largest
       // numeric cell — but skip the bill-total columns (those carry the
