@@ -134,12 +134,34 @@ async function parseTallyFile(file) {
   const groups = new Map();
   let skipped = 0;
 
+  // Tally Columnar Purchase Register typically has one "header" row per
+  // voucher (with Date/Supplier/Bill No filled) followed by item rows
+  // where those identifier columns are blank. Carry the last voucher's
+  // identity forward so item rows attribute to the right bill.
+  let parent = null;
+
   for (let i = headerIdx + 1; i < aoa.length; i++) {
     const r = aoa[i];
-    const supplier = text(r, ix.supplier);
-    const bill_no  = text(r, ix.bill_no);
-    const date     = toIsoDate(get(r, ix.date));
-    if (!supplier || !bill_no || !date) { skipped++; continue; }
+    const rowSupplier = text(r, ix.supplier);
+    const rowBillNo   = text(r, ix.bill_no);
+    const rowDate     = toIsoDate(get(r, ix.date));
+    const itemName    = text(r, ix.item);
+    const hasAllIds   = rowSupplier && rowBillNo && rowDate;
+
+    if (hasAllIds) {
+      parent = { supplier: rowSupplier, bill_no: rowBillNo, date: rowDate };
+    } else if (!parent) {
+      skipped++;
+      continue;
+    } else if (!itemName) {
+      // No identifiers AND no item — likely a totals/separator row. Skip.
+      skipped++;
+      continue;
+    }
+
+    const supplier = parent.supplier;
+    const bill_no  = parent.bill_no;
+    const date     = parent.date;
 
     // Pick first non-zero amount candidate.
     let amount = 0;
@@ -155,7 +177,6 @@ async function parseTallyFile(file) {
     const gstNumber = text(r, ix.gst_number);
     const hsn = text(r, ix.hsn);
 
-    const itemName = text(r, ix.item);
     let item = null;
     if (itemName) {
       // Item amount: prefer the explicit per-line column ("Value" / "Item
@@ -209,12 +230,15 @@ async function parseTallyFile(file) {
 
   const rows = [];
   let zeroAmount = 0;
+  let itemLines = 0;
+  let billsWithItems = 0;
   for (const g of groups.values()) {
     let amount = g.amount;
     if (!amount && g.items.length) {
       amount = g.items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
     }
     if (!amount) zeroAmount++;
+    if (g.items.length) { itemLines += g.items.length; billsWithItems++; }
     const gst_details = Object.keys(g.gstObj).length ? JSON.stringify(g.gstObj) : '';
     rows.push({
       date: g.date,
@@ -228,7 +252,7 @@ async function parseTallyFile(file) {
     });
   }
 
-  return { rows, skipped, zeroAmount, error: null };
+  return { rows, skipped, zeroAmount, itemLines, billsWithItems, error: null };
 }
 // ------------------------------------------------------------------------
 
@@ -347,16 +371,26 @@ function aggregateItems(bills) {
 function useW(){const[w,setW]=useState(typeof window!=='undefined'?window.innerWidth:1200);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);return w;}
 
 function parseCSVLine(line) {
+  // Handles RFC-4180-style escaping: cells with comma/quote/newline are
+  // wrapped in "...", and an inner " is escaped as "" — gviz CSV does
+  // exactly this, and items_json cells contain plenty of inner quotes.
   const cols = [];
-  let cur = '', inQ = false;
-  for (let i = 0; i < line.length; i++) {
+  let cur = '', inQ = false, i = 0;
+  while (i < line.length) {
     const c = line[i];
-    if (c === '"') { inQ = !inQ; }
-    else if (c === ',' && !inQ) { cols.push(cur); cur = ''; }
-    else { cur += c; }
+    if (inQ) {
+      if (c === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i += 2; continue; }
+        inQ = false; i++; continue;
+      }
+      cur += c; i++; continue;
+    }
+    if (c === ',') { cols.push(cur); cur = ''; i++; continue; }
+    if (c === '"' && cur === '') { inQ = true; i++; continue; }
+    cur += c; i++;
   }
   cols.push(cur);
-  return cols.map(c => (c || '').replace(/^"|"$/g, ''));
+  return cols;
 }
 
 function parsePurchasesCSV(csv) {
@@ -447,7 +481,7 @@ export default function PurchasesPage() {
     if (!file) return;
     setUploading(true); setSyncMsg('');
     try {
-      const { rows, error, skipped, zeroAmount } = await parseTallyFile(file);
+      const { rows, error, skipped, zeroAmount, itemLines, billsWithItems } = await parseTallyFile(file);
       if (error) throw new Error(error);
       if (rows.length === 0) throw new Error('No valid rows found');
       const items = rows.map(r => ({
@@ -468,7 +502,8 @@ export default function PurchasesPage() {
       if (created > 0) await fetchBills();
       const skipNote = skipped ? ` · ${skipped} skipped` : '';
       const zeroNote = zeroAmount ? ` · ${zeroAmount} no-amount` : '';
-      setSyncMsg(`✓ ${created} new · ${duplicate} dup · ${errors} err${skipNote}${zeroNote}`);
+      const itemNote = itemLines ? ` · ${itemLines} items in ${billsWithItems} bills` : ' · 0 items';
+      setSyncMsg(`✓ ${created} new · ${duplicate} dup · ${errors} err${skipNote}${zeroNote}${itemNote}`);
     } catch (err) {
       setSyncMsg('⚠ ' + (err.message || 'Upload failed'));
     } finally {
