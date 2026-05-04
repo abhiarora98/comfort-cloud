@@ -386,6 +386,102 @@ async function parseTallyFile(file) {
 
 // --- Items aggregation (client-side) ------------------------------------
 
+// --- Price trend analysis (client-side) ---------------------------------
+// Walks bills, groups item lines by their MAPPED canonical name (only
+// items with a confirmed alias in ITEM_ALIASES count), and computes
+// per-material price metrics.
+function computePriceTrends(bills, aliases) {
+  const aliasMap = new Map();
+  for (const a of aliases || []) {
+    if (!a || !a.raw_name || !a.canonical_name) continue;
+    aliasMap.set(normItemKey(a.raw_name), a.canonical_name);
+  }
+
+  const byCanonical = new Map();
+  for (const b of bills) {
+    if (!b.items_json) continue;
+    let items;
+    try { items = JSON.parse(b.items_json); } catch { continue; }
+    if (!Array.isArray(items)) continue;
+    for (const it of items) {
+      if (!it || !it.name) continue;
+      const canonical = aliasMap.get(normItemKey(it.name));
+      if (!canonical) continue; // ONLY mapped items
+      const qty = parseFloat(it.qty) || 0;
+      const amount = parseFloat(it.amount) || 0;
+      let rate = parseFloat(it.rate) || 0;
+      if (!rate && qty > 0 && amount > 0) rate = amount / qty;
+      if (rate <= 0 || qty <= 0 || !b.date) continue;
+      if (!byCanonical.has(canonical)) byCanonical.set(canonical, []);
+      byCanonical.get(canonical).push({
+        date: b.date,
+        vendor: b.supplier || b.supplier_original || '—',
+        qty, rate, amount,
+        bill_id: b.id,
+        bill_no: b.bill_no,
+        raw_name: it.name,
+      });
+    }
+  }
+
+  const out = [];
+  for (const [canonical, lines] of byCanonical) {
+    lines.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    const total_qty    = lines.reduce((s, l) => s + l.qty, 0);
+    const total_amount = lines.reduce((s, l) => s + l.amount, 0);
+    const weighted_avg = total_qty > 0 ? total_amount / total_qty : 0;
+    const first  = lines[0];
+    const latest = lines[lines.length - 1];
+    const pct_change = first.rate > 0 ? ((latest.rate - first.rate) / first.rate) * 100 : 0;
+
+    let trend = 'stable';
+    if (lines.length >= 2) {
+      if (Math.abs(pct_change) < 2) trend = 'stable';
+      else if (pct_change > 0) trend = 'up';
+      else trend = 'down';
+    }
+
+    // Cheapest current vendor (most recent rate per vendor; pick min).
+    const lastByVendor = new Map();
+    for (const l of lines) lastByVendor.set(l.vendor, l.rate);
+    const sortedVendors = [...lastByVendor.entries()].sort((a, b) => a[1] - b[1]);
+    const cheapestVendor = sortedVendors[0];
+
+    // Heuristic insights — short, plain English.
+    let insight = '';
+    if (lines.length >= 2 && Math.abs(pct_change) >= 10) {
+      insight = pct_change > 0
+        ? `Price up ${pct_change.toFixed(0)}% since first purchase — consider negotiating.`
+        : `Price down ${Math.abs(pct_change).toFixed(0)}% since first purchase — good time to stock up.`;
+    } else if (sortedVendors.length >= 2 && cheapestVendor) {
+      const cheapest = cheapestVendor[1];
+      const dearest = sortedVendors[sortedVendors.length - 1][1];
+      const spread = dearest > 0 ? ((dearest - cheapest) / dearest) * 100 : 0;
+      if (spread >= 5) {
+        insight = `${cheapestVendor[0]} is ${spread.toFixed(0)}% cheaper than the highest-priced vendor.`;
+      }
+    } else if (lines.length >= 5 && trend === 'stable') {
+      insight = `Stable price across ${lines.length} purchases.`;
+    }
+
+    out.push({
+      canonical_name: canonical,
+      purchases: lines,
+      total_qty, total_amount, weighted_avg,
+      first_rate: first.rate,
+      latest_rate: latest.rate,
+      pct_change, trend,
+      first_date: first.date,
+      latest_date: latest.date,
+      vendors: [...lastByVendor.keys()],
+      cheapest_vendor: cheapestVendor ? { vendor: cheapestVendor[0], rate: cheapestVendor[1] } : null,
+      insight,
+    });
+  }
+  return out;
+}
+// ------------------------------------------------------------------------
+
 // --- Tally entry flagging (client-side, heuristic) ----------------------
 // Surfaces entries that are likely wrong in Tally. All checks are local —
 // nothing is auto-rejected. The user investigates and fixes upstream.
@@ -668,7 +764,7 @@ export default function PurchasesPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [view, setView] = useState('history'); // 'history' | 'form' | 'items' | 'insights'
+  const [view, setView] = useState('history'); // 'history' | 'form' | 'items' | 'trends' | 'insights'
   const [itemSort, setItemSort] = useState('recent'); // 'recent' | 'spend' | 'name' | 'stale'
   const [suggestion, setSuggestion] = useState(null); // { category, confidence, classified_by, reasons }
   const [classifying, setClassifying] = useState(false);
@@ -1257,9 +1353,9 @@ export default function PurchasesPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {!mob && <>
-            {['history','items','insights'].map(v => (
+            {['history','items','trends','insights'].map(v => (
               <button key={v} onClick={() => setView(v)} style={{ background: view===v ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '5px 12px', borderRadius: 8, fontSize: 11, fontFamily: MN, cursor: 'pointer' }}>
-                {v==='history' ? `History (${bills.length})` : v==='items' ? 'Items' : 'Insights'}
+                {v==='history' ? `History (${bills.length})` : v==='items' ? 'Items' : v==='trends' ? 'Trends' : 'Insights'}
               </button>
             ))}
             <button onClick={() => setView('form')} style={{ background: '#d97706', border: 'none', color: '#fff', padding: '5px 12px', borderRadius: 8, fontSize: 11, fontFamily: MN, cursor: 'pointer', fontWeight: 700 }}>+ Add Bill</button>
@@ -1271,9 +1367,9 @@ export default function PurchasesPage() {
       {/* Mobile tab bar */}
       {mob && view !== 'form' && (
         <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', background: '#fff' }}>
-          {['history','items','insights'].map(v => (
+          {['history','items','trends','insights'].map(v => (
             <button key={v} onClick={() => setView(v)} style={{ flex: 1, padding: '12px', border: 'none', background: 'none', fontFamily: MN, fontSize: 12, fontWeight: view===v ? 700 : 500, color: view===v ? '#0f172a' : '#94a3b8', borderBottom: view===v ? '2px solid #d97706' : '2px solid transparent', cursor: 'pointer' }}>
-              {v==='history' ? `History (${bills.length})` : v==='items' ? 'Items' : 'Insights'}
+              {v==='history' ? `History (${bills.length})` : v==='items' ? 'Items' : v==='trends' ? 'Trends' : 'Insights'}
             </button>
           ))}
         </div>
@@ -1667,6 +1763,129 @@ export default function PurchasesPage() {
                   })}
                 </div>
               )}
+            </div>
+          );
+        })()}
+
+        {/* Trends view — price trends per mapped material only */}
+        {view === 'trends' && (() => {
+          const trends = computePriceTrends(bills, aliases);
+          const sorted = trends.slice().sort((a, b) => (b.latest_date || '').localeCompare(a.latest_date || ''));
+          const fmtRupee = (n) => `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+          const trendStyle = (t) => t === 'up'
+            ? { color: '#b91c1c', bg: '#fee2e2', border: '#fecaca', sym: '↑' }
+            : t === 'down'
+              ? { color: '#166534', bg: '#dcfce7', border: '#bbf7d0', sym: '↓' }
+              : { color: '#475569', bg: '#f1f5f9', border: '#e2e8f0', sym: '→' };
+          const sectionLabel = { fontFamily: MN, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8' };
+          const cellTh = { fontFamily: MN, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#94a3b8', textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' };
+          const cellTd = { fontSize: 12, color: '#0f172a', padding: '6px 8px', borderBottom: '1px solid #f1f5f9' };
+          const aliasMappedCount = new Set(aliases.map(a => normItemKey(a.raw_name))).size;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ ...card, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 16 }}>📈</span>
+                <div style={{ ...sectionLabel, color: '#475569' }}>Price Trends</div>
+                <div style={{ marginLeft: 'auto', fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>
+                  {sorted.length} mapped {sorted.length === 1 ? 'material' : 'materials'}
+                  {aliasMappedCount > sorted.length && ` · ${aliasMappedCount - sorted.length} mapped but no purchase data`}
+                </div>
+              </div>
+              {sorted.length === 0 ? (
+                <div style={{ ...card, padding: 48, textAlign: 'center' }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>📈</div>
+                  <div style={{ fontFamily: MN, fontSize: 12, color: '#94a3b8' }}>No mapped materials with price data yet</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Map items in the Items tab — trends appear once a mapped item has a qty + rate.</div>
+                </div>
+              ) : sorted.map(t => {
+                const ts = trendStyle(t.trend);
+                const recent = t.purchases.slice(-8).reverse();
+                return (
+                  <div key={t.canonical_name} style={{ ...card, padding: 16 }}>
+                    {/* Header row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>{t.canonical_name}</div>
+                      <span title={`First ${fmtRupee(t.first_rate)} → Latest ${fmtRupee(t.latest_rate)}`} style={{ fontFamily: MN, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999, background: ts.bg, color: ts.color, border: `1px solid ${ts.border}`, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        {ts.sym} {t.pct_change > 0 ? '+' : ''}{t.pct_change.toFixed(1)}%
+                      </span>
+                      <div style={{ marginLeft: 'auto', fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>
+                        {t.first_date} → {t.latest_date}
+                      </div>
+                    </div>
+                    {/* Stats row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: mob ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+                      <div>
+                        <div style={sectionLabel}>Latest</div>
+                        <div style={{ fontFamily: MN, fontSize: 16, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>{fmtRupee(t.latest_rate)}</div>
+                        <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{t.purchases[t.purchases.length - 1].vendor}</div>
+                      </div>
+                      <div>
+                        <div style={sectionLabel}>Weighted Avg</div>
+                        <div style={{ fontFamily: MN, fontSize: 16, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>{fmtRupee(t.weighted_avg)}</div>
+                        <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>across {t.purchases.length} purchases</div>
+                      </div>
+                      <div>
+                        <div style={sectionLabel}>Total Qty</div>
+                        <div style={{ fontFamily: MN, fontSize: 16, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>{t.total_qty.toLocaleString('en-IN')}</div>
+                        <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8' }}>{fmtRupee(t.total_amount)} total</div>
+                      </div>
+                      <div>
+                        <div style={sectionLabel}>Cheapest Now</div>
+                        <div style={{ fontFamily: MN, fontSize: 16, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>
+                          {t.cheapest_vendor ? fmtRupee(t.cheapest_vendor.rate) : '—'}
+                        </div>
+                        <div style={{ fontFamily: MN, fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {t.cheapest_vendor ? t.cheapest_vendor.vendor : '—'}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Insight */}
+                    {t.insight && (
+                      <div style={{ padding: '8px 12px', background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 8, fontSize: 12, color: '#713f12', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 14 }}>💡</span>
+                        <span>{t.insight}</span>
+                      </div>
+                    )}
+                    {/* Recent purchases */}
+                    {t.purchases.length > 1 && (
+                      <details>
+                        <summary style={{ cursor: 'pointer', ...sectionLabel, listStyle: 'none', padding: '6px 0' }}>
+                          Recent purchases ({Math.min(recent.length, t.purchases.length)} of {t.purchases.length}) ▾
+                        </summary>
+                        <div style={{ marginTop: 8, overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                              <tr>
+                                <th style={cellTh}>Date</th>
+                                <th style={cellTh}>Vendor</th>
+                                <th style={{ ...cellTh, textAlign: 'right' }}>Qty</th>
+                                <th style={{ ...cellTh, textAlign: 'right' }}>Rate</th>
+                                <th style={{ ...cellTh, textAlign: 'right' }}>vs Avg</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {recent.map((p, i) => {
+                                const diffPct = t.weighted_avg > 0 ? ((p.rate - t.weighted_avg) / t.weighted_avg) * 100 : 0;
+                                return (
+                                  <tr key={i}>
+                                    <td style={{ ...cellTd, fontFamily: MN, fontSize: 11 }}>{p.date}</td>
+                                    <td style={{ ...cellTd, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{p.vendor}</td>
+                                    <td style={{ ...cellTd, textAlign: 'right', fontFamily: MN }}>{p.qty.toLocaleString('en-IN')}</td>
+                                    <td style={{ ...cellTd, textAlign: 'right', fontFamily: MN, fontWeight: 700 }}>{fmtRupee(p.rate)}</td>
+                                    <td style={{ ...cellTd, textAlign: 'right', fontFamily: MN, color: Math.abs(diffPct) < 1 ? '#94a3b8' : diffPct > 0 ? '#b91c1c' : '#166534' }}>
+                                      {diffPct > 0 ? '+' : ''}{diffPct.toFixed(1)}%
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           );
         })()}
